@@ -4,7 +4,7 @@ A spaced-repetition flashcard app that builds its deck from an Obsidian vault.
 Cards are graded **Difficult / Medium / Easy**, and each note carries a *tier* that
 controls how aggressively its cards resurface.
 
-`gneiss-prototype.jsx` is a clickable single-file React prototype — the design and
+`prototype/gneiss-prototype.jsx` is a clickable single-file React prototype — the design and
 logic reference, not production code. Everything below is decided; anything marked
 **OPEN** is not.
 
@@ -83,20 +83,42 @@ Navigation: bottom tab bar has only Today and Vault. Settings is intentionally
 *not* a tab — it's config touched monthly, and the bar's slots are reserved for the
 daily loop. Review and Settings both hide the tab bar.
 
-## The unresolved question: vault access on mobile
+## Stack decision (DECIDED)
 
-The requirement is that it reads Obsidian notes **on a phone**. Three routes:
+Target is a **standalone Angular mobile app**, wrapped natively with **Capacitor**
+(Angular is web-only; Capacitor gives the native iOS/Android shell and file access).
 
-1. **Obsidian plugin** *(recommended)* — Obsidian runs on iOS/Android, plugins get
-   direct vault access via `vault.read()` / `TFile`, no sync plumbing. Cost: you live
-   inside Obsidian's plugin API and UI constraints. Prior art: the community
-   Spaced Repetition plugin.
-2. **Standalone app over a synced folder** — iCloud Drive / Dropbox / Obsidian Sync.
-   Full control of the experience; inherits sync-conflict handling and fiddly iOS
-   file permissions.
+**Local-first, no backend for v1.** The app has only two kinds of state:
+
+1. **Vault content** — the markdown notes. Already live in Obsidian and sync via the
+   user's existing mechanism (iCloud Drive / Dropbox / Obsidian Sync). Gneiss only *reads*
+   them, via the Capacitor Filesystem API over the synced folder.
+2. **Review state** — per-card interval / ease / due. **Written back into each note's YAML
+   frontmatter**, the same way the Obsidian SR plugin does. This keeps *markdown the source
+   of truth* (already a core principle above) and makes cross-device sync **free** — the
+   vault's own sync carries the scheduling data too. No server, no accounts, fully offline.
+
+Reminders are **on-device** (Capacitor Local Notifications) — no push server.
+
+### The trade this accepts
+
+This is route 2 below. It deliberately gives up the *easiest* vault access (route 1, the
+Obsidian plugin) in exchange for a fully branded, standalone experience. The cost is the
+hard part: reading a synced folder on iOS/Android (Capacitor Filesystem + iOS's
+document-picker / permission model, plus sync-conflict handling). Accepted knowingly.
+
+### Routes considered
+
+1. **Obsidian plugin** — direct vault access via `vault.read()` / `TFile`, no sync plumbing.
+   **Rejected:** a plugin can't be Angular; it lives inside Obsidian's plugin API and UI.
+2. **Standalone app over a synced folder** — **CHOSEN.** Full control of the experience.
 3. **Local REST API plugin** — desktop only. Fails the mobile requirement.
 
-**OPEN — decide this before writing production code**, it determines the whole stack.
+### When a backend would later be justified (not v1)
+
+- Syncing review state across devices *without* relying on the user's vault sync.
+- Accounts / cross-user features.
+- Server-driven push notifications (vs. on-device local reminders).
 
 ## Prototype-only shortcuts
 
