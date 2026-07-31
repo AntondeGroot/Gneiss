@@ -54,4 +54,19 @@ Redirects stderr into stdout.
       },
     ]);
   });
+
+  it("parses each inline :: line as its own card, trimming around the separator", () => {
+    const md = `Redirect stdout to a file :: \`cmd > out.txt\`
+Count the lines in a file :: \`wc -l file\`
+
+#flashcards/shell
+`;
+
+    const { cards } = parseNote(md, "redirection.md");
+
+    expect(cards).toEqual([
+      { front: "Redirect stdout to a file", back: "`cmd > out.txt`" },
+      { front: "Count the lines in a file", back: "`wc -l file`" },
+    ]);
+  });
 });
