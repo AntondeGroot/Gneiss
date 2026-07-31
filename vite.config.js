@@ -16,13 +16,16 @@ export default defineConfig({
       exclude: ["src/**/*.test.ts", "src/vault/types.ts", "src/vault/index.ts"],
       reporter: ["text-summary", "lcov"],
       // Ratchet: a frozen floor pinned just under the current numbers, so coverage
-      // can only rise, and CI stays green while the suite is still being written.
-      // TODO: climb to the checklist target of 90 across the board as tests 3-16 land.
+      // can only rise. Lines, functions and statements are past the checklist's
+      // target of 90.
+      // TODO: climb branches to 90 — the shortfall is the unexercised edges
+      // (frontmatter tiers, multi-entry SR comments, inline cards carrying review
+      // state, and notes matching no mapping row).
       thresholds: {
-        lines: 22,
-        branches: 22,
-        functions: 21,
-        statements: 22,
+        lines: 96,
+        branches: 76,
+        functions: 94,
+        statements: 92,
       },
     },
   },

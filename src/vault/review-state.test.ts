@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseReviewStates } from "./review-state.js";
+import { formatReviewComment, parseReviewStates } from "./review-state.js";
 
 describe("parseReviewStates", () => {
   it("reads due, interval, and ease, scaling the integer-percent ease to a factor", () => {
@@ -8,5 +8,13 @@ describe("parseReviewStates", () => {
 <!--SR:!2026-08-21,3,250-->`;
 
     expect(parseReviewStates(answer)).toEqual([{ due: "2026-08-21", interval: 3, ease: 2.5 }]);
+  });
+});
+
+describe("formatReviewComment", () => {
+  it("writes back the exact bytes it parsed, so an untouched card is never rewritten", () => {
+    const comment = "<!--SR:!2026-08-21,3,250-->";
+
+    expect(formatReviewComment(parseReviewStates(comment))).toBe(comment);
   });
 });
