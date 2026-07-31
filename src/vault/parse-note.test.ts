@@ -69,4 +69,22 @@ Count the lines in a file :: \`wc -l file\`
       { front: "Count the lines in a file", back: "`wc -l file`" },
     ]);
   });
+
+  it("collects only flashcards tags as topics, reading a tier tag as the override", () => {
+    const md = `What does \`2>&1\` do?
+?
+Redirects stderr into stdout.
+
+#someHashtag
+#flashcards/shell
+#core
+`;
+
+    expect(parseNote(md, "redirection.md")).toEqual({
+      note: "redirection.md",
+      cards: [{ front: "What does `2>&1` do?", back: "Redirects stderr into stdout." }],
+      topicTags: ["#flashcards/shell"],
+      tierOverride: "core",
+    });
+  });
 });
