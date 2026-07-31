@@ -23,4 +23,12 @@ describe("cramClamp", () => {
     // The current runway fraction of 0.4 puts it at floor(20 * 0.4).
     expect(clamped).toBe(8);
   });
+
+  it("stops clamping once the exam has passed, without the cram being turned off", () => {
+    const dayAfterTheExam = "2026-09-02";
+
+    // `cram.active` is still true — the date alone ends the clamp, so there is
+    // no reset step the user can forget.
+    expect(cramClamp(30, [EXAM_TAG], cram, dayAfterTheExam)).toBe(30);
+  });
 });
