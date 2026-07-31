@@ -16,6 +16,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Test output
+coverage/
+
 # Env
 .env
 .env.local
