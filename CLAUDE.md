@@ -66,8 +66,16 @@ Shape of the mapping:
 #flashcards/git           → core       # used daily, lookup mid-flow is friction
 #flashcards/shell         → core
 #flashcards/lang          → standard
-#flashcards/lang/certexam → optional   # exam prep; decays once passed
+#flashcards/lang/certexam → standard   # crammed before the exam, retained after
 ```
+
+**OPEN:** `optional`'s lifecycle is undecided and deliberately parked. It is currently a
+one-way trapdoor — material demoted to `optional` drifts out of rotation and nothing ever
+asks whether that was right. Whether Gneiss should prompt to revisit a long-dormant topic,
+and whether topics should ever be retired outright, is unresolved. `exam` was considered as
+a fourth tier and **rejected**: a tier's job is to produce one interval multiplier, and an
+exam tier's would be 1.0 — identical to `standard`. Exam-ness is a deadline, which cram
+mode already models, not a distinct long-term pace.
 
 Only `#core` and `#optional` exist as note-level tags — **`standard` is the absence of a
 tag**, so the common case needs no edit. Both are **top-level tags, deliberately not
@@ -106,8 +114,10 @@ Two properties are why the date is part of the design:
 - **Focus intensifies on its own.** Nothing can schedule past the exam, so intervals
   compress automatically as the date nears — no separate "intensity" knob.
 - **The exam date is the off-switch.** The day after, the clamp stops applying and the
-  tag reverts to its mapped tier (`optional`), decaying out of rotation — the desired
-  post-exam behaviour, with **no manual reset step**.
+  topic reverts to its mapped tier, with **no manual reset step**. Note that this tier is
+  normally `standard` or `core`: sitting an exam is evidence the material matters, so
+  passing it is not a reason to discard the knowledge. Cram supplies urgency before a
+  deadline; it does not change what the material is worth afterwards.
 
 While cram is active, its scope also overrides the new-cards-per-day cap, and the Today
 screen leads with `<topic> · 12 days · 34 due` instead of the normal tier ring.
