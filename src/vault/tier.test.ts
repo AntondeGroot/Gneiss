@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveTier } from "./tier.js";
+import { resolveTier, tierGrowth } from "./tier.js";
 import type { ParsedNote, Tier, TierMapping } from "./types.js";
 
 function noteTagged(topicTags: string[], tierOverride?: Tier): ParsedNote {
@@ -27,5 +27,13 @@ describe("resolveTier", () => {
     const note = noteTagged(["#flashcards/lang", "#flashcards/lang/certexam"]);
 
     expect(resolveTier(note, mapping)).toBe("optional");
+  });
+});
+
+describe("tierGrowth", () => {
+  it("collapses every tier to the same growth when core emphasis is off", () => {
+    expect(tierGrowth("core", 0)).toBe(1);
+    expect(tierGrowth("standard", 0)).toBe(1);
+    expect(tierGrowth("optional", 0)).toBe(1);
   });
 });
