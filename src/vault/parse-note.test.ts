@@ -34,4 +34,24 @@ public class Duck implements Comparable<Duck> {
       },
     ]);
   });
+
+  it("attaches existing review state to the card and keeps it out of the answer text", () => {
+    const md = `What does \`2>&1\` do?
+?
+Redirects stderr into stdout.
+<!--SR:!2026-08-21,3,250-->
+
+#flashcards/shell
+`;
+
+    const { cards } = parseNote(md, "redirection.md");
+
+    expect(cards).toEqual([
+      {
+        front: "What does `2>&1` do?",
+        back: "Redirects stderr into stdout.",
+        review: { due: "2026-08-21", interval: 3, ease: 2.5 },
+      },
+    ]);
+  });
 });
