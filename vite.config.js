@@ -9,5 +9,21 @@ export default defineConfig({
   test: {
     globals: true,
     include: ["src/**/*.test.ts"],
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.ts"],
+      // types.ts is type-only (no runtime code); index.ts is a re-export barrel.
+      exclude: ["src/**/*.test.ts", "src/vault/types.ts", "src/vault/index.ts"],
+      reporter: ["text-summary", "lcov"],
+      // Ratchet: a frozen floor pinned just under the current numbers, so coverage
+      // can only rise, and CI stays green while the suite is still being written.
+      // TODO: climb to the checklist target of 90 across the board as tests 3-16 land.
+      thresholds: {
+        lines: 22,
+        branches: 22,
+        functions: 21,
+        statements: 22,
+      },
+    },
   },
 });

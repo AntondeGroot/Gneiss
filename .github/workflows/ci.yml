@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same PR cancels the in-flight run rather than queueing it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The job ID is the status-check name branch protection matches on, so keep it
+  # short and stable — renaming it silently breaks the required check.
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Fails on any TypeScript error; tsconfig has strict, noUnusedLocals,
+      # noUnusedParameters, noUncheckedIndexedAccess and exactOptionalPropertyTypes.
+      - name: Type-check
+        run: npm run typecheck
+
+      # Fails on a failing test, and on coverage below the ratcheted floor
+      # in vite.config.js.
+      - name: Test
+        run: npm run test -- --coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
