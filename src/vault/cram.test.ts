@@ -31,4 +31,12 @@ describe("cramClamp", () => {
     // no reset step the user can forget.
     expect(cramClamp(30, [EXAM_TAG], cram, dayAfterTheExam)).toBe(30);
   });
+
+  it("leaves topics outside the cram scope alone, including the scope's own parent", () => {
+    const duringTheCram = "2026-08-12";
+
+    expect(cramClamp(30, ["#flashcards/shell"], cram, duringTheCram)).toBe(30);
+    // Cramming a subtopic must not drag its broader parent topic in with it.
+    expect(cramClamp(30, ["#flashcards/lang"], cram, duringTheCram)).toBe(30);
+  });
 });
