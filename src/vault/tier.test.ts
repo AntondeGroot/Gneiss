@@ -36,4 +36,15 @@ describe("tierGrowth", () => {
     expect(tierGrowth("standard", 0)).toBe(1);
     expect(tierGrowth("optional", 0)).toBe(1);
   });
+
+  it("shortens core intervals and lengthens optional ones as emphasis rises", () => {
+    const core = tierGrowth("core", 1);
+    const standard = tierGrowth("standard", 1);
+    const optional = tierGrowth("optional", 1);
+
+    // Asserted as an ordering, not exact values: the 0.45 / 0.80 constants are
+    // tunable, but core resurfacing sooner than optional is the whole premise.
+    expect(core).toBeLessThan(standard);
+    expect(standard).toBeLessThan(optional);
+  });
 });
