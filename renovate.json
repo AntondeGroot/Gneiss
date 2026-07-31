@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommitTypeAll(chore)"],
+  "timezone": "Europe/Amsterdam",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "description": "Catch-all: one PR for every remaining non-major update. Listed first because Renovate cascades — later rules override this grouping for the ecosystems below.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "all non-major dependencies"
+    },
+    {
+      "description": "Vitest and its coverage provider are peer-versioned; bumping them in separate PRs makes each fail CI on its own.",
+      "matchPackageNames": ["vitest", "@vitest/**"],
+      "groupName": "vitest"
+    },
+    {
+      "description": "Vite and its plugins move together.",
+      "matchPackageNames": ["vite", "@vitejs/**"],
+      "groupName": "vite"
+    },
+    {
+      "description": "React runtime packages must stay on the same version as each other.",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "react"
+    },
+    {
+      "description": "Angular peer-versions the whole framework — a split bump will not install.",
+      "matchPackageNames": ["@angular/**", "@angular-devkit/**", "angular-eslint", "@angular-eslint/**"],
+      "groupName": "angular"
+    },
+    {
+      "description": "Capacitor core, CLI and platform packages ship in lockstep.",
+      "matchPackageNames": ["@capacitor/**"],
+      "groupName": "capacitor"
+    },
+    {
+      "description": "TypeScript on its own — a bump can surface new type errors across the module and deserves a dedicated review.",
+      "matchPackageNames": ["typescript"],
+      "groupName": "typescript"
+    },
+    {
+      "description": "Majors are never grouped and never opened automatically: each one waits for approval on the Dependency Dashboard, then gets its own PR.",
+      "matchUpdateTypes": ["major"],
+      "groupName": null,
+      "dependencyDashboardApproval": true
+    }
+  ]
+}
