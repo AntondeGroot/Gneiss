@@ -18,4 +18,14 @@ describe("resolveTier", () => {
 
     expect(resolveTier(noteTagged(["#flashcards/lang"], "core"), mapping)).toBe("core");
   });
+
+  it("picks the most specific mapped tag when a note carries a topic and its subtopic", () => {
+    const mapping: TierMapping = {
+      "#flashcards/lang": "core",
+      "#flashcards/lang/certexam": "optional",
+    };
+    const note = noteTagged(["#flashcards/lang", "#flashcards/lang/certexam"]);
+
+    expect(resolveTier(note, mapping)).toBe("optional");
+  });
 });
