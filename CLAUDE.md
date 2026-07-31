@@ -77,6 +77,12 @@ a fourth tier and **rejected**: a tier's job is to produce one interval multipli
 exam tier's would be 1.0 — identical to `standard`. Exam-ness is a deadline, which cram
 mode already models, not a distinct long-term pace.
 
+**Gneiss never opts a note into the deck.** Tiering only applies to notes the user has
+already tagged `#flashcards*`; `withTier()` leaves any other note byte-for-byte untouched
+rather than writing a tag into a note the app doesn't own. A note holding cards but no
+`#flashcards` tag is surfaced in the Vault screen as a gap for the user to resolve, not
+silently adopted.
+
 Only `#core` and `#optional` exist as note-level tags — **`standard` is the absence of a
 tag**, so the common case needs no edit. Both are **top-level tags, deliberately not
 nested** under `#flashcards/`: that namespace is the *topic* axis, tier is an orthogonal
