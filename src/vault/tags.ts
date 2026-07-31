@@ -32,11 +32,22 @@ export function findTierOverride(md: string): Tier | undefined {
   return match[1].toLowerCase() as Tier;
 }
 
+/** A note joins the deck only when the user tags it — Gneiss never opts one in. */
+export function isFlashcardNote(md: string): boolean {
+  return findTopicTags(md).length > 0;
+}
+
 /**
  * Rewrites the note so its tier tag reflects `tier`, leaving every other byte
  * untouched. `standard` is expressed as the absence of a tag, so it only removes.
+ *
+ * Notes the user hasn't tagged as flashcards are left alone: they aren't in the
+ * deck, so there is no tier to express, and writing a tag into one would mean
+ * editing a note the app doesn't own.
  */
 export function withTier(md: string, tier: Tier): string {
+  if (!isFlashcardNote(md)) return md;
+
   const withoutTierTag = removeTierTags(md);
   if (tier === IMPLICIT_TIER) return withoutTierTag;
   return appendToTagBlock(withoutTierTag, `#${tier}`);

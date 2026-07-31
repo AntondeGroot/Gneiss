@@ -16,7 +16,7 @@ export type {
 } from "./types.js";
 
 export { parseNote } from "./parse-note.js";
-export { findTags, findTierOverride, findTopicTags, withTier } from "./tags.js";
+export { findTags, findTierOverride, findTopicTags, isFlashcardNote, withTier } from "./tags.js";
 export { formatReviewComment, hasReviewComment, parseReviewStates, stripReviewComments } from "./review-state.js";
 export { resolveTier, tierGrowth } from "./tier.js";
 export { cramClamp, daysBetween } from "./cram.js";
