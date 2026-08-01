@@ -18,30 +18,32 @@
   <button type="button" (click)="onSeed()" [disabled]="busy()">Seed sample notes</button>
 </div>
 
-<p class="status">{{ status() }}</p>
+<p class="status">
+  {{ status() }} @if (dueCount() > 0) {
+  <a class="review-link" routerLink="/review">Review {{ dueCount() }} due →</a>
+  }
+</p>
 
-@for (view of notes(); track view.note.note) {
+@for (group of notes(); track group.note) {
 <section class="note">
-  <button type="button" class="note-head" (click)="toggle(view.note.note)">
-    <span class="name">{{ view.note.note }}</span>
+  <button type="button" class="note-head" (click)="toggle(group.note)">
+    <span class="name">{{ group.note }}</span>
     <span class="meta">
-      <span class="tier" [class]="'tier-' + view.tier">{{ view.tier }}</span>
-      <span class="count">{{ view.note.cards.length }} cards</span>
+      <span class="tier" [class]="'tier-' + group.tier">{{ group.tier }}</span>
+      <span class="count">{{ group.cards.length }} cards</span>
     </span>
   </button>
 
-  @if (expanded() === view.note.note) {
+  @if (expanded() === group.note) {
   <ul class="cards">
-    @for (card of view.note.cards; track card.front) {
+    @for (card of group.cards; track card.id) {
     <li>
       <p class="front">{{ card.front }}</p>
       <pre class="back">{{ card.back }}</pre>
-      @if (card.review) {
       <p class="review">
         due {{ card.review.due }} · interval {{ card.review.interval }}d · ease {{ card.review.ease
         }}
       </p>
-      }
     </li>
     }
   </ul>

@@ -1,39 +1,35 @@
-import { Component, inject, signal } from "@angular/core";
+import { Component, computed, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { RouterLink } from "@angular/router";
 
-import { resolveTier } from "../../vault";
-import type { ParsedNote, Tier, TierMapping } from "../../vault";
+import type { Tier } from "../../vault";
+import { DeckService } from "../services/deck.service";
+import type { DeckCard } from "../services/deck.service";
 import { SampleVaultService } from "../services/sample-vault.service";
-import { VaultService } from "../services/vault.service";
 
-// TODO: belongs in .gneiss/config.md inside the vault, so it syncs with the notes.
-const TIER_MAPPING: TierMapping = {
-  "#flashcards/git": "core",
-  "#flashcards/shell": "core",
-  "#flashcards/tools": "standard",
-  "#flashcards/lang": "standard",
-};
-
-export interface NoteView {
-  readonly note: ParsedNote;
+export interface NoteGroup {
+  readonly note: string;
   readonly tier: Tier;
+  readonly cards: readonly DeckCard[];
 }
 
 @Component({
   selector: "gn-vault-screen",
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: "./vault-screen.html",
   styleUrl: "./vault-screen.scss",
 })
 export class VaultScreen {
-  private readonly vault = inject(VaultService);
+  private readonly deck = inject(DeckService);
   private readonly samples = inject(SampleVaultService);
 
   protected readonly path = signal("Vault");
-  protected readonly notes = signal<readonly NoteView[]>([]);
   protected readonly status = signal("Nothing read yet.");
   protected readonly busy = signal(false);
   protected readonly expanded = signal<string | null>(null);
+
+  protected readonly notes = computed(() => groupByNote(this.deck.all()));
+  protected readonly dueCount = computed(() => this.deck.due().length);
 
   protected onLoad(): void {
     void this.load();
@@ -43,22 +39,16 @@ export class VaultScreen {
     void this.seed();
   }
 
-  protected toggle(name: string): void {
-    this.expanded.update((current) => (current === name ? null : name));
-  }
-
-  protected cardCount(): number {
-    return this.notes().reduce((total, view) => total + view.note.cards.length, 0);
+  protected toggle(note: string): void {
+    this.expanded.update((current) => (current === note ? null : note));
   }
 
   private async load(): Promise<void> {
     this.busy.set(true);
     try {
-      const parsed = await this.vault.readNotes(this.path());
-      this.notes.set(parsed.map(toView));
-      this.status.set(describeResult(parsed.length, this.cardCount()));
+      await this.deck.load(this.path());
+      this.status.set(describeResult(this.notes().length, this.deck.all().length));
     } catch (error) {
-      this.notes.set([]);
       this.status.set(`Could not read "${this.path()}" — ${messageOf(error)}`);
     } finally {
       this.busy.set(false);
@@ -73,8 +63,18 @@ export class VaultScreen {
   }
 }
 
-function toView(note: ParsedNote): NoteView {
-  return { note, tier: resolveTier(note, TIER_MAPPING) };
+function groupByNote(cards: readonly DeckCard[]): NoteGroup[] {
+  const groups = new Map<string, DeckCard[]>();
+  for (const card of cards) {
+    const existing = groups.get(card.note);
+    if (existing) existing.push(card);
+    else groups.set(card.note, [card]);
+  }
+  return [...groups].map(([note, grouped]) => ({
+    note,
+    tier: grouped[0]?.tier ?? "standard",
+    cards: grouped,
+  }));
 }
 
 function describeResult(notes: number, cards: number): string {

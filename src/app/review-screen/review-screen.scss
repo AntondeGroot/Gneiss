@@ -1,0 +1,176 @@
+// Palette inherited from the prototype: charcoal panels, safelight amber.
+$bg: #131110;
+$panel: #1c1916;
+$panel2: #221e1a;
+$line: #2c2722;
+$text: #ede6dc;
+$dim: #9a9087;
+$faint: #6e665e;
+$amber: #e5a045;
+$teal: #7fa8a0;
+$easy: #8fae7e;
+$hard: #c9685a;
+
+:host {
+  display: block;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
+  color: $text;
+  font-family: "Hanken Grotesk", "Avenir Next", system-ui, sans-serif;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 500;
+  font-size: 1.7rem;
+}
+
+.intro {
+  text-align: center;
+  padding-top: 3rem;
+}
+
+.count {
+  margin: 0.2rem 0;
+  font-family: Fraunces, Georgia, serif;
+  font-size: 2.6rem;
+  color: $amber;
+}
+
+.sub {
+  margin: 0 0 1.5rem;
+  color: $dim;
+  font-size: 0.9rem;
+}
+
+.link {
+  color: $dim;
+  font-size: 0.88rem;
+}
+
+button {
+  border: 1px solid $line;
+  border-radius: 0.7rem;
+  background: $panel2;
+  color: $text;
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  background: $amber;
+  border-color: $amber;
+  color: $bg;
+  font-weight: 600;
+  padding: 0.7rem 1.4rem;
+
+  &.wide {
+    width: 100%;
+    margin-top: 1.5rem;
+  }
+}
+
+.card {
+  border: 1px solid $line;
+  border-radius: 1rem;
+  background: $panel;
+  padding: 1rem 1.1rem 1.2rem;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid $line;
+  font-size: 0.72rem;
+}
+
+.note {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  color: $faint;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tier {
+  border: 1px solid currentcolor;
+  border-radius: 1rem;
+  padding: 0.08rem 0.45rem;
+
+  &.tier-core {
+    color: $amber;
+  }
+  &.tier-standard {
+    color: $teal;
+  }
+  &.tier-optional {
+    color: $faint;
+  }
+}
+
+.left {
+  margin-left: auto;
+  color: $faint;
+}
+
+.front {
+  margin: 1.6rem 0;
+  font-size: 1.15rem;
+  line-height: 1.45;
+}
+
+.back {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  background: $panel2;
+  border-radius: 0.6rem;
+  color: $dim;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.grades {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 1.3rem;
+}
+
+.grade {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.4rem;
+  text-transform: capitalize;
+
+  .label {
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .next {
+    font-size: 0.68rem;
+    color: $faint;
+    text-transform: none;
+  }
+
+  &.grade-difficult {
+    color: $hard;
+    border-color: rgb(201 104 90 / 45%);
+  }
+  &.grade-medium {
+    color: $amber;
+    border-color: rgb(229 160 69 / 45%);
+  }
+  &.grade-easy {
+    color: $easy;
+    border-color: rgb(143 174 126 / 45%);
+  }
+}
