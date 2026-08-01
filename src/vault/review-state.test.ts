@@ -17,4 +17,16 @@ describe("formatReviewComment", () => {
 
     expect(formatReviewComment(parseReviewStates(comment))).toBe(comment);
   });
+
+  it("reads every entry of a multi-card comment and writes them back in order", () => {
+    const comment = "<!--SR:!2026-08-21,3,250!2026-09-02,12,270-->";
+
+    const states = parseReviewStates(comment);
+
+    expect(states).toEqual([
+      { due: "2026-08-21", interval: 3, ease: 2.5 },
+      { due: "2026-09-02", interval: 12, ease: 2.7 },
+    ]);
+    expect(formatReviewComment(states)).toBe(comment);
+  });
 });
