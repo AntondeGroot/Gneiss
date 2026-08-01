@@ -1,0 +1,13 @@
+/* The application: everything under src/ that is not a test.
+   That includes src/vault/, so Angular compiles the module straight from source —
+   no path mapping, no intermediate build.
+   Note *.test.ts is excluded alongside *.spec.ts: the vault module's tests use
+   the .test.ts suffix and must not be bundled into the app. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"]
+}

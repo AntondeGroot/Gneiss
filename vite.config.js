@@ -8,12 +8,15 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    include: ["src/**/*.test.ts"],
+    include: ["src/vault/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      include: ["src/**/*.ts"],
+      // Scoped to the vault module, not all of src/. Angular lives in src/app and
+      // is covered by its own builder (`npm run test:app`) — measuring it here
+      // would drag untested-by-this-runner files into the denominator.
+      include: ["src/vault/**/*.ts"],
       // types.ts is type-only (no runtime code); index.ts is a re-export barrel.
-      exclude: ["src/**/*.test.ts", "src/vault/types.ts", "src/vault/index.ts"],
+      exclude: ["src/vault/**/*.test.ts", "src/vault/types.ts", "src/vault/index.ts"],
       reporter: ["text-summary", "lcov"],
       // Ratchet: a frozen floor pinned at the current numbers, so coverage can
       // only rise. Lines, functions and statements are past the checklist's 90.
