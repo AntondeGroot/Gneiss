@@ -28,6 +28,22 @@
 </section>
 
 <section class="group">
+  <h2>Reviews per day</h2>
+  <p class="hint">
+    Caps cards already in rotation. An existing vault arrives with everything overdue at once; this
+    drains that backlog over days instead of one impossible session.
+  </p>
+  <input
+    type="number"
+    name="reviewsPerDay"
+    min="1"
+    max="500"
+    [ngModel]="draft().reviewsPerDay"
+    (ngModelChange)="onNumber('reviewsPerDay', $event)"
+  />
+</section>
+
+<section class="group">
   <h2>New cards per day</h2>
   <p class="hint">A ceiling on unseen cards, so a large vault cannot flood a session.</p>
   <input

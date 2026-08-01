@@ -28,3 +28,5 @@ export { locateCards } from "./parse-note.js";
 export type { CardLocation } from "./parse-note.js";
 export { withReviewState } from "./write-review.js";
 export { NEVER, nextStreak, standingStreak } from "./streak.js";
+export { selectDue } from "./queue.js";
+export type { DailyLimits, DueSelection, Schedulable } from "./queue.js";

@@ -32,7 +32,7 @@ export class ReviewScreen {
   protected readonly finished = computed(() => this.started() && this.current() === null);
 
   protected start(): void {
-    this.queue.set(byTier(this.deck.due()));
+    this.queue.set([...this.deck.due()]);
     this.position.set(0);
     this.graded.set(0);
     this.revealed.set(false);
@@ -58,12 +58,6 @@ export class ReviewScreen {
     this.position.update((index) => index + 1);
     this.revealed.set(false);
   }
-}
-
-/** Core first: the material worth the most review budget leads the session. */
-function byTier(cards: readonly DeckCard[]): DeckCard[] {
-  const rank = { core: 0, standard: 1, optional: 2 };
-  return [...cards].sort((a, b) => rank[a.tier] - rank[b.tier] || a.id.localeCompare(b.id));
 }
 
 function describeInterval(days: number): string {

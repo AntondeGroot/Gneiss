@@ -52,7 +52,7 @@ export class SettingsScreen {
     this.draft.update((config) => ({ ...config, [key]: value }));
   }
 
-  protected onNumber(key: "spread" | "newPerDay", value: string): void {
+  protected onNumber(key: "spread" | "newPerDay" | "reviewsPerDay", value: string): void {
     this.update(key, Number(value));
   }
 

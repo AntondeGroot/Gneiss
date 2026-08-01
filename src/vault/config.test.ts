@@ -8,6 +8,7 @@ describe("config round trip", () => {
     const config: GneissConfig = {
       spread: 0.65,
       newPerDay: 12,
+      reviewsPerDay: 25,
       streak: 4,
       lastReviewedOn: "2026-08-01",
       reminderOn: true,
@@ -42,6 +43,7 @@ Notes below the frontmatter are ignored.
     expect(parseConfig(written)).toEqual({
       spread: 0.5,
       newPerDay: 8,
+      reviewsPerDay: 30,
       streak: 0,
       lastReviewedOn: "",
       reminderOn: false,

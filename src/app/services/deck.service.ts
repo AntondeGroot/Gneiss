@@ -2,11 +2,11 @@ import { Injectable, computed, inject, signal } from "@angular/core";
 
 import {
   DEFAULT_CONFIG,
-  isDue,
   newReviewState,
   nextStreak,
   resolveTier,
   schedule,
+  selectDue,
   standingStreak,
 } from "../../vault";
 import type { GneissConfig, Grade, ParsedNote, ReviewState, Tier, TierMapping } from "../../vault";
@@ -49,23 +49,21 @@ export class DeckService {
 
   readonly all = this.cards.asReadonly();
   /**
-   * Every due review, plus at most `newPerDay` cards never seen before.
-   * Without the cap, pointing at an existing vault surfaces every unseen card at
-   * once — hundreds of them — which is the quickest way to abandon an SRS.
+   * Today's queue: due reviews and new cards, each under its own cap, ordered
+   * core-first and most-overdue-first. An imported vault's backlog drains over
+   * days rather than arriving all at once.
    */
-  readonly due = computed(() => {
-    const dueToday = this.cards().filter((card) => isDue(card.review, today()));
-    return [...seenBefore(dueToday), ...unseen(dueToday).slice(0, this.config().newPerDay)];
-  });
-
-  /** New cards held back by today's cap, so the UI can say so rather than hide it. */
-  readonly heldBack = computed(() =>
-    Math.max(
-      0,
-      unseen(this.cards().filter((card) => isDue(card.review, today()))).length -
-        this.config().newPerDay,
-    ),
+  private readonly selection = computed(() =>
+    selectDue(this.cards(), today(), {
+      newPerDay: this.config().newPerDay,
+      reviewsPerDay: this.config().reviewsPerDay,
+    }),
   );
+
+  readonly due = computed(() => this.selection().queue);
+  /** Cards held back by today's caps, so the UI can say so rather than hide it. */
+  readonly heldBackNew = computed(() => this.selection().heldBackNew);
+  readonly heldBackReviews = computed(() => this.selection().heldBackReviews);
 
   /** Zero once a day has been missed — never claims a streak that is already broken. */
   readonly streak = computed(() =>
@@ -146,14 +144,6 @@ function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
     topicTags: note.topicTags,
     review: card.review ?? newReviewState(today()),
   }));
-}
-
-function seenBefore(cards: readonly DeckCard[]): DeckCard[] {
-  return cards.filter((card) => card.review.interval > 0);
-}
-
-function unseen(cards: readonly DeckCard[]): DeckCard[] {
-  return cards.filter((card) => card.review.interval === 0);
 }
 
 export function today(): string {
