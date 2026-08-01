@@ -21,23 +21,27 @@ export interface DeckCard {
  * Holds the deck for the session: reads the vault once, flattens it into cards,
  * and applies grades.
  *
- * Review state currently lives in memory only. Writing it back into each note's
- * `<!--SR:-->` comment is the next step and deliberately not done here yet, so
- * nothing in this service modifies the vault.
+ * Grading updates the card in memory and then records it in the note it came
+ * from, so progress survives a restart and syncs with the vault.
  */
 @Injectable({ providedIn: "root" })
 export class DeckService {
   private readonly vault = inject(VaultService);
   private readonly configFile = inject(ConfigService);
   private readonly cards = signal<readonly DeckCard[]>([]);
+  private readonly vaultPath = signal("");
 
   /** Read from `.gneiss/config.md` in the vault, so it syncs across devices. */
   readonly config = signal<GneissConfig>(DEFAULT_CONFIG);
+
+  /** Set when a write to the vault failed, so the UI can say so rather than lie. */
+  readonly writeError = signal<string | null>(null);
 
   readonly all = this.cards.asReadonly();
   readonly due = computed(() => this.cards().filter((card) => isDue(card.review, today())));
 
   async load(path: string): Promise<void> {
+    this.vaultPath.set(path);
     const config = await this.configFile.read(path);
     this.config.set(config);
 
@@ -56,11 +60,23 @@ export class DeckService {
     return schedule(card.review, grade, this.optionsFor(card));
   }
 
-  grade(card: DeckCard, grade: Grade): void {
+  /**
+   * Applies the grade in memory immediately, then persists it. The in-memory
+   * update is not rolled back on a write failure: the grade genuinely happened,
+   * and losing it would be worse than a note that is briefly out of date.
+   */
+  async grade(card: DeckCard, grade: Grade): Promise<void> {
     const review = this.preview(card, grade);
     this.cards.update((cards) =>
       cards.map((existing) => (existing.id === card.id ? { ...existing, review } : existing)),
     );
+
+    try {
+      await this.vault.writeReviewState(this.vaultPath(), card.note, card.front, review);
+      this.writeError.set(null);
+    } catch (error) {
+      this.writeError.set(error instanceof Error ? error.message : String(error));
+    }
   }
 
   private optionsFor(card: DeckCard) {

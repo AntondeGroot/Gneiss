@@ -26,6 +26,7 @@ export class ReviewScreen {
   protected readonly graded = signal(0);
 
   protected readonly dueCount = computed(() => this.deck.due().length);
+  protected readonly writeError = this.deck.writeError;
   protected readonly current = computed(() => this.queue()[this.position()] ?? null);
   protected readonly remaining = computed(() => this.queue().length - this.position());
   protected readonly finished = computed(() => this.started() && this.current() === null);
@@ -52,7 +53,7 @@ export class ReviewScreen {
     const card = this.current();
     if (!card) return;
 
-    this.deck.grade(card, grade);
+    void this.deck.grade(card, grade);
     this.graded.update((count) => count + 1);
     this.position.update((index) => index + 1);
     this.revealed.set(false);

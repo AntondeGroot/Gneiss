@@ -18,15 +18,50 @@ const FRONTMATTER_DELIMITER = "---";
 const HEADING_MARKER = /^#+\s*/;
 const TIER_TAG = /#(core|optional)\b/gi;
 
+/** Where a card sits in the note, so review state can be written back to it. */
+export interface CardLocation {
+  readonly front: string;
+  /** Inline cards carry their comment on the same line; block cards on the next. */
+  readonly kind: "inline" | "block";
+  /** Index into the note's lines, counting from the top of the file. */
+  readonly answerEndLine: number;
+}
+
+interface ScanResult {
+  readonly cards: ParsedCard[];
+  readonly locations: CardLocation[];
+}
+
 export function parseNote(md: string, filename: string): ParsedNote {
   const normalized = (md ?? "").replace(/\r\n/g, "\n");
   const tierOverride = findTierOverride(normalized);
 
   return {
     note: filename,
-    cards: new CardScanner().scan(bodyLines(normalized)),
+    cards: scanBody(normalized).cards,
     topicTags: findTopicTags(normalized),
     ...(tierOverride ? { tierOverride } : {}),
+  };
+}
+
+/**
+ * Where each card ends, for write-back. Shares the scanner with `parseNote` so
+ * the two can never disagree about where a card is.
+ */
+export function locateCards(md: string): CardLocation[] {
+  return scanBody((md ?? "").replace(/\r\n/g, "\n")).locations;
+}
+
+function scanBody(normalized: string): ScanResult {
+  const lines = normalized.split("\n");
+  const offset = lines.length - bodyLines(normalized).length;
+  const result = new CardScanner().scan(bodyLines(normalized));
+
+  // Positions are relative to the body; shift them past any frontmatter so they
+  // index the whole file.
+  return {
+    cards: result.cards,
+    locations: result.locations.map((at) => ({ ...at, answerEndLine: at.answerEndLine + offset })),
   };
 }
 
@@ -47,14 +82,21 @@ function bodyLines(md: string): string[] {
  */
 class CardScanner {
   private readonly cards: ParsedCard[] = [];
+  private readonly locations: CardLocation[] = [];
   private buffer: string[] = [];
   private pendingFront: string | null = null;
   private insideFence = false;
+  /** Index of the last line taken as content — where a card's answer ends. */
+  private lastContentLine = -1;
+  private lineIndex = -1;
 
-  scan(lines: string[]): ParsedCard[] {
-    for (const line of lines) this.consume(line);
+  scan(lines: string[]): ScanResult {
+    for (const [index, line] of lines.entries()) {
+      this.lineIndex = index;
+      this.consume(line);
+    }
     this.flush();
-    return this.cards;
+    return { cards: this.cards, locations: this.locations };
   }
 
   private consume(line: string): void {
@@ -62,11 +104,11 @@ class CardScanner {
 
     if (trimmed.startsWith(FENCE)) {
       this.insideFence = !this.insideFence;
-      this.buffer.push(line);
+      this.take(line);
       return;
     }
     if (this.insideFence) {
-      this.buffer.push(line);
+      this.take(line);
       return;
     }
     if (this.startsInlineCard(trimmed)) {
@@ -81,7 +123,12 @@ class CardScanner {
       this.flush();
       return;
     }
+    this.take(line);
+  }
+
+  private take(line: string): void {
     this.buffer.push(line);
+    this.lastContentLine = this.lineIndex;
   }
 
   private startsInlineCard(trimmed: string): boolean {
@@ -92,7 +139,11 @@ class CardScanner {
     const separator = line.indexOf(INLINE_SEPARATOR);
     const front = cleanFront(line.slice(0, separator));
     const rest = line.slice(separator + INLINE_SEPARATOR.length);
-    this.addCard(front, stripReviewComments(rest).trim(), parseReviewStates(rest));
+    this.addCard(front, stripReviewComments(rest).trim(), parseReviewStates(rest), {
+      front,
+      kind: "inline",
+      answerEndLine: this.lineIndex,
+    });
     this.buffer = [];
   }
 
@@ -104,7 +155,11 @@ class CardScanner {
   private flush(): void {
     if (this.pendingFront !== null) {
       const raw = this.buffer.join("\n");
-      this.addCard(this.pendingFront, stripReviewComments(raw).trim(), parseReviewStates(raw));
+      this.addCard(this.pendingFront, stripReviewComments(raw).trim(), parseReviewStates(raw), {
+        front: this.pendingFront,
+        kind: "block",
+        answerEndLine: this.lastContentLine,
+      });
       this.pendingFront = null;
     }
     this.buffer = [];
@@ -114,10 +169,12 @@ class CardScanner {
     front: string,
     back: string,
     reviews: ReturnType<typeof parseReviewStates>,
+    location: CardLocation,
   ): void {
     if (!front || !back) return;
     const review = reviews[0];
     this.cards.push({ front, back, ...(review ? { review } : {}) });
+    this.locations.push(location);
   }
 }
 

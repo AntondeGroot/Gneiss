@@ -1,8 +1,8 @@
 import { Injectable } from "@angular/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 
-import { parseNote } from "../../vault";
-import type { ParsedNote } from "../../vault";
+import { parseNote, withReviewState } from "../../vault";
+import type { ParsedNote, ReviewState } from "../../vault";
 
 const MARKDOWN_EXTENSION = ".md";
 
@@ -18,10 +18,11 @@ interface VaultLocation {
 }
 
 /**
- * Reads an Obsidian vault off the filesystem and parses it into cards.
+ * Reads an Obsidian vault off the filesystem and parses it into cards, and
+ * records review state back into the notes.
  *
- * Gneiss does not own the vault: this service only ever reads. Writing review
- * state back is a separate concern, deliberately not mixed in here.
+ * Gneiss does not own the vault. The only thing it ever writes to a note is that
+ * card's `<!--SR:-->` comment — never its content, and never its structure.
  */
 @Injectable({ providedIn: "root" })
 export class VaultService {
@@ -37,6 +38,37 @@ export class VaultService {
     const location: VaultLocation = { path, directory: this.directory };
     const paths = await this.collectMarkdownPaths(location, "");
     return Promise.all(paths.map((notePath) => this.readNote(location, notePath)));
+  }
+
+  /**
+   * Records a card's review state in its note.
+   *
+   * The only write Gneiss makes to a note. Read-modify-write on the file as it is
+   * on disk right now, not on a cached copy, so a note edited in Obsidian since
+   * the last read keeps those edits.
+   */
+  async writeReviewState(
+    vaultPath: string,
+    notePath: string,
+    front: string,
+    review: ReviewState,
+  ): Promise<void> {
+    const location: VaultLocation = { path: vaultPath, directory: this.directory };
+    const full = joinPath(vaultPath, notePath);
+
+    const { data } = await Filesystem.readFile({
+      path: full,
+      directory: location.directory,
+      encoding: Encoding.UTF8,
+    });
+    const updated = withReviewState(await asText(data), front, review);
+
+    await Filesystem.writeFile({
+      path: full,
+      data: updated,
+      directory: location.directory,
+      encoding: Encoding.UTF8,
+    });
   }
 
   /** Depth-first walk — real vaults organise notes into folders. */
