@@ -7,9 +7,13 @@ import { VaultService } from "./vault.service";
 // reference a plain function — a detached method would trip unbound-method.
 const { readdir, readFile } = vi.hoisted(() => ({ readdir: vi.fn(), readFile: vi.fn() }));
 
-vi.mock("@capacitor/filesystem", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@capacitor/filesystem")>()),
+// Stubbed outright rather than spread over the real module: `importOriginal`
+// with an inline `typeof import(...)` is sensitive to hoisting order. The service
+// only touches these three exports, so naming them keeps the mock honest.
+vi.mock("@capacitor/filesystem", () => ({
   Filesystem: { readdir, readFile },
+  Directory: { Documents: "DOCUMENTS" },
+  Encoding: { UTF8: "utf8" },
 }));
 
 const VAULT_PATH = "Vault";

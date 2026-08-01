@@ -1,0 +1,8 @@
+<nav>
+  <a routerLink="/today" routerLinkActive="active">
+    Today @if (due().length > 0) {
+    <span class="badge">{{ due().length }}</span>
+    }
+  </a>
+  <a routerLink="/vault" routerLinkActive="active">Vault</a>
+</nav>
