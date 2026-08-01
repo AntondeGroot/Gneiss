@@ -5,7 +5,8 @@ import { RouterLink } from "@angular/router";
 import type { Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import type { DeckCard } from "../services/deck.service";
-import { FolderPickerService } from "../services/folder-picker.service";
+import { BrowserVaultSource } from "../services/browser-vault.source";
+import { CapacitorVaultSource } from "../services/capacitor-vault.source";
 import { SampleVaultService } from "../services/sample-vault.service";
 
 export interface NoteGroup {
@@ -23,9 +24,12 @@ export interface NoteGroup {
 export class VaultScreen {
   private readonly deck = inject(DeckService);
   private readonly samples = inject(SampleVaultService);
-  private readonly picker = inject(FolderPickerService);
+  private readonly deviceSource = inject(CapacitorVaultSource);
+  private readonly browserSource = inject(BrowserVaultSource);
 
-  protected readonly canPickFolder = this.picker.supported;
+  protected readonly canPickFolder = this.browserSource.isAvailable();
+  protected readonly sourceLabel = this.deck.sourceLabel;
+  protected readonly canWrite = this.deck.canWrite;
 
   protected readonly path = signal("Vault");
   protected readonly status = signal("Nothing read yet.");
@@ -54,7 +58,7 @@ export class VaultScreen {
   private async load(): Promise<void> {
     this.busy.set(true);
     try {
-      await this.deck.load(this.path());
+      await this.deck.open(this.deviceSource, this.path());
       this.status.set(describeResult(this.notes().length, this.deck.all().length));
     } catch (error) {
       this.status.set(`Could not read "${this.path()}" — ${messageOf(error)}`);
@@ -63,13 +67,11 @@ export class VaultScreen {
     }
   }
 
-  /** Read-only: nothing is written back to a folder opened this way. */
   private async openFolder(): Promise<void> {
     this.busy.set(true);
     try {
-      const notes = await this.picker.pickAndRead();
-      this.deck.setNotes(notes);
-      this.status.set(`${describeResult(this.notes().length, this.deck.all().length)} · read-only`);
+      await this.deck.open(this.browserSource, "");
+      this.status.set(describeResult(this.notes().length, this.deck.all().length));
     } catch (error) {
       this.status.set(`Could not open that folder — ${messageOf(error)}`);
     } finally {

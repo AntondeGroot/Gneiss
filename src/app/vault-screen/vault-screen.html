@@ -21,6 +21,14 @@
   }
 </div>
 
+@if (sourceLabel()) {
+<p class="source">
+  {{ sourceLabel() }} @if (!canWrite()) {
+  <span class="readonly">· read-only, grades will not be saved</span>
+  }
+</p>
+}
+
 <p class="status">
   {{ status() }} @if (dueCount() > 0) {
   <a class="review-link" routerLink="/review">Review {{ dueCount() }} due →</a>

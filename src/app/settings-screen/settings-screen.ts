@@ -64,7 +64,7 @@ export class SettingsScreen {
     this.saving.set(true);
     const config = this.draft();
     try {
-      await this.deck.saveConfig(this.deck.vaultPath(), config);
+      await this.deck.saveConfig(config);
       await this.reminders.apply(config.reminderOn, config.reminderAt);
       this.message.set("Saved to .gneiss/config.md in the vault.");
     } catch (error) {
