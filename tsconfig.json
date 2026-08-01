@@ -1,11 +1,19 @@
+/* Base config shared by the app and the tests through the project references
+   below. Angular's generated defaults, plus the strict flags the vault module
+   was written under — those are kept, not relaxed, now that Angular owns src/. */
 {
+  "compileOnSave": false,
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "types": ["vitest/globals"],
+    "module": "preserve",
 
+    /* Angular's defaults */
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+
+    /* Carried over from the vault module */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
@@ -16,8 +24,17 @@
 
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true,
+    "extendedDiagnostics": {
+      "defaultCategory": "error"
+    }
+  },
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.spec.json" }]
 }

@@ -39,13 +39,24 @@ jobs:
       - name: Format check
         run: npm run format:check
 
-      # Fails on a failing test, and on coverage below the ratcheted floor
-      # in vite.config.js.
-      - name: Test
+      # The vault module's suite, under standalone Vitest. Fails on a failing
+      # test, and on coverage below the ratcheted floor in vite.config.js.
+      - name: Test vault module
         run: npm run test -- --coverage
 
-      - name: Build
+      # Angular's own specs, under its unit-test builder.
+      - name: Test app
+        run: npm run test:app
+
+      # Also the template type-check: tsc alone does not catch template errors,
+      # only a real build does.
+      - name: Build app
         run: npm run build
+
+      # Kept building so the prototype cannot silently rot while it is still the
+      # design reference.
+      - name: Build prototype
+        run: npm run prototype:build
 
       - name: Upload coverage
         if: always()

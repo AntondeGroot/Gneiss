@@ -1,0 +1,10 @@
+/* Tests. Covers both suffixes: Angular's generated specs use *.spec.ts, while
+   the vault module's suite uses *.test.ts and runs under standalone Vitest.
+   Both are type-checked here so neither can drift uncompiled. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
+}
