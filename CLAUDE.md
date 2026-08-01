@@ -266,6 +266,36 @@ document-picker / permission model, plus sync-conflict handling). Accepted knowi
 - The vault is five hardcoded markdown strings in `SEED`.
 - Streak is a plain counter with no date logic.
 
+## Images on cards (OPEN, not built)
+
+Anticipated, and the current design accommodates it — recorded so the constraints aren't
+rediscovered later.
+
+Obsidian embeds images as `![[diagram.png]]` (wikilink) or `![alt](assets/diagram.png)`
+(standard markdown). Both are plain text inside a card's answer, and `parseNote` already
+passes them through untouched, the same way it passes through fenced code. So a card
+*carries* an image reference today; only rendering is missing.
+
+`VaultService` deliberately does **not** read non-markdown files during the walk, and that
+stays right once images are supported: an image should load when the card referencing it is
+shown, not by pulling every attachment in the vault through the filesystem bridge at
+startup. Eager reading would be the bug, not the fix.
+
+Two things are needed to actually display one:
+
+- **Rewrite embeds into loadable URLs** at render time, via `Capacitor.convertFileSrc(uri)`.
+  It hands the webview a native file path directly — no base64, and the bytes never enter
+  JS memory.
+- **Resolve the attachment path.** `![[diagram.png]]` names a file without saying where it
+  is; Obsidian resolves it by searching the whole vault. That needs a map of
+  attachment filename → path.
+
+**The one decision with a cost attached:** that map is cheapest to build during the
+directory walk that already exists, since every listing is read there anyway. Collecting it
+later means either a second full traversal or reworking the walk. Deferred deliberately —
+the walk is small and well covered, so adding a second return value to `readNotes` is a
+contained change when it's actually needed.
+
 ## Next steps discussed
 
 - ~~**Format detection**~~ — **RESOLVED**, see *Vault conventions this assumes*: real
