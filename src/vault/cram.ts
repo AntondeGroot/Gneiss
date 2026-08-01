@@ -24,10 +24,11 @@ const MINIMUM_INTERVAL = 1;
 export function cramClamp(
   interval: number,
   topicTags: string[],
-  cram: CramState,
+  /** Null when no cram is configured at all — the usual case. */
+  cram: CramState | null,
   today: string,
 ): number {
-  if (!cram.active) return interval;
+  if (!cram?.active) return interval;
   if (!topicTags.some((tag) => isWithinScope(tag, cram.scope))) return interval;
 
   const daysLeft = daysBetween(today, cram.examDate);
