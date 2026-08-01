@@ -15,17 +15,20 @@ export default defineConfig({
       // types.ts is type-only (no runtime code); index.ts is a re-export barrel.
       exclude: ["src/**/*.test.ts", "src/vault/types.ts", "src/vault/index.ts"],
       reporter: ["text-summary", "lcov"],
-      // Ratchet: a frozen floor pinned just under the current numbers, so coverage
-      // can only rise. Lines, functions and statements are past the checklist's
-      // target of 90.
-      // TODO: climb branches to 90 — the shortfall is the unexercised edges
-      // (frontmatter tiers, multi-entry SR comments, inline cards carrying review
-      // state, and notes matching no mapping row).
+      // Ratchet: a frozen floor pinned at the current numbers, so coverage can
+      // only rise. Lines, functions and statements are past the checklist's 90.
+      //
+      // Branches sit below 90 and the remainder is deliberate: what's left is
+      // defensive code that is unreachable by construction or guards a case the
+      // types already exclude — `lastNonBlankLine` returning null (withTier
+      // early-returns unless the note has a tag), the NaN date guard, and the
+      // `?? ""` fallbacks behind a regex that has already matched. Contriving
+      // tests for those would buy a number, not confidence.
       thresholds: {
-        lines: 96,
-        branches: 76,
-        functions: 94,
-        statements: 92,
+        lines: 99,
+        branches: 83,
+        functions: 100,
+        statements: 95,
       },
     },
   },

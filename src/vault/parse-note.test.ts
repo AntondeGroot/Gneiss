@@ -70,6 +70,23 @@ Count the lines in a file :: \`wc -l file\`
     ]);
   });
 
+  it("attaches review state trailing an inline card, keeping it out of the answer", () => {
+    const md = `Redirect stdout to a file :: \`cmd > out.txt\` <!--SR:!2026-08-21,3,250-->
+
+#flashcards/shell
+`;
+
+    const { cards } = parseNote(md, "redirection.md");
+
+    expect(cards).toEqual([
+      {
+        front: "Redirect stdout to a file",
+        back: "`cmd > out.txt`",
+        review: { due: "2026-08-21", interval: 3, ease: 2.5 },
+      },
+    ]);
+  });
+
   it("collects only flashcards tags as topics, reading a tier tag as the override", () => {
     const md = `What does \`2>&1\` do?
 ?
