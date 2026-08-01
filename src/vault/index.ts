@@ -22,3 +22,5 @@ export { resolveTier, tierGrowth } from "./tier.js";
 export { cramClamp, daysBetween } from "./cram.js";
 export { addDays, isDue, newReviewState, schedule, STARTING_EASE } from "./schedule.js";
 export type { SchedulingOptions } from "./schedule.js";
+export { DEFAULT_CONFIG, formatConfig, parseConfig } from "./config.js";
+export type { GneissConfig } from "./config.js";

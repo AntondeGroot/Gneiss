@@ -1,6 +1,9 @@
 import { Injectable } from "@angular/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 
+import { formatConfig } from "../../vault";
+import type { GneissConfig } from "../../vault";
+
 /**
  * Writes a small sample vault to the filesystem.
  *
@@ -17,6 +20,7 @@ export class SampleVaultService {
     for (const [relativePath, contents] of Object.entries(SAMPLE_NOTES)) {
       await this.write(`${root}/${relativePath}`, contents);
     }
+    await this.write(`${root}/.gneiss/config.md`, formatConfig(SAMPLE_CONFIG));
   }
 
   private async write(path: string, data: string): Promise<void> {
@@ -29,6 +33,18 @@ export class SampleVaultService {
     });
   }
 }
+
+/** Mirrors the sample notes below, so the seeded vault shows real tier spread. */
+const SAMPLE_CONFIG: GneissConfig = {
+  spread: 0.8,
+  tiers: {
+    "#flashcards/git": "core",
+    "#flashcards/shell": "core",
+    "#flashcards/tools": "standard",
+    "#flashcards/lang": "standard",
+  },
+  cram: null,
+};
 
 /** Deliberately varied: both card syntaxes, a subfolder, a tier override, prior review state. */
 const SAMPLE_NOTES: Record<string, string> = {
