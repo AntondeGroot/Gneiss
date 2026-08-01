@@ -1,16 +1,9 @@
 import { Injectable, computed, inject, signal } from "@angular/core";
 
-import { isDue, newReviewState, resolveTier, schedule } from "../../vault";
-import type { CramState, Grade, ParsedNote, ReviewState, Tier, TierMapping } from "../../vault";
+import { DEFAULT_CONFIG, isDue, newReviewState, resolveTier, schedule } from "../../vault";
+import type { GneissConfig, Grade, ParsedNote, ReviewState, Tier, TierMapping } from "../../vault";
+import { ConfigService } from "./config.service";
 import { VaultService } from "./vault.service";
-
-// TODO: belongs in .gneiss/config.md inside the vault, so it syncs with the notes.
-const TIER_MAPPING: TierMapping = {
-  "#flashcards/git": "core",
-  "#flashcards/shell": "core",
-  "#flashcards/tools": "standard",
-  "#flashcards/lang": "standard",
-};
 
 /** A parsed card plus everything scheduling needs to act on it. */
 export interface DeckCard {
@@ -35,18 +28,27 @@ export interface DeckCard {
 @Injectable({ providedIn: "root" })
 export class DeckService {
   private readonly vault = inject(VaultService);
+  private readonly configFile = inject(ConfigService);
   private readonly cards = signal<readonly DeckCard[]>([]);
 
-  /** Core emphasis, 0..1. TODO: move to Settings alongside the tier mapping. */
-  readonly spread = signal(0.8);
-  readonly cram = signal<CramState | null>(null);
+  /** Read from `.gneiss/config.md` in the vault, so it syncs across devices. */
+  readonly config = signal<GneissConfig>(DEFAULT_CONFIG);
 
   readonly all = this.cards.asReadonly();
   readonly due = computed(() => this.cards().filter((card) => isDue(card.review, today())));
 
   async load(path: string): Promise<void> {
+    const config = await this.configFile.read(path);
+    this.config.set(config);
+
     const notes = await this.vault.readNotes(path);
-    this.cards.set(notes.flatMap(toCards));
+    this.cards.set(notes.flatMap((note) => toCards(note, config.tiers)));
+  }
+
+  /** Persists settings back into the vault. */
+  async saveConfig(path: string, config: GneissConfig): Promise<void> {
+    this.config.set(config);
+    await this.configFile.write(path, config);
   }
 
   /** What the interval would become, without committing the grade. */
@@ -64,16 +66,16 @@ export class DeckService {
   private optionsFor(card: DeckCard) {
     return {
       tier: card.tier,
-      spread: this.spread(),
+      spread: this.config().spread,
       today: today(),
       topicTags: card.topicTags,
-      cram: this.cram(),
+      cram: this.config().cram,
     };
   }
 }
 
-function toCards(note: ParsedNote): DeckCard[] {
-  const tier = resolveTier(note, TIER_MAPPING);
+function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
+  const tier = resolveTier(note, tiers);
   return note.cards.map((card) => ({
     id: `${note.note}::${card.front}`,
     note: note.note,
