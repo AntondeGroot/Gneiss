@@ -6,11 +6,13 @@
   "labels": ["dependencies"],
   "prConcurrentLimit": 5,
   "minimumReleaseAge": "3 days",
+  "platformAutomerge": true,
   "packageRules": [
     {
-      "description": "Catch-all: one PR for every remaining non-major update. Listed first because Renovate cascades — later rules override this grouping for the ecosystems below.",
+      "description": "Catch-all: one PR for every remaining non-major update, merged automatically once CI passes. Listed first because Renovate cascades — later rules override this grouping for the ecosystems below, while inheriting the automerge set here.",
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "all non-major dependencies"
+      "groupName": "all non-major dependencies",
+      "automerge": true
     },
     {
       "description": "Vitest and its coverage provider are peer-versioned; bumping them in separate PRs makes each fail CI on its own.",
@@ -43,10 +45,11 @@
       "groupName": "typescript"
     },
     {
-      "description": "Majors are never grouped and never opened automatically: each one waits for approval on the Dependency Dashboard, then gets its own PR.",
+      "description": "Majors are never grouped, never opened automatically and never automerged: each one waits for approval on the Dependency Dashboard, then gets its own PR to review by hand.",
       "matchUpdateTypes": ["major"],
       "groupName": null,
-      "dependencyDashboardApproval": true
+      "dependencyDashboardApproval": true,
+      "automerge": false
     }
   ]
 }
