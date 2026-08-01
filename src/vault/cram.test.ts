@@ -39,4 +39,11 @@ describe("cramClamp", () => {
     // Cramming a subtopic must not drag its broader parent topic in with it.
     expect(cramClamp(30, ["#flashcards/lang"], cram, duringTheCram)).toBe(30);
   });
+
+  it("leaves intervals alone while no cram is active", () => {
+    const noCram: CramState = { ...cram, active: false };
+
+    // Same tag and same date that clamped 30 down to 8 above — only the flag differs.
+    expect(cramClamp(30, [EXAM_TAG], noCram, "2026-08-12")).toBe(30);
+  });
 });
