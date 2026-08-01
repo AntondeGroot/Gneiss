@@ -223,6 +223,22 @@ App config (tag→tier mapping, `spread`, cram state) is a third kind of state a
 
 Reminders are **on-device** (Capacitor Local Notifications) — no push server.
 
+### Native build setup
+
+`capacitor.config.ts` points `webDir` at `dist/gneiss/browser`, so the Angular app must
+be built before syncing. `npm run cap:sync` does both; `cap:android` / `cap:ios` sync and
+then open the native IDE.
+
+- **Android needs JDK 21**, not the newest installed JDK. Gradle 8.14.3 (what the Capacitor
+  template ships) cannot read class file major version 69+, so a default `JAVA_HOME` of
+  JDK 25/26 fails at settings evaluation with *"Unsupported class file major version"*.
+  Run Gradle with `JAVA_HOME=$(/usr/libexec/java_home -v 21)`, or set `org.gradle.java.home`
+  in `~/.gradle/gradle.properties` — user-level, so no machine-specific path is committed.
+- **iOS needs full Xcode plus CocoaPods**, not just the Command Line Tools. The platform is
+  not added yet for that reason.
+- `android/` and `ios/` are generated and hold a copy of the built web bundle, so both are
+  excluded from lint and formatting.
+
 ### The trade this accepts
 
 This is route 2 below. It deliberately gives up the *easiest* vault access (route 1, the
