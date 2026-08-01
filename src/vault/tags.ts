@@ -27,7 +27,7 @@ export function findTopicTags(md: string): string[] {
 
 /** A per-note `#core` / `#optional` tag, if the note carries one. */
 export function findTierOverride(md: string): Tier | undefined {
-  const match = md.match(/#(core|optional)\b/i);
+  const match = HAS_TIER_TAG.exec(md);
   if (!match?.[1]) return undefined;
   return match[1].toLowerCase() as Tier;
 }
@@ -58,28 +58,22 @@ export function withTier(md: string, tier: Tier): string {
  * whose tier is unchanged must come back byte-for-byte identical.
  */
 function removeTierTags(md: string): string {
-  return md
-    .split("\n")
-    .map(removeTierTagFromLine)
-    .filter((line) => line !== LINE_REMOVED)
-    .join("\n");
+  return md.split("\n").flatMap(withoutTierTag).join("\n");
 }
 
-/** Sentinel for a line that held only a tier tag and should disappear entirely. */
-const LINE_REMOVED = Symbol("line removed");
+/** The line with its tier tags gone, or nothing at all if it held only one. */
+function withoutTierTag(line: string): string[] {
+  if (!HAS_TIER_TAG.test(line)) return [line];
 
-function removeTierTagFromLine(line: string): string | typeof LINE_REMOVED {
-  if (!HAS_TIER_TAG.test(line)) return line;
-
-  const cleaned = line.replace(TIER_TAG, "").replace(/[ \t]+$/, "");
+  const cleaned = line.replace(TIER_TAG, "").trimEnd();
   const heldNothingElse = cleaned.trim() === "" && line.trim() !== "";
-  return heldNothingElse ? LINE_REMOVED : cleaned;
+  return heldNothingElse ? [] : [cleaned];
 }
 
 function appendToTagBlock(md: string, tag: string): string {
   const lines = md.split("\n");
   const blockStart = findTrailingTagBlockStart(lines);
-  if (blockStart === null) return `${md.replace(/\s*$/, "")}\n\n${tag}\n`;
+  if (blockStart === null) return `${md.trimEnd()}\n\n${tag}\n`;
 
   const lastTagLine = findLastTagLine(lines, blockStart);
   lines[lastTagLine] = `${lines[lastTagLine]?.trimEnd() ?? ""}\n${tag}`;
