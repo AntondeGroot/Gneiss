@@ -51,4 +51,28 @@ describe("VaultService", () => {
     expect(notes.map((note) => note.note)).toEqual(["grep.md"]);
     expect(readdir).not.toHaveBeenCalledWith(expect.objectContaining({ path: "Vault/.obsidian" }));
   });
+
+  it("descends through nested folders, identifying notes by path rather than filename", async () => {
+    const card = "Question? :: Answer\n\n#flashcards/lang\n";
+    givenVault(
+      {
+        Vault: [entry("grep.md", "file"), entry("Java", "directory")],
+        "Vault/Java": [entry("generics.md", "file"), entry("Streams", "directory")],
+        "Vault/Java/Streams": [entry("reduce.md", "file")],
+      },
+      {
+        "Vault/grep.md": card,
+        "Vault/Java/generics.md": card,
+        "Vault/Java/Streams/reduce.md": card,
+      },
+    );
+
+    const notes = await service.readNotes(LOCATION);
+
+    expect(notes.map((note) => note.note)).toEqual([
+      "grep.md",
+      "Java/generics.md",
+      "Java/Streams/reduce.md",
+    ]);
+  });
 });
