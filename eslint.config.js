@@ -180,8 +180,9 @@ export default tseslint.config(
 
   // ——— Tests: same correctness rules, but the size caps do not apply ———
   // Specs are legitimately long (fixtures, byte-exact expected strings).
+  // Covers both suffixes: *.test.ts (vault module) and *.spec.ts (Angular).
   {
-    files: ["src/**/*.test.ts"],
+    files: ["src/**/*.test.ts", "src/**/*.spec.ts"],
     rules: {
       "max-lines": "off",
       "max-lines-per-function": "off",
