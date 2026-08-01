@@ -1,5 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 
+// The parser, tier resolution, growth curve and tag rewriting all come from
+// src/vault — the framework-free module the real Angular app will lift unchanged.
+// Note there is no filesystem here: "the vault" is the noteSources state below,
+// so withTier() rewrites an in-memory string and nothing reaches disk.
+import { parseNote, resolveTier, tierGrowth, withTier } from "../src/vault";
+
 // ——— Palette: "darkroom" — inherited from Keeper, charcoal + safelight amber ———
 const C = {
   bg: "#131110",
@@ -29,26 +35,24 @@ const TIERS = {
   optional: { label: "Good to have", color: C.faint, note: "drifts out" },
 };
 
-// "Core emphasis" slider (spread: 0 flat … 1 aggressive) sets the growth spread.
-// At spread 0 every tier grows the same; at 1 core comes back much sooner than
-// good-to-have. This is the knob behind "grep matters more than java."
-function tierGrowth(tier, spread) {
-  if (tier === "standard") return 1.0;
-  if (tier === "core") return 1 - 0.45 * spread;   // 1.0 → 0.55
-  return 1 + 0.8 * spread;                          // 1.0 → 1.8  (optional)
-}
+// Tier is not hand-set per note: a topic tag maps to a tier, and a per-note
+// #core / #optional tag overrides that. Stands in for the Settings table.
+const TIER_MAPPING = {
+  "#flashcards/git": "core",
+  "#flashcards/shell": "core",
+  "#flashcards/tools": "standard",
+  "#flashcards/lang": "standard",
+};
 
 // ——— Mock Obsidian vault (stands in for real markdown notes) ———
 // ——— Mock Obsidian vault: real markdown, the way the notes actually live ———
 // Two card formats are supported, matching the Obsidian SR plugin conventions:
 //   inline   →  Question :: Answer
 //   block    →  Question / a line with just ? / Answer
-// Tier comes from `tier:` frontmatter, or an inline #core / #standard / #optional tag.
+// Tier comes from the note's #flashcards/<topic> tag via TIER_MAPPING, or from a
+// per-note #core / #optional tag that overrides it (see java-generics.md).
 const SEED = [
-  { note: "grep.md", md: `---
-tier: core
----
-# grep
+  { note: "grep.md", md: `# grep
 
 Recursively search a string in every file under the current dir? :: grep -r "pattern" .
 
@@ -63,11 +67,10 @@ Show 3 lines of context around each match?
 grep -C 3 "pattern"   (-A after, -B before)
 
 Print only the lines that do NOT match? :: grep -v "pattern" file
+
+#flashcards/shell
 ` },
-  { note: "git.md", md: `---
-tier: core
----
-# git cheatsheet
+  { note: "git.md", md: `# git cheatsheet
 
 Unstage a file you already added? :: git restore --staged <file>   (old: git reset HEAD)
 Change the most recent commit message? :: git commit --amend
@@ -79,20 +82,20 @@ Create a branch and switch to it in one step?
 git switch -c <branch>   (old: checkout -b)
 
 Stage only selected chunks of a file interactively? :: git add -p
+
+#flashcards/git
 ` },
-  { note: "docker.md", md: `---
-tier: standard
----
-List currently running containers? :: docker ps      (add -a for all)
+  { note: "docker.md", md: `List currently running containers? :: docker ps      (add -a for all)
 Follow the logs of a running container? :: docker logs -f <container>
+
+#flashcards/tools
 ` },
-  { note: "vim.md", md: `---
-tier: standard
----
-Save and quit from normal mode? :: :wq        (or ZZ)
+  { note: "vim.md", md: `Save and quit from normal mode? :: :wq        (or ZZ)
 Delete the current line? :: dd
+
+#flashcards/tools
 ` },
-  { note: "java-generics.md", md: `# Java generics  #optional
+  { note: "java-generics.md", md: `# Java generics
 
 Create an immutable list literal? :: List.of(a, b, c)
 
@@ -103,80 +106,18 @@ Read Numbers out (producer). You can't safely add.
 == vs .equals() for objects?
 ?
 == compares references; .equals() compares logical value.
+
+#flashcards/lang
+#optional
 ` },
 ];
 
-// ——— The parser: Obsidian markdown → cards + tier ———
-function parseNote(md, filename) {
-  const lines = (md || "").replace(/\r\n/g, "\n").split("\n");
-  let tier = null;
-  let i = 0;
+// The parser and the tag rewriter used to live here. They now come from
+// src/vault, so this file no longer knows anything about markdown syntax.
 
-  // frontmatter block
-  if (lines[0]?.trim() === "---") {
-    let j = 1;
-    for (; j < lines.length && lines[j].trim() !== "---"; j++) {
-      const m = lines[j].match(/^tier:\s*(core|standard|optional)/i);
-      if (m) tier = m[1].toLowerCase();
-    }
-    i = j + 1;
-  }
-  const body = lines.slice(i);
-
-  // inline #tier tag fallback
-  if (!tier) {
-    const m = body.join("\n").match(/#(core|standard|optional)\b/i);
-    if (m) tier = m[1].toLowerCase();
-  }
-  tier = tier || "standard";
-
-  const cards = [];
-  let inFence = false, buf = [], pendingFront = null;
-  const clean = (s) => s.replace(/^#+\s*/, "").replace(/#(core|standard|optional)\b/gi, "").trim();
-  const flush = () => {
-    if (pendingFront !== null) {
-      const back = buf.join("\n").trim();
-      if (back) cards.push({ front: pendingFront, back });
-      pendingFront = null;
-    }
-    buf = [];
-  };
-
-  for (const line of body) {
-    const t = line.trim();
-    if (t.startsWith("```")) { inFence = !inFence; buf.push(line); continue; }
-    if (inFence) { buf.push(line); continue; }
-
-    if (pendingFront === null && t.includes("::")) {          // inline card
-      const idx = line.indexOf("::");
-      const front = clean(line.slice(0, idx));
-      const back = line.slice(idx + 2).trim();
-      if (front && back) cards.push({ front, back });
-      buf = [];
-      continue;
-    }
-    if (t === "?") { pendingFront = clean(buf.join(" ")) || null; buf = []; continue; }  // block separator
-    if (t === "") { flush(); continue; }
-    buf.push(line);
-  }
-  flush();
-
-  return { note: filename, tier, cards: cards.filter((c) => c.front && c.back) };
-}
-
-// ——— rewrite a note's markdown to a new tier (keeps markdown the source of truth) ———
-function withTier(md, tier) {
-  const lines = (md || "").replace(/\r\n/g, "\n").split("\n");
-  if (lines[0]?.trim() === "---") {
-    let j = 1, found = false;
-    for (; j < lines.length && lines[j].trim() !== "---"; j++) {
-      if (/^tier:/i.test(lines[j])) { lines[j] = `tier: ${tier}`; found = true; }
-    }
-    if (!found) lines.splice(1, 0, `tier: ${tier}`);
-    return lines.join("\n");
-  }
-  const stripped = (md || "").replace(/#(core|standard|optional)\b/gi, "").replace(/[ \t]+$/gm, "");
-  return `---\ntier: ${tier}\n---\n${stripped.replace(/^\n+/, "")}`;
+/** A note's tier: its own #core / #optional tag, else the topic mapping. */
+function tierOf(parsed) {
+  return resolveTier(parsed, TIER_MAPPING);
 }
 
 // ——— stable ids so editing a note preserves review progress on unchanged cards ———
@@ -188,8 +129,9 @@ function buildCards() {
   _id = 0;
   const out = [];
   SEED.forEach((n) => {
-    const p = parseNote(n.md, n.note);
-    p.cards.forEach((c) => out.push(makeCard(n.note, p.tier, c.front, c.back)));
+    const parsed = parseNote(n.md, n.note);
+    const tier = tierOf(parsed);
+    parsed.cards.forEach((c) => out.push(makeCard(n.note, tier, c.front, c.back)));
   });
   return out;
 }
@@ -302,8 +244,10 @@ export default function Gneiss() {
   function saveNote(note, md) {
     const parsed = parseNote(md, note);
     setNoteSources((s) => ({ ...s, [note]: md }));
-    setCards((prev) => reconcileNote(prev, note, parsed.tier, parsed.cards));
+    setCards((prev) => reconcileNote(prev, note, tierOf(parsed), parsed.cards));
   }
+  // Rewrites the note's tag block, then re-parses it — the markdown stays the
+  // source of truth, exactly as the real app will do against the filesystem.
   function setNoteTier(note, tier) {
     saveNote(note, withTier(noteSources[note], tier));
   }
@@ -618,7 +562,7 @@ function NoteEditor({ note, md, onBack, onSave }) {
   const [draft, setDraft] = useState(md);
   const parsed = useMemo(() => parseNote(draft, note), [draft, note]);
   const dirty = draft !== md;
-  const tier = TIERS[parsed.tier];
+  const tier = TIERS[tierOf(parsed)];
 
   return (
     <div style={{ animation: "rise .3s ease" }}>
