@@ -10,6 +10,8 @@ describe("config round trip", () => {
       newPerDay: 12,
       streak: 4,
       lastReviewedOn: "2026-08-01",
+      reminderOn: true,
+      reminderAt: "07:15",
       tiers: { "#flashcards/git": "core", "#flashcards/lang/certexam": "optional" },
       cram: { active: true, scope: "#flashcards/lang/certexam", examDate: "2026-09-01" },
     };
@@ -42,6 +44,8 @@ Notes below the frontmatter are ignored.
       newPerDay: 8,
       streak: 0,
       lastReviewedOn: "",
+      reminderOn: false,
+      reminderAt: "08:30",
       tiers: { "#flashcards/git": "core", "#flashcards/tools": "standard" },
       cram: { active: true, scope: "#flashcards/lang", examDate: "2026-12-01" },
     });

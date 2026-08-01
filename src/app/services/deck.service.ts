@@ -37,7 +37,9 @@ export class DeckService {
   private readonly vault = inject(VaultService);
   private readonly configFile = inject(ConfigService);
   private readonly cards = signal<readonly DeckCard[]>([]);
-  private readonly vaultPath = signal("");
+  private readonly path = signal("");
+  /** Where the vault was loaded from, so settings can be written back to it. */
+  readonly vaultPath = this.path.asReadonly();
 
   /** Read from `.gneiss/config.md` in the vault, so it syncs across devices. */
   readonly config = signal<GneissConfig>(DEFAULT_CONFIG);
@@ -71,7 +73,7 @@ export class DeckService {
   );
 
   async load(path: string): Promise<void> {
-    this.vaultPath.set(path);
+    this.path.set(path);
     const config = await this.configFile.read(path);
     this.config.set(config);
 

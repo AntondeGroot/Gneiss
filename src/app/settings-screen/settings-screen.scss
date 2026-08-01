@@ -1,0 +1,177 @@
+$bg: #131110;
+$panel: #1c1916;
+$panel2: #221e1a;
+$line: #2c2722;
+$text: #ede6dc;
+$dim: #9a9087;
+$faint: #6e665e;
+$amber: #e5a045;
+$teal: #7fa8a0;
+
+:host {
+  display: block;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  color: $text;
+  font-family: "Hanken Grotesk", "Avenir Next", system-ui, sans-serif;
+}
+
+.bar {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.back {
+  color: $dim;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+h1 {
+  margin: 0;
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 500;
+  font-size: 1.5rem;
+}
+
+h2 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.group {
+  border: 1px solid $line;
+  border-radius: 0.8rem;
+  background: $panel;
+  padding: 1rem 1.05rem;
+  margin-bottom: 0.9rem;
+}
+
+.hint {
+  margin: 0 0 0.9rem;
+  color: $dim;
+  font-size: 0.82rem;
+  line-height: 1.5;
+
+  &.small {
+    margin: 0.6rem 0 0;
+    font-size: 0.74rem;
+    color: $faint;
+  }
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: $amber;
+}
+
+input[type="number"],
+input[type="time"],
+input[type="date"],
+input[name="cramScope"] {
+  width: 100%;
+  background: $panel2;
+  border: 1px solid $line;
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  color: $text;
+  font: inherit;
+  font-size: 0.88rem;
+  color-scheme: dark;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  margin-bottom: 0.7rem;
+
+  input {
+    accent-color: $amber;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.field {
+  display: block;
+  margin-bottom: 0.7rem;
+
+  span {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: $faint;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+
+.preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    align-items: center;
+    padding: 0.5rem 0.3rem;
+    border: 1px solid $line;
+    border-radius: 0.55rem;
+    background: $panel2;
+  }
+
+  .tier {
+    font-size: 0.68rem;
+    text-transform: capitalize;
+    color: $faint;
+  }
+
+  .days {
+    font-family: Fraunces, Georgia, serif;
+    font-size: 1.15rem;
+  }
+
+  .tier-core .days {
+    color: $amber;
+  }
+  .tier-standard .days {
+    color: $teal;
+  }
+  .tier-optional .days {
+    color: $faint;
+  }
+}
+
+.primary {
+  width: 100%;
+  padding: 0.8rem;
+  border: none;
+  border-radius: 0.7rem;
+  background: $amber;
+  color: $bg;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.message {
+  margin-top: 0.9rem;
+  color: $dim;
+  font-size: 0.82rem;
+  text-align: center;
+}

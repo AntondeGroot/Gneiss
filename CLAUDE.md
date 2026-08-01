@@ -195,9 +195,15 @@ rest on. No real vault data lives in this repo — the prototype's `SEED` is inv
 - **Settings** — reminder + time, new-cards-per-day cap, core emphasis slider with
   a live preview of resulting intervals.
 
-Navigation: bottom tab bar has only Today and Vault. Settings is intentionally
-*not* a tab — it's config touched monthly, and the bar's slots are reserved for the
-daily loop. Review and Settings both hide the tab bar.
+Navigation: bottom tab bar has **Today, Vault and Settings**. Only Review hides it —
+nothing should compete with the card being recalled.
+
+**CHANGED:** Settings was originally kept *out* of the tab bar, on the reasoning that
+it is config touched monthly and the slots belonged to the daily loop. Reversed in
+use: with only two tabs the bar looked sparse, and reaching Settings through a corner
+link on Today was less discoverable than the argument assumed. Three tabs still leaves
+the bar uncrowded. The Today header link and the Settings back link were both dropped
+as duplicates once the tab existed.
 
 ## Stack decision (DECIDED)
 

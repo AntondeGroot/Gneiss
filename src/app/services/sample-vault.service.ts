@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 
-import { formatConfig } from "../../vault";
+import { DEFAULT_CONFIG, formatConfig } from "../../vault";
 import type { GneissConfig } from "../../vault";
 
 /**
@@ -36,17 +36,13 @@ export class SampleVaultService {
 
 /** Mirrors the sample notes below, so the seeded vault shows real tier spread. */
 const SAMPLE_CONFIG: GneissConfig = {
-  spread: 0.8,
-  newPerDay: 8,
-  streak: 0,
-  lastReviewedOn: "",
+  ...DEFAULT_CONFIG,
   tiers: {
     "#flashcards/git": "core",
     "#flashcards/shell": "core",
     "#flashcards/tools": "standard",
     "#flashcards/lang": "standard",
   },
-  cram: null,
 };
 
 /** Deliberately varied: both card syntaxes, a subfolder, a tier override, prior review state. */
