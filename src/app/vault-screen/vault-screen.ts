@@ -5,6 +5,7 @@ import { RouterLink } from "@angular/router";
 import type { Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import type { DeckCard } from "../services/deck.service";
+import { FolderPickerService } from "../services/folder-picker.service";
 import { SampleVaultService } from "../services/sample-vault.service";
 
 export interface NoteGroup {
@@ -22,6 +23,9 @@ export interface NoteGroup {
 export class VaultScreen {
   private readonly deck = inject(DeckService);
   private readonly samples = inject(SampleVaultService);
+  private readonly picker = inject(FolderPickerService);
+
+  protected readonly canPickFolder = this.picker.supported;
 
   protected readonly path = signal("Vault");
   protected readonly status = signal("Nothing read yet.");
@@ -39,6 +43,10 @@ export class VaultScreen {
     void this.seed();
   }
 
+  protected onOpenFolder(): void {
+    void this.openFolder();
+  }
+
   protected toggle(note: string): void {
     this.expanded.update((current) => (current === note ? null : note));
   }
@@ -50,6 +58,20 @@ export class VaultScreen {
       this.status.set(describeResult(this.notes().length, this.deck.all().length));
     } catch (error) {
       this.status.set(`Could not read "${this.path()}" — ${messageOf(error)}`);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Read-only: nothing is written back to a folder opened this way. */
+  private async openFolder(): Promise<void> {
+    this.busy.set(true);
+    try {
+      const notes = await this.picker.pickAndRead();
+      this.deck.setNotes(notes);
+      this.status.set(`${describeResult(this.notes().length, this.deck.all().length)} · read-only`);
+    } catch (error) {
+      this.status.set(`Could not open that folder — ${messageOf(error)}`);
     } finally {
       this.busy.set(false);
     }
