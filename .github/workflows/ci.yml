@@ -65,3 +65,44 @@ jobs:
           name: coverage
           path: coverage/
           if-no-files-found: ignore
+
+  # Publishes the laptop build to GitHub Pages. Gated on `verify`, so a build
+  # that fails any gate is never deployed — this app writes to the user's notes,
+  # so shipping an unverified build is not a cosmetic risk.
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # --base-href=/Gneiss/ because this is a project page, not a user page,
+      # and the 404.html fallback so deep links reach the router.
+      - name: Build for Pages
+        run: npm run build:pages
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/gneiss/browser
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
