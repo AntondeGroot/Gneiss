@@ -28,6 +28,12 @@ describe("resolveTier", () => {
 
     expect(resolveTier(note, mapping)).toBe("optional");
   });
+
+  it("falls back to standard when the note matches no mapping row", () => {
+    const mapping: TierMapping = { "#flashcards/lang": "core" };
+
+    expect(resolveTier(noteTagged(["#flashcards/shell"]), mapping)).toBe("standard");
+  });
 });
 
 describe("tierGrowth", () => {

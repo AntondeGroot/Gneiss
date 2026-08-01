@@ -41,7 +41,3 @@ function formatEntry(state: ReviewState): string {
 export function stripReviewComments(text: string): string {
   return text.replace(REVIEW_COMMENT_GLOBAL, "");
 }
-
-export function hasReviewComment(text: string): boolean {
-  return REVIEW_COMMENT.test(text);
-}
