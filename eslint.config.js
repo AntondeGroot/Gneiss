@@ -1,6 +1,8 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
+import angular from "angular-eslint";
 import sonarjs from "eslint-plugin-sonarjs";
+import boundaries from "eslint-plugin-boundaries";
 import prettier from "eslint-config-prettier";
 import globals from "globals";
 
@@ -53,6 +55,126 @@ export default tseslint.config(
       "sonarjs/todo-tag": "off",
       // A crypto rule; there is no security-sensitive randomness here.
       "sonarjs/pseudo-random": "off",
+    },
+  },
+
+  // ——— Angular: component/directive conventions, plus inline-template extraction ———
+  {
+    files: ["src/app/**/*.ts", "src/main.ts"],
+    extends: [...angular.configs.tsRecommended],
+    processor: angular.processInlineTemplates,
+  },
+
+  // ——— Angular templates: correctness and accessibility ———
+  {
+    files: ["src/**/*.html"],
+    extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
+  },
+
+  // ——— Architectural layers ———
+  // Attacks the cause of god objects rather than the symptom: a component that can
+  // reach the filesystem directly will accrete data-layer logic until it is one.
+  // The load-bearing rule is that `domain` (the vault module) may depend on
+  // nothing — that is what keeps it liftable into any host.
+  {
+    files: ["src/**/*.ts"],
+    plugins: { boundaries },
+    settings: {
+      // v7 element patterns match FOLDERS, not individual files — a file pattern
+      // like `src/vault/**/*.ts` classifies nothing and silently disables the rule.
+      // Order matters: first match wins, so specific folders precede the catch-alls.
+      "boundaries/elements": [
+        { type: "domain", pattern: "src/vault" },
+        { type: "service", pattern: "src/app/services" },
+        { type: "component", pattern: "src/app" },
+        { type: "bootstrap", pattern: "src" },
+      ],
+      // Without a TypeScript resolver, every extensionless import resolves to
+      // nothing, everything classifies as "unknown", and the rule passes over a
+      // codebase full of violations — a green gate that checks nothing.
+      "import/resolver": { typescript: { project: "tsconfig.app.json" } },
+    },
+    rules: {
+      "boundaries/dependencies": [
+        "error",
+        {
+          default: "disallow",
+          policies: [
+            // The vault module stays dependency-free — it may only import itself.
+            {
+              from: [{ element: { type: "domain" } }],
+              allow: [{ to: { element: { type: "domain" } } }],
+            },
+            {
+              from: [{ element: { type: "service" } }],
+              allow: [
+                { to: { element: { type: "domain" } } },
+                { to: { element: { type: "service" } } },
+              ],
+            },
+            // Components reach data through a service — never the filesystem directly.
+            {
+              from: [{ element: { type: "component" } }],
+              allow: [
+                { to: { element: { type: "domain" } } },
+                { to: { element: { type: "service" } } },
+                { to: { element: { type: "component" } } },
+              ],
+            },
+            {
+              from: [{ element: { type: "bootstrap" } }],
+              allow: [{ to: { element: { type: "component" } } }],
+            },
+          ],
+        },
+      ],
+      // Flags any file that fails to classify — the check that proves the
+      // patterns and resolver are actually working.
+      "boundaries/no-unknown-files": "error",
+      // Would also flag every external package (@angular/*, rxjs), drowning the
+      // signal. Real violations surface through boundaries/dependencies.
+      "boundaries/no-unknown": "off",
+    },
+  },
+
+  // ——— External boundaries ———
+  // boundaries/dependencies governs local elements only, so it cannot see an
+  // import of a Capacitor plugin — which is precisely the data layer a component
+  // must not reach. boundaries/external would cover it but is deprecated in v7,
+  // so these two constraints are expressed directly instead.
+  {
+    files: ["src/app/**/*.ts"],
+    ignores: ["src/app/services/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@capacitor/*"],
+              message:
+                "Components must not reach native APIs directly — wrap the plugin in a service under src/app/services.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/vault/**/*.ts"],
+    ignores: ["src/vault/**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@angular/*", "@capacitor/*", "rxjs"],
+              message: "The vault module stays framework-free so it lifts into any host unchanged.",
+            },
+          ],
+        },
+      ],
     },
   },
 
