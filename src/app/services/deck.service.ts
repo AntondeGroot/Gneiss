@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from "@angular/core";
+import { Injectable, computed, signal } from "@angular/core";
 
 import {
   DEFAULT_CONFIG,
@@ -10,8 +10,7 @@ import {
   standingStreak,
 } from "../../vault";
 import type { GneissConfig, Grade, ParsedNote, ReviewState, Tier, TierMapping } from "../../vault";
-import { ConfigService } from "./config.service";
-import { VaultService } from "./vault.service";
+import type { VaultSource } from "./vault-source";
 
 /** A parsed card plus everything scheduling needs to act on it. */
 export interface DeckCard {
@@ -34,12 +33,11 @@ export interface DeckCard {
  */
 @Injectable({ providedIn: "root" })
 export class DeckService {
-  private readonly vault = inject(VaultService);
-  private readonly configFile = inject(ConfigService);
+  private source: VaultSource | null = null;
   private readonly cards = signal<readonly DeckCard[]>([]);
-  private readonly path = signal("");
-  /** Where the vault was loaded from, so settings can be written back to it. */
-  readonly vaultPath = this.path.asReadonly();
+  /** The open vault, so the UI can name it and know whether writes are possible. */
+  readonly sourceLabel = signal("");
+  readonly canWrite = signal(false);
 
   /** Read from `.gneiss/config.md` in the vault, so it syncs across devices. */
   readonly config = signal<GneissConfig>(DEFAULT_CONFIG);
@@ -70,13 +68,15 @@ export class DeckService {
     standingStreak(this.config().streak, this.config().lastReviewedOn, today()),
   );
 
-  async load(path: string): Promise<void> {
-    this.path.set(path);
-    const config = await this.configFile.read(path);
-    this.config.set(config);
+  /** Opens a vault from any source, then reads its config and notes. */
+  async open(source: VaultSource, location: string): Promise<void> {
+    await source.open(location);
+    this.source = source;
+    this.sourceLabel.set(source.label);
+    this.canWrite.set(source.canWrite());
 
-    const notes = await this.vault.readNotes(path);
-    this.setNotes(notes);
+    this.config.set(await source.readConfig());
+    this.setNotes(await source.readNotes());
   }
 
   /**
@@ -89,9 +89,9 @@ export class DeckService {
   }
 
   /** Persists settings back into the vault. */
-  async saveConfig(path: string, config: GneissConfig): Promise<void> {
+  async saveConfig(config: GneissConfig): Promise<void> {
     this.config.set(config);
-    await this.configFile.write(path, config);
+    await this.source?.writeConfig(config);
   }
 
   /** What the interval would become, without committing the grade. */
@@ -111,7 +111,7 @@ export class DeckService {
     );
 
     try {
-      await this.vault.writeReviewState(this.vaultPath(), card.note, card.front, review);
+      await this.source?.writeReviewState(card.note, card.front, review);
       await this.recordReviewDay();
       this.writeError.set(null);
     } catch (error) {
@@ -124,7 +124,7 @@ export class DeckService {
     const config = this.config();
     if (config.lastReviewedOn === today()) return;
 
-    await this.saveConfig(this.vaultPath(), {
+    await this.saveConfig({
       ...config,
       streak: nextStreak(config.streak, config.lastReviewedOn, today()),
       lastReviewedOn: today(),
