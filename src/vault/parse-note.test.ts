@@ -87,4 +87,26 @@ Redirects stderr into stdout.
       tierOverride: "core",
     });
   });
+
+  it("skips YAML frontmatter, parsing only the cards beneath it", () => {
+    const md = `---
+tier: core
+created: 2026-08-01
+---
+
+What does \`2>&1\` do?
+?
+Redirects stderr into stdout.
+
+#flashcards/shell
+`;
+
+    // Note there is no tierOverride: a \`tier:\` frontmatter key is not read, since
+    // tags are the supported path. Only a #core / #optional tag sets the override.
+    expect(parseNote(md, "redirection.md")).toEqual({
+      note: "redirection.md",
+      cards: [{ front: "What does `2>&1` do?", back: "Redirects stderr into stdout." }],
+      topicTags: ["#flashcards/shell"],
+    });
+  });
 });
