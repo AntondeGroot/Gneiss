@@ -1,0 +1,183 @@
+// Palette inherited from the prototype: charcoal panels, safelight amber.
+$bg: #131110;
+$panel: #1c1916;
+$panel2: #221e1a;
+$line: #2c2722;
+$text: #ede6dc;
+$dim: #9a9087;
+$faint: #6e665e;
+$amber: #e5a045;
+$teal: #7fa8a0;
+
+:host {
+  display: block;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem 3rem;
+  color: $text;
+  font-family: "Hanken Grotesk", "Avenir Next", system-ui, sans-serif;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 500;
+  font-size: 1.65rem;
+}
+
+.sub {
+  margin: 0 0 1.5rem;
+  color: $dim;
+  font-size: 0.92rem;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1 1 12rem;
+
+  span {
+    color: $faint;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  input {
+    background: $panel;
+    border: 1px solid $line;
+    border-radius: 0.6rem;
+    padding: 0.6rem 0.7rem;
+    color: $text;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.85rem;
+  }
+}
+
+button {
+  border: 1px solid $line;
+  border-radius: 0.6rem;
+  padding: 0.62rem 0.9rem;
+  background: $panel2;
+  color: $dim;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &.primary {
+    background: $amber;
+    border-color: $amber;
+    color: $bg;
+    font-weight: 600;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.status,
+.empty {
+  margin: 1.1rem 0;
+  color: $dim;
+  font-size: 0.88rem;
+}
+
+.note {
+  border: 1px solid $line;
+  border-radius: 0.8rem;
+  background: $panel;
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+}
+
+.note-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0.85rem 0.95rem;
+  text-align: left;
+}
+
+.name {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.85rem;
+  color: $text;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+
+.tier {
+  border-radius: 1rem;
+  border: 1px solid currentcolor;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.7rem;
+
+  &.tier-core {
+    color: $amber;
+  }
+  &.tier-standard {
+    color: $teal;
+  }
+  &.tier-optional {
+    color: $faint;
+  }
+}
+
+.count {
+  color: $faint;
+  font-size: 0.75rem;
+}
+
+.cards {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.95rem 0.5rem;
+
+  li {
+    border-top: 1px solid $line;
+    padding: 0.75rem 0;
+  }
+}
+
+.front {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+}
+
+.back {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  background: $panel2;
+  border-radius: 0.5rem;
+  color: $dim;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.review {
+  margin: 0.4rem 0 0;
+  color: $faint;
+  font-size: 0.72rem;
+}

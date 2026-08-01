@@ -1,4 +1,3 @@
-import { Directory } from "@capacitor/filesystem";
 import type { FileInfo, ReaddirResult, ReadFileResult } from "@capacitor/filesystem";
 
 import { VaultService } from "./vault.service";
@@ -13,7 +12,7 @@ vi.mock("@capacitor/filesystem", async (importOriginal) => ({
   Filesystem: { readdir, readFile },
 }));
 
-const LOCATION = { path: "Vault", directory: Directory.Documents };
+const VAULT_PATH = "Vault";
 
 function entry(name: string, type: "file" | "directory"): FileInfo {
   return { name, type, size: 0, mtime: 0, uri: `/${name}` };
@@ -46,7 +45,7 @@ describe("VaultService", () => {
       { "Vault/grep.md": "What does grep do? :: search text\n\n#flashcards/shell\n" },
     );
 
-    const notes = await service.readNotes(LOCATION);
+    const notes = await service.readNotes(VAULT_PATH);
 
     expect(notes.map((note) => note.note)).toEqual(["grep.md"]);
     expect(readdir).not.toHaveBeenCalledWith(expect.objectContaining({ path: "Vault/.obsidian" }));
@@ -67,7 +66,7 @@ describe("VaultService", () => {
       },
     );
 
-    const notes = await service.readNotes(LOCATION);
+    const notes = await service.readNotes(VAULT_PATH);
 
     expect(notes.map((note) => note.note)).toEqual([
       "grep.md",
@@ -91,7 +90,7 @@ describe("VaultService", () => {
       { "Vault/grep.md": card, "Vault/README.MD": card },
     );
 
-    const notes = await service.readNotes(LOCATION);
+    const notes = await service.readNotes(VAULT_PATH);
 
     expect(notes.map((note) => note.note)).toEqual(["grep.md", "README.MD"]);
     // Not merely filtered from the result — the attachments were never read.
@@ -115,7 +114,7 @@ Case-insensitive search? :: grep -i "pattern" file
       },
     );
 
-    const [note] = await service.readNotes(LOCATION);
+    const [note] = await service.readNotes(VAULT_PATH);
 
     expect(note).toEqual({
       note: "grep.md",
@@ -139,7 +138,7 @@ Case-insensitive search? :: grep -i "pattern" file
       data: new Blob(["Case-insensitive search? :: grep -i\n\n#flashcards/shell\n"]),
     } satisfies ReadFileResult);
 
-    const [note] = await service.readNotes(LOCATION);
+    const [note] = await service.readNotes(VAULT_PATH);
 
     expect(note?.cards).toEqual([{ front: "Case-insensitive search?", back: "grep -i" }]);
   });

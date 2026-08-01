@@ -6,8 +6,12 @@ import type { ParsedNote } from "../../vault";
 
 const MARKDOWN_EXTENSION = ".md";
 
-/** Where the Obsidian vault lives on the device. */
-export interface VaultLocation {
+/**
+ * Where the Obsidian vault lives on the device. Internal: Capacitor's `Directory`
+ * enum is an implementation detail and must not leak to callers, or every screen
+ * would need to know about the native filesystem.
+ */
+interface VaultLocation {
   /** Path relative to `directory`, e.g. "Obsidian/Programming". */
   readonly path: string;
   readonly directory: Directory;
@@ -21,10 +25,18 @@ export interface VaultLocation {
  */
 @Injectable({ providedIn: "root" })
 export class VaultService {
-  /** Every markdown note in the vault, including those in subfolders. */
-  async readNotes(location: VaultLocation): Promise<ParsedNote[]> {
+  // TODO: on iOS the user picks the folder and this becomes a stored bookmark.
+  private readonly directory = Directory.Documents;
+
+  /**
+   * Every markdown note under `path`, including those in subfolders.
+   *
+   * @param path Vault folder relative to the app's documents directory.
+   */
+  async readNotes(path: string): Promise<ParsedNote[]> {
+    const location: VaultLocation = { path, directory: this.directory };
     const paths = await this.collectMarkdownPaths(location, "");
-    return Promise.all(paths.map((path) => this.readNote(location, path)));
+    return Promise.all(paths.map((notePath) => this.readNote(location, notePath)));
   }
 
   /** Depth-first walk — real vaults organise notes into folders. */

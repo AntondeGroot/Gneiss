@@ -1,0 +1,52 @@
+<header>
+  <h1>Vault</h1>
+  <p class="sub">Markdown read off the device, parsed into cards.</p>
+</header>
+
+<div class="controls">
+  <label class="field">
+    <span>Folder</span>
+    <input
+      name="path"
+      [ngModel]="path()"
+      (ngModelChange)="path.set($event)"
+      [disabled]="busy()"
+      spellcheck="false"
+    />
+  </label>
+  <button type="button" class="primary" (click)="onLoad()" [disabled]="busy()">Read vault</button>
+  <button type="button" (click)="onSeed()" [disabled]="busy()">Seed sample notes</button>
+</div>
+
+<p class="status">{{ status() }}</p>
+
+@for (view of notes(); track view.note.note) {
+<section class="note">
+  <button type="button" class="note-head" (click)="toggle(view.note.note)">
+    <span class="name">{{ view.note.note }}</span>
+    <span class="meta">
+      <span class="tier" [class]="'tier-' + view.tier">{{ view.tier }}</span>
+      <span class="count">{{ view.note.cards.length }} cards</span>
+    </span>
+  </button>
+
+  @if (expanded() === view.note.note) {
+  <ul class="cards">
+    @for (card of view.note.cards; track card.front) {
+    <li>
+      <p class="front">{{ card.front }}</p>
+      <pre class="back">{{ card.back }}</pre>
+      @if (card.review) {
+      <p class="review">
+        due {{ card.review.due }} · interval {{ card.review.interval }}d · ease {{ card.review.ease
+        }}
+      </p>
+      }
+    </li>
+    }
+  </ul>
+  }
+</section>
+} @empty {
+<p class="empty">No notes loaded.</p>
+}
