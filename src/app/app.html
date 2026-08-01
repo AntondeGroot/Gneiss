@@ -4,4 +4,10 @@
 </div>
 }
 
-<router-outlet />
+<main [class.with-tab-bar]="showTabBar()">
+  <router-outlet />
+</main>
+
+@if (showTabBar()) {
+<gn-tab-bar />
+}

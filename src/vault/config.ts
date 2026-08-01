@@ -11,6 +11,7 @@
  * which is what lets it lift into any host unchanged.
  */
 
+import { NEVER } from "./streak.js";
 import type { CramState, Tier, TierMapping } from "./types.js";
 
 const DELIMITER = "---";
@@ -23,11 +24,21 @@ export interface GneissConfig {
   readonly spread: number;
   /** Ceiling on brand-new cards introduced per day, so a big vault cannot flood day one. */
   readonly newPerDay: number;
+  /** Consecutive review days, and the day the last review happened. */
+  readonly streak: number;
+  readonly lastReviewedOn: string;
   readonly tiers: TierMapping;
   readonly cram: CramState | null;
 }
 
-export const DEFAULT_CONFIG: GneissConfig = { spread: 0.8, newPerDay: 8, tiers: {}, cram: null };
+export const DEFAULT_CONFIG: GneissConfig = {
+  spread: 0.8,
+  newPerDay: 8,
+  streak: 0,
+  lastReviewedOn: NEVER,
+  tiers: {},
+  cram: null,
+};
 
 export function parseConfig(md: string): GneissConfig {
   const sections = readSections(frontmatterOf(md));
@@ -35,13 +46,21 @@ export function parseConfig(md: string): GneissConfig {
   return {
     spread: readSpread(sections.top["spread"]),
     newPerDay: readCount(sections.top["newPerDay"], DEFAULT_CONFIG.newPerDay),
+    streak: readCount(sections.top["streak"], DEFAULT_CONFIG.streak),
+    lastReviewedOn: sections.top["lastReviewedOn"] ?? NEVER,
     tiers: readTiers(sections.nested[TIERS] ?? {}),
     cram: readCram(sections.nested[CRAM] ?? {}),
   };
 }
 
 export function formatConfig(config: GneissConfig): string {
-  const lines = [DELIMITER, `spread: ${config.spread}`, `newPerDay: ${config.newPerDay}`];
+  const lines = [
+    DELIMITER,
+    `spread: ${config.spread}`,
+    `newPerDay: ${config.newPerDay}`,
+    `streak: ${config.streak}`,
+    `lastReviewedOn: ${config.lastReviewedOn}`,
+  ];
 
   lines.push(`${TIERS}:`);
   for (const [tag, tier] of Object.entries(config.tiers)) {

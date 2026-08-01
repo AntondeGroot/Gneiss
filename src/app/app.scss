@@ -32,3 +32,9 @@ $splash-bg: #07050c;
     animation: none;
   }
 }
+
+// Leaves room for the fixed tab bar so the last row of content is reachable.
+.with-tab-bar {
+  display: block;
+  padding-bottom: 4.5rem;
+}

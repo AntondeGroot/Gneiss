@@ -1,0 +1,51 @@
+<header class="bar">
+  <span class="streak">
+    @if (streak() > 0) {
+    <span class="flame" aria-hidden="true">▲</span> {{ streak() }} day streak }
+  </span>
+  <a class="gear" routerLink="/vault" aria-label="Vault">Vault</a>
+</header>
+
+<section class="ring-wrap">
+  <svg
+    viewBox="0 0 128 128"
+    class="ring"
+    role="img"
+    [attr.aria-label]="due().length + ' cards due'"
+  >
+    <circle class="track" cx="64" cy="64" [attr.r]="radius" />
+    @for (segment of segments(); track segment.tier) {
+    <circle
+      [class]="'segment segment-' + segment.tier"
+      cx="64"
+      cy="64"
+      [attr.r]="radius"
+      [attr.stroke-dasharray]="segment.dash"
+      [attr.stroke-dashoffset]="segment.offset"
+    />
+    }
+  </svg>
+  <div class="centre">
+    <span class="count">{{ due().length }}</span>
+    <span class="label">due</span>
+  </div>
+</section>
+
+<ul class="legend">
+  @for (segment of segments(); track segment.tier) {
+  <li [class]="'tier-' + segment.tier">
+    <span class="dot" aria-hidden="true"></span>{{ segment.count }} {{ segment.tier }}
+  </li>
+  }
+</ul>
+
+@if (due().length > 0) {
+<button type="button" class="primary" (click)="start()">Start review</button>
+} @else if (loaded()) {
+<p class="empty">Nothing due today.</p>
+} @else {
+<p class="empty">No vault loaded yet.</p>
+<a class="link" routerLink="/vault">Open Vault</a>
+} @if (heldBack() > 0) {
+<p class="held">{{ heldBack() }} new cards held back by today's cap.</p>
+}

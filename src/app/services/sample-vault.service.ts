@@ -38,6 +38,8 @@ export class SampleVaultService {
 const SAMPLE_CONFIG: GneissConfig = {
   spread: 0.8,
   newPerDay: 8,
+  streak: 0,
+  lastReviewedOn: "",
   tiers: {
     "#flashcards/git": "core",
     "#flashcards/shell": "core",

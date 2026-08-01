@@ -1,0 +1,155 @@
+$bg: #131110;
+$panel2: #221e1a;
+$line: #2c2722;
+$text: #ede6dc;
+$dim: #9a9087;
+$faint: #6e665e;
+$amber: #e5a045;
+$teal: #7fa8a0;
+
+:host {
+  display: block;
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  color: $text;
+  font-family: "Hanken Grotesk", "Avenir Next", system-ui, sans-serif;
+  text-align: center;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 1.5rem;
+  font-size: 0.78rem;
+}
+
+.streak {
+  color: $amber;
+}
+
+.flame {
+  font-size: 0.7rem;
+}
+
+.gear,
+.link {
+  color: $dim;
+  font-size: 0.8rem;
+}
+
+.ring-wrap {
+  position: relative;
+  margin: 2.2rem auto 0;
+  width: 15rem;
+  height: 15rem;
+}
+
+.ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+circle {
+  fill: none;
+  stroke-width: 11;
+  stroke-linecap: butt;
+}
+
+.track {
+  stroke: $panel2;
+}
+
+.segment-core {
+  stroke: $amber;
+}
+.segment-standard {
+  stroke: $teal;
+}
+.segment-optional {
+  stroke: $faint;
+}
+
+.centre {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.1rem;
+}
+
+.count {
+  font-family: Fraunces, Georgia, serif;
+  font-size: 3.4rem;
+  line-height: 1;
+}
+
+.label {
+  color: $faint;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  list-style: none;
+  margin: 1.4rem 0 2rem;
+  padding: 0;
+  font-size: 0.76rem;
+  color: $dim;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: currentcolor;
+  }
+
+  .tier-core {
+    color: $amber;
+  }
+  .tier-standard {
+    color: $teal;
+  }
+  .tier-optional {
+    color: $faint;
+  }
+}
+
+.primary {
+  width: 100%;
+  padding: 0.85rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: $amber;
+  color: $bg;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.empty {
+  color: $dim;
+  font-size: 0.9rem;
+  margin: 0 0 0.6rem;
+}
+
+.held {
+  margin-top: 1rem;
+  color: $faint;
+  font-size: 0.76rem;
+  border-top: 1px solid $line;
+  padding-top: 0.9rem;
+}

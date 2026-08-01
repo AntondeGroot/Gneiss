@@ -27,3 +27,4 @@ export type { GneissConfig } from "./config.js";
 export { locateCards } from "./parse-note.js";
 export type { CardLocation } from "./parse-note.js";
 export { withReviewState } from "./write-review.js";
+export { NEVER, nextStreak, standingStreak } from "./streak.js";

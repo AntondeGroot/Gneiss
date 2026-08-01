@@ -8,6 +8,8 @@ describe("config round trip", () => {
     const config: GneissConfig = {
       spread: 0.65,
       newPerDay: 12,
+      streak: 4,
+      lastReviewedOn: "2026-08-01",
       tiers: { "#flashcards/git": "core", "#flashcards/lang/certexam": "optional" },
       cram: { active: true, scope: "#flashcards/lang/certexam", examDate: "2026-09-01" },
     };
@@ -38,6 +40,8 @@ Notes below the frontmatter are ignored.
     expect(parseConfig(written)).toEqual({
       spread: 0.5,
       newPerDay: 8,
+      streak: 0,
+      lastReviewedOn: "",
       tiers: { "#flashcards/git": "core", "#flashcards/tools": "standard" },
       cram: { active: true, scope: "#flashcards/lang", examDate: "2026-12-01" },
     });

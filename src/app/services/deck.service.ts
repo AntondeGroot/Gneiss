@@ -1,6 +1,14 @@
 import { Injectable, computed, inject, signal } from "@angular/core";
 
-import { DEFAULT_CONFIG, isDue, newReviewState, resolveTier, schedule } from "../../vault";
+import {
+  DEFAULT_CONFIG,
+  isDue,
+  newReviewState,
+  nextStreak,
+  resolveTier,
+  schedule,
+  standingStreak,
+} from "../../vault";
 import type { GneissConfig, Grade, ParsedNote, ReviewState, Tier, TierMapping } from "../../vault";
 import { ConfigService } from "./config.service";
 import { VaultService } from "./vault.service";
@@ -38,7 +46,29 @@ export class DeckService {
   readonly writeError = signal<string | null>(null);
 
   readonly all = this.cards.asReadonly();
-  readonly due = computed(() => this.cards().filter((card) => isDue(card.review, today())));
+  /**
+   * Every due review, plus at most `newPerDay` cards never seen before.
+   * Without the cap, pointing at an existing vault surfaces every unseen card at
+   * once — hundreds of them — which is the quickest way to abandon an SRS.
+   */
+  readonly due = computed(() => {
+    const dueToday = this.cards().filter((card) => isDue(card.review, today()));
+    return [...seenBefore(dueToday), ...unseen(dueToday).slice(0, this.config().newPerDay)];
+  });
+
+  /** New cards held back by today's cap, so the UI can say so rather than hide it. */
+  readonly heldBack = computed(() =>
+    Math.max(
+      0,
+      unseen(this.cards().filter((card) => isDue(card.review, today()))).length -
+        this.config().newPerDay,
+    ),
+  );
+
+  /** Zero once a day has been missed — never claims a streak that is already broken. */
+  readonly streak = computed(() =>
+    standingStreak(this.config().streak, this.config().lastReviewedOn, today()),
+  );
 
   async load(path: string): Promise<void> {
     this.vaultPath.set(path);
@@ -73,10 +103,23 @@ export class DeckService {
 
     try {
       await this.vault.writeReviewState(this.vaultPath(), card.note, card.front, review);
+      await this.recordReviewDay();
       this.writeError.set(null);
     } catch (error) {
       this.writeError.set(error instanceof Error ? error.message : String(error));
     }
+  }
+
+  /** Advances the streak on the first review of a new day, and persists it. */
+  private async recordReviewDay(): Promise<void> {
+    const config = this.config();
+    if (config.lastReviewedOn === today()) return;
+
+    await this.saveConfig(this.vaultPath(), {
+      ...config,
+      streak: nextStreak(config.streak, config.lastReviewedOn, today()),
+      lastReviewedOn: today(),
+    });
   }
 
   private optionsFor(card: DeckCard) {
@@ -101,6 +144,14 @@ function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
     topicTags: note.topicTags,
     review: card.review ?? newReviewState(today()),
   }));
+}
+
+function seenBefore(cards: readonly DeckCard[]): DeckCard[] {
+  return cards.filter((card) => card.review.interval > 0);
+}
+
+function unseen(cards: readonly DeckCard[]): DeckCard[] {
+  return cards.filter((card) => card.review.interval === 0);
 }
 
 export function today(): string {
