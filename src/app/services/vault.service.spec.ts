@@ -75,4 +75,60 @@ describe("VaultService", () => {
       "Java/Streams/reduce.md",
     ]);
   });
+
+  it("reads only markdown, whatever the case, and never opens other attachments", async () => {
+    const card = "Question? :: Answer\n\n#flashcards/lang\n";
+    givenVault(
+      {
+        Vault: [
+          entry("grep.md", "file"),
+          entry("README.MD", "file"),
+          entry("Mockito_Guide.pdf", "file"),
+          entry("diagram.png", "file"),
+          entry("board.canvas", "file"),
+        ],
+      },
+      { "Vault/grep.md": card, "Vault/README.MD": card },
+    );
+
+    const notes = await service.readNotes(LOCATION);
+
+    expect(notes.map((note) => note.note)).toEqual(["grep.md", "README.MD"]);
+    // Not merely filtered from the result — the attachments were never read.
+    expect(readFile).toHaveBeenCalledTimes(2);
+  });
+
+  it("parses file contents into cards, carrying existing review state through", async () => {
+    givenVault(
+      { Vault: [entry("grep.md", "file")] },
+      {
+        "Vault/grep.md": `What does \`grep -v\` do?
+?
+Prints only the lines that do NOT match.
+<!--SR:!2026-08-21,3,250-->
+
+Case-insensitive search? :: grep -i "pattern" file
+
+#flashcards/shell
+#core
+`,
+      },
+    );
+
+    const [note] = await service.readNotes(LOCATION);
+
+    expect(note).toEqual({
+      note: "grep.md",
+      topicTags: ["#flashcards/shell"],
+      tierOverride: "core",
+      cards: [
+        {
+          front: "What does `grep -v` do?",
+          back: "Prints only the lines that do NOT match.",
+          review: { due: "2026-08-21", interval: 3, ease: 2.5 },
+        },
+        { front: "Case-insensitive search?", back: 'grep -i "pattern" file' },
+      ],
+    });
+  });
 });
