@@ -27,6 +27,9 @@ export interface GneissConfig {
   /** Consecutive review days, and the day the last review happened. */
   readonly streak: number;
   readonly lastReviewedOn: string;
+  /** Daily on-device reminder, and the local time it fires at (HH:MM). */
+  readonly reminderOn: boolean;
+  readonly reminderAt: string;
   readonly tiers: TierMapping;
   readonly cram: CramState | null;
 }
@@ -36,6 +39,8 @@ export const DEFAULT_CONFIG: GneissConfig = {
   newPerDay: 8,
   streak: 0,
   lastReviewedOn: NEVER,
+  reminderOn: false,
+  reminderAt: "08:30",
   tiers: {},
   cram: null,
 };
@@ -48,6 +53,8 @@ export function parseConfig(md: string): GneissConfig {
     newPerDay: readCount(sections.top["newPerDay"], DEFAULT_CONFIG.newPerDay),
     streak: readCount(sections.top["streak"], DEFAULT_CONFIG.streak),
     lastReviewedOn: sections.top["lastReviewedOn"] ?? NEVER,
+    reminderOn: sections.top["reminderOn"] === "true",
+    reminderAt: sections.top["reminderAt"] ?? DEFAULT_CONFIG.reminderAt,
     tiers: readTiers(sections.nested[TIERS] ?? {}),
     cram: readCram(sections.nested[CRAM] ?? {}),
   };
@@ -60,6 +67,8 @@ export function formatConfig(config: GneissConfig): string {
     `newPerDay: ${config.newPerDay}`,
     `streak: ${config.streak}`,
     `lastReviewedOn: ${config.lastReviewedOn}`,
+    `reminderOn: ${config.reminderOn}`,
+    `reminderAt: "${config.reminderAt}"`,
   ];
 
   lines.push(`${TIERS}:`);

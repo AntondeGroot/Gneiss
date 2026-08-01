@@ -11,6 +11,9 @@ import { TabBar } from "./tab-bar/tab-bar";
  */
 const SPLASH_MS = 1300;
 
+/** Only reviewing takes the whole screen — nothing should compete with the card. */
+const HIDDEN_ON = ["/review"];
+
 @Component({
   selector: "gn-root",
   imports: [RouterOutlet, TabBar],
@@ -30,7 +33,9 @@ export class App {
     ),
     { initialValue: "" },
   );
-  protected readonly showTabBar = computed(() => !this.url().startsWith("/review"));
+  protected readonly showTabBar = computed(
+    () => !HIDDEN_ON.some((route) => this.url().startsWith(route)),
+  );
 
   constructor() {
     const timer = setTimeout(() => this.booting.set(false), SPLASH_MS);
