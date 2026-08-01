@@ -24,3 +24,6 @@ export { addDays, isDue, newReviewState, schedule, STARTING_EASE } from "./sched
 export type { SchedulingOptions } from "./schedule.js";
 export { DEFAULT_CONFIG, formatConfig, parseConfig } from "./config.js";
 export type { GneissConfig } from "./config.js";
+export { locateCards } from "./parse-note.js";
+export type { CardLocation } from "./parse-note.js";
+export { withReviewState } from "./write-review.js";
