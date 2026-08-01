@@ -131,4 +131,16 @@ Case-insensitive search? :: grep -i "pattern" file
       ],
     });
   });
+
+  it("decodes the Blob that readFile hands back on the web platform", async () => {
+    givenVault({ Vault: [entry("grep.md", "file")] });
+    // Native returns a string; the web implementation returns a Blob instead.
+    readFile.mockResolvedValue({
+      data: new Blob(["Case-insensitive search? :: grep -i\n\n#flashcards/shell\n"]),
+    } satisfies ReadFileResult);
+
+    const [note] = await service.readNotes(LOCATION);
+
+    expect(note?.cards).toEqual([{ front: "Case-insensitive search?", back: "grep -i" }]);
+  });
 });
