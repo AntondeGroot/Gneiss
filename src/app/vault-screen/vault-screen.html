@@ -16,6 +16,9 @@
   </label>
   <button type="button" class="primary" (click)="onLoad()" [disabled]="busy()">Read vault</button>
   <button type="button" (click)="onSeed()" [disabled]="busy()">Seed sample notes</button>
+  @if (canPickFolder) {
+  <button type="button" (click)="onOpenFolder()" [disabled]="busy()">Open folder…</button>
+  }
 </div>
 
 <p class="status">

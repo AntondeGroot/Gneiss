@@ -76,7 +76,16 @@ export class DeckService {
     this.config.set(config);
 
     const notes = await this.vault.readNotes(path);
-    this.cards.set(notes.flatMap((note) => toCards(note, config.tiers)));
+    this.setNotes(notes);
+  }
+
+  /**
+   * Loads already-parsed notes, for sources other than the device filesystem.
+   * The vault path stays empty, which is what keeps write-back from firing
+   * against a folder Gneiss did not read through VaultService.
+   */
+  setNotes(notes: readonly ParsedNote[]): void {
+    this.cards.set(notes.flatMap((note) => toCards(note, this.config().tiers)));
   }
 
   /** Persists settings back into the vault. */
