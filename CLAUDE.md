@@ -306,9 +306,19 @@ contained change when it's actually needed.
 
 - ~~**Format detection**~~ — **RESOLVED**, see *Vault conventions this assumes*: real
   notes already use the block `?` format, so no migration is needed.
-- **Importing existing SR state** — parse `<!--SR:...-->` comments into the app's
-  scheduling model on first run. Stored due dates may be years old, so a naive import
-  makes the entire deck overdue at once; needs a backfill/rescale rule.
+- ~~**Importing existing SR state**~~ — **RESOLVED.** `<!--SR:...-->` comments parse on
+  read, and the years-old-backlog problem is handled by `selectDue()` rather than by
+  rewriting due dates.
+
+  **Nothing is rescheduled.** A card scheduled in 2024 genuinely is overdue, and moving
+  its date would be Gneiss lying about the user's own data — and would mean writing to
+  every note on first run. Instead the *day's queue* is capped: `reviewsPerDay` for cards
+  in rotation, `newPerDay` for unseen ones, counted separately so a backlog cannot eat
+  the day's new material. The backlog drains a day at a time and the Today screen says
+  how much is held back rather than hiding it.
+
+  Ordering happens **before** the cap — core tier first, then longest-overdue first —
+  otherwise the cap keeps an arbitrary slice and the cards that matter never surface.
 - **Cloze deletions** — `the {{c1::--staged}} flag unstages`, common in dev notes.
 - Adaptive daily mix (how much core vs. optional to serve per session).
 - **OPEN:** whether cram mode should also be able to *promote* rather than only clamp —

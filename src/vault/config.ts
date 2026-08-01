@@ -24,6 +24,8 @@ export interface GneissConfig {
   readonly spread: number;
   /** Ceiling on brand-new cards introduced per day, so a big vault cannot flood day one. */
   readonly newPerDay: number;
+  /** Ceiling on cards already in rotation — what drains an imported backlog. */
+  readonly reviewsPerDay: number;
   /** Consecutive review days, and the day the last review happened. */
   readonly streak: number;
   readonly lastReviewedOn: string;
@@ -37,6 +39,7 @@ export interface GneissConfig {
 export const DEFAULT_CONFIG: GneissConfig = {
   spread: 0.8,
   newPerDay: 8,
+  reviewsPerDay: 30,
   streak: 0,
   lastReviewedOn: NEVER,
   reminderOn: false,
@@ -51,6 +54,7 @@ export function parseConfig(md: string): GneissConfig {
   return {
     spread: readSpread(sections.top["spread"]),
     newPerDay: readCount(sections.top["newPerDay"], DEFAULT_CONFIG.newPerDay),
+    reviewsPerDay: readCount(sections.top["reviewsPerDay"], DEFAULT_CONFIG.reviewsPerDay),
     streak: readCount(sections.top["streak"], DEFAULT_CONFIG.streak),
     lastReviewedOn: sections.top["lastReviewedOn"] ?? NEVER,
     reminderOn: sections.top["reminderOn"] === "true",
@@ -65,6 +69,7 @@ export function formatConfig(config: GneissConfig): string {
     DELIMITER,
     `spread: ${config.spread}`,
     `newPerDay: ${config.newPerDay}`,
+    `reviewsPerDay: ${config.reviewsPerDay}`,
     `streak: ${config.streak}`,
     `lastReviewedOn: ${config.lastReviewedOn}`,
     `reminderOn: ${config.reminderOn}`,

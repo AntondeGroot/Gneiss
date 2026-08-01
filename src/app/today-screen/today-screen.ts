@@ -34,7 +34,8 @@ export class TodayScreen {
 
   protected readonly due = this.deck.due;
   protected readonly streak = this.deck.streak;
-  protected readonly heldBack = this.deck.heldBack;
+  protected readonly heldBackNew = this.deck.heldBackNew;
+  protected readonly heldBackReviews = this.deck.heldBackReviews;
   protected readonly loaded = computed(() => this.deck.all().length > 0);
 
   protected readonly segments = computed(() => toSegments(this.due()));

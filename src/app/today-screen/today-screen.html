@@ -45,6 +45,12 @@
 } @else {
 <p class="empty">No vault loaded yet.</p>
 <a class="link" routerLink="/vault">Open Vault</a>
-} @if (heldBack() > 0) {
-<p class="held">{{ heldBack() }} new cards held back by today's cap.</p>
+} @if (heldBackReviews() > 0 || heldBackNew() > 0) {
+<p class="held">
+  @if (heldBackReviews() > 0) {
+  <span>{{ heldBackReviews() }} overdue cards held back — the backlog drains a day at a time.</span>
+  } @if (heldBackNew() > 0) {
+  <span>{{ heldBackNew() }} new cards held back by today's cap.</span>
+  }
+</p>
 }
