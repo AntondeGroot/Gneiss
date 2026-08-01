@@ -110,7 +110,11 @@ class CardScanner {
     this.buffer = [];
   }
 
-  private addCard(front: string, back: string, reviews: ReturnType<typeof parseReviewStates>): void {
+  private addCard(
+    front: string,
+    back: string,
+    reviews: ReturnType<typeof parseReviewStates>,
+  ): void {
     if (!front || !back) return;
     const review = reviews[0];
     this.cards.push({ front, back, ...(review ? { review } : {}) });

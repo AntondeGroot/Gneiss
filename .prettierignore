@@ -1,0 +1,16 @@
+dist/
+coverage/
+node_modules/
+package-lock.json
+
+# Scoped out deliberately, not permanently:
+#
+# The prototype is a design reference rather than production code, and its dense
+# inline SVG/JSX would reflow into a far larger, harder-to-scan file.
+# TODO: include it once the prototype is retired in favour of the Angular app.
+prototype/
+
+# The markdown here is hand-formatted — CLAUDE.md's tables and deliberate line
+# breaks carry meaning that a reflow would flatten.
+# TODO: revisit once the docs settle.
+*.md

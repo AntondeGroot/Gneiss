@@ -17,7 +17,7 @@ const ENTRY = /!(\d{4}-\d{2}-\d{2}),(\d+),(\d+)/g;
 const EASE_PERCENT = 100;
 
 export function parseReviewStates(text: string): ReviewState[] {
-  const comment = text.match(REVIEW_COMMENT);
+  const comment = REVIEW_COMMENT.exec(text);
   if (!comment?.[1]) return [];
 
   return [...comment[1].matchAll(ENTRY)].map(([, due, interval, ease]) => ({

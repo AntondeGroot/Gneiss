@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 
 // The parser, tier resolution, growth curve and tag rewriting all come from
 // src/vault — the framework-free module the real Angular app will lift unchanged.

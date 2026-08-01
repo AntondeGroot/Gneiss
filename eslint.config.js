@@ -1,0 +1,88 @@
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import sonarjs from "eslint-plugin-sonarjs";
+import prettier from "eslint-config-prettier";
+import globals from "globals";
+
+/**
+ * Size caps — stop a file growing one harmless function at a time.
+ * 300 rather than the checklist's 400, matching the readability standard that a
+ * file over ~300 lines is almost always doing more than one thing.
+ */
+const MAX_LINES = 300;
+/**
+ * 30 rather than the checklist's 80. The largest function in the module counts
+ * 25 lines (CardScanner.consume, a flat chain of guard clauses), so this is tight
+ * without forcing a legitimately linear dispatch to be broken up.
+ */
+const MAX_LINES_PER_FUNCTION = 30;
+
+export default tseslint.config(
+  { ignores: ["dist/**", "coverage/**", "node_modules/**"] },
+
+  // ——— The vault module: type-aware linting, the strictest tier ———
+  {
+    files: ["src/**/*.ts"],
+    extends: [
+      js.configs.recommended,
+      ...tseslint.configs.recommendedTypeChecked,
+      sonarjs.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      "no-console": "error",
+      eqeqeq: "error",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-deprecated": "error",
+
+      "max-lines": ["error", { max: MAX_LINES, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": [
+        "error",
+        { max: MAX_LINES_PER_FUNCTION, skipBlankLines: true, skipComments: true },
+      ],
+      "max-classes-per-file": ["error", 1],
+
+      // Errors on every TODO, which fights the ratchet pattern used throughout
+      // this repo — pinned thresholds and scoped exemptions all point at a TODO.
+      "sonarjs/todo-tag": "off",
+      // A crypto rule; there is no security-sensitive randomness here.
+      "sonarjs/pseudo-random": "off",
+    },
+  },
+
+  // ——— Tests: same correctness rules, but the size caps do not apply ———
+  // Specs are legitimately long (fixtures, byte-exact expected strings).
+  {
+    files: ["src/**/*.test.ts"],
+    rules: {
+      "max-lines": "off",
+      "max-lines-per-function": "off",
+    },
+  },
+
+  // ——— The prototype: plain JS, no type-aware linting ———
+  // It is a design reference rather than production code (see CLAUDE.md), so it
+  // gets correctness rules without the strictness applied to src/.
+  // TODO: fold this into the strict tier, or delete it once Angular lands.
+  {
+    files: ["prototype/**/*.jsx"],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: globals.browser,
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+    rules: {
+      eqeqeq: "error",
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
+  },
+
+  // Turns off every rule Prettier owns. Must stay last.
+  prettier,
+);

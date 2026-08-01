@@ -31,7 +31,12 @@
     },
     {
       "description": "Angular peer-versions the whole framework — a split bump will not install.",
-      "matchPackageNames": ["@angular/**", "@angular-devkit/**", "angular-eslint", "@angular-eslint/**"],
+      "matchPackageNames": [
+        "@angular/**",
+        "@angular-devkit/**",
+        "angular-eslint",
+        "@angular-eslint/**"
+      ],
       "groupName": "angular"
     },
     {
