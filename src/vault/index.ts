@@ -20,3 +20,5 @@ export { findTags, findTierOverride, findTopicTags, isFlashcardNote, withTier } 
 export { formatReviewComment, parseReviewStates, stripReviewComments } from "./review-state.js";
 export { resolveTier, tierGrowth } from "./tier.js";
 export { cramClamp, daysBetween } from "./cram.js";
+export { addDays, isDue, newReviewState, schedule, STARTING_EASE } from "./schedule.js";
+export type { SchedulingOptions } from "./schedule.js";
