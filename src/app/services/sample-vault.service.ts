@@ -37,6 +37,7 @@ export class SampleVaultService {
 /** Mirrors the sample notes below, so the seeded vault shows real tier spread. */
 const SAMPLE_CONFIG: GneissConfig = {
   spread: 0.8,
+  newPerDay: 8,
   tiers: {
     "#flashcards/git": "core",
     "#flashcards/shell": "core",

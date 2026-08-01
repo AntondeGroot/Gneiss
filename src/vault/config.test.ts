@@ -7,6 +7,7 @@ describe("config round trip", () => {
   it("survives being written and read back without losing a setting", () => {
     const config: GneissConfig = {
       spread: 0.65,
+      newPerDay: 12,
       tiers: { "#flashcards/git": "core", "#flashcards/lang/certexam": "optional" },
       cram: { active: true, scope: "#flashcards/lang/certexam", examDate: "2026-09-01" },
     };
@@ -19,6 +20,7 @@ describe("parseConfig", () => {
   it("reads settings a user typed by hand", () => {
     const written = `---
 spread: 0.5
+newPerDay: 8
 tiers:
   "#flashcards/git": core
   "#flashcards/tools": standard
@@ -35,6 +37,7 @@ Notes below the frontmatter are ignored.
 
     expect(parseConfig(written)).toEqual({
       spread: 0.5,
+      newPerDay: 8,
       tiers: { "#flashcards/git": "core", "#flashcards/tools": "standard" },
       cram: { active: true, scope: "#flashcards/lang", examDate: "2026-12-01" },
     });
