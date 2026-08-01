@@ -21,24 +21,27 @@ const CRAM = "cram";
 export interface GneissConfig {
   /** Core emphasis, 0..1. */
   readonly spread: number;
+  /** Ceiling on brand-new cards introduced per day, so a big vault cannot flood day one. */
+  readonly newPerDay: number;
   readonly tiers: TierMapping;
   readonly cram: CramState | null;
 }
 
-export const DEFAULT_CONFIG: GneissConfig = { spread: 0.8, tiers: {}, cram: null };
+export const DEFAULT_CONFIG: GneissConfig = { spread: 0.8, newPerDay: 8, tiers: {}, cram: null };
 
 export function parseConfig(md: string): GneissConfig {
   const sections = readSections(frontmatterOf(md));
 
   return {
     spread: readSpread(sections.top["spread"]),
+    newPerDay: readCount(sections.top["newPerDay"], DEFAULT_CONFIG.newPerDay),
     tiers: readTiers(sections.nested[TIERS] ?? {}),
     cram: readCram(sections.nested[CRAM] ?? {}),
   };
 }
 
 export function formatConfig(config: GneissConfig): string {
-  const lines = [DELIMITER, `spread: ${config.spread}`];
+  const lines = [DELIMITER, `spread: ${config.spread}`, `newPerDay: ${config.newPerDay}`];
 
   lines.push(`${TIERS}:`);
   for (const [tag, tier] of Object.entries(config.tiers)) {
@@ -115,6 +118,11 @@ function unquote(text: string): string {
 function readSpread(raw: string | undefined): number {
   const value = Number(raw);
   return Number.isFinite(value) ? clampToUnit(value) : DEFAULT_CONFIG.spread;
+}
+
+function readCount(raw: string | undefined, fallback: number): number {
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? Math.floor(value) : fallback;
 }
 
 function clampToUnit(value: number): number {
