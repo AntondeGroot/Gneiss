@@ -1,0 +1,46 @@
+@if (!started()) {
+<section class="intro">
+  <h1>Review</h1>
+  @if (dueCount() > 0) {
+  <p class="count">{{ dueCount() }} due</p>
+  <p class="sub">Core material comes first.</p>
+  <button type="button" class="primary" (click)="start()">Start review</button>
+  } @else {
+  <p class="sub">Nothing due. Read a vault first.</p>
+  <a class="link" routerLink="/vault">Go to Vault</a>
+  }
+</section>
+} @if (started() && current(); as card) {
+<section class="card">
+  <header class="bar">
+    <span class="note">{{ card.note }}</span>
+    <span class="tier" [class]="'tier-' + card.tier">{{ card.tier }}</span>
+    <span class="left">{{ remaining() }} left</span>
+  </header>
+
+  <p class="front">{{ card.front }}</p>
+
+  @if (revealed()) {
+  <pre class="back">{{ card.back }}</pre>
+  <div class="grades">
+    <!-- Named `choice`, not `grade`: a loop variable called `grade` shadows the
+         component's grade() method, and the call silently binds to the string. -->
+    @for (choice of grades; track choice) {
+    <button type="button" [class]="'grade grade-' + choice" (click)="grade(choice)">
+      <span class="label">{{ choice }}</span>
+      <span class="next">{{ preview(choice) }}</span>
+    </button>
+    }
+  </div>
+  } @else {
+  <button type="button" class="primary wide" (click)="reveal()">Show answer</button>
+  }
+</section>
+} @if (finished()) {
+<section class="intro">
+  <h1>Done</h1>
+  <p class="count">{{ graded() }} reviewed</p>
+  <p class="sub">Review state is held in memory — not yet written back to the vault.</p>
+  <a class="link" routerLink="/vault">Back to Vault</a>
+</section>
+}
