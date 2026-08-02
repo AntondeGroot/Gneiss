@@ -15,6 +15,16 @@ describe("topicTiers", () => {
       { tag: "#flashcards/lang/certexam", effective: "core" },
     ]);
   });
+
+  it("keeps a row for a mapped tag the vault no longer carries", () => {
+    const mapping: TierMapping = { "#flashcards/retired": "optional" };
+
+    const rows = topicTiers(["#flashcards/git"], mapping);
+
+    // The row still applies to anything under it, so the table has to offer a
+    // way to clear it — dropping it would leave a rule with no way back.
+    expect(rows.map((row) => row.tag)).toEqual(["#flashcards/git", "#flashcards/retired"]);
+  });
 });
 
 function rowFor(tag: string, mapping: TierMapping) {
