@@ -28,6 +28,38 @@
 </section>
 
 <section class="group">
+  <h2>Tiers by topic</h2>
+  <p class="hint">
+    The main way tiers are set: one row retunes every note in a topic, and touches no notes. A
+    subtopic with no row of its own inherits from its parent. A per-note <code>#core</code> or
+    <code>#optional</code> tag still outranks whatever the row says.
+  </p>
+
+  @for (topic of topics(); track topic.tag) {
+  <div class="topic">
+    <span class="tag">{{ topic.tag }}</span>
+    <div class="choices" role="group" [attr.aria-label]="'Tier for ' + topic.tag">
+      @for (choice of choices; track $index) {
+      <button
+        type="button"
+        [class.on]="(topic.mapped ?? null) === choice"
+        [attr.aria-pressed]="(topic.mapped ?? null) === choice"
+        (click)="setTopicTier(topic.tag, choice)"
+      >
+        {{ choice ?? "Inherit" }}
+      </button>
+      }
+    </div>
+    @if (!topic.mapped) {
+    <span class="inherited">schedules as {{ topic.effective }}</span>
+    }
+  </div>
+  } @empty {
+  <p class="hint small">No topic tags yet — open a vault and its topics appear here.</p>
+  }
+</section>
+
+<section class="group">
   <h2>Reviews per day</h2>
   <p class="hint">
     Caps cards already in rotation. An existing vault arrives with everything overdue at once; this
