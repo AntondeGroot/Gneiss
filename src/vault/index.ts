@@ -18,7 +18,10 @@ export type {
 export { parseNote } from "./parse-note.js";
 export { findTags, findTierOverride, findTopicTags, isFlashcardNote, withTier } from "./tags.js";
 export { formatReviewComment, parseReviewStates, stripReviewComments } from "./review-state.js";
-export { resolveTier, tierGrowth } from "./tier.js";
+export { resolveTier, tierFromMapping, tierGrowth } from "./tier.js";
+export type { Tierable } from "./tier.js";
+export { distinctTopicTags, topicTiers, withTopicTier } from "./topics.js";
+export type { TopicTier } from "./topics.js";
 export { cramClamp, daysBetween } from "./cram.js";
 export { addDays, isDue, newReviewState, schedule, STARTING_EASE } from "./schedule.js";
 export type { SchedulingOptions } from "./schedule.js";

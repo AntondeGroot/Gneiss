@@ -7,7 +7,7 @@
  *   3. `standard`
  */
 
-import type { ParsedNote, Tier, TierMapping } from "./types.js";
+import type { Tier, TierMapping } from "./types.js";
 
 const DEFAULT_TIER: Tier = "standard";
 
@@ -15,15 +15,29 @@ const DEFAULT_TIER: Tier = "standard";
 const CORE_COMPRESSION = 0.45;
 const OPTIONAL_EXPANSION = 0.8;
 
-export function resolveTier(note: ParsedNote, mapping: TierMapping): Tier {
+/**
+ * What tiering needs to know about a note. Narrower than `ParsedNote`, which
+ * satisfies it — so a card that has outlived the note it was parsed from can be
+ * re-tiered too, which is what happens when the mapping is edited.
+ */
+export interface Tierable {
+  readonly topicTags: readonly string[];
+  readonly tierOverride?: Tier;
+}
+
+export function resolveTier(note: Tierable, mapping: TierMapping): Tier {
   return note.tierOverride ?? tierFromMapping(note.topicTags, mapping) ?? DEFAULT_TIER;
 }
 
 /**
+ * The tier the mapping alone gives these tags, ignoring any per-note override.
  * Longest-prefix match, so `#flashcards/lang/certexam` beats `#flashcards/lang`
  * when both are mapped.
  */
-function tierFromMapping(topicTags: string[], mapping: TierMapping): Tier | undefined {
+export function tierFromMapping(
+  topicTags: readonly string[],
+  mapping: TierMapping,
+): Tier | undefined {
   let longestMatch = "";
   let tier: Tier | undefined;
 

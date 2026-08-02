@@ -153,6 +153,51 @@ input[name="cramScope"] {
   }
 }
 
+.topic {
+  padding: 0.6rem 0;
+  border-top: 1px solid $line;
+
+  .tag {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.78rem;
+    color: $teal;
+    word-break: break-all;
+  }
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+
+  button {
+    padding: 0.4rem 0.2rem;
+    border: 1px solid $line;
+    border-radius: 0.45rem;
+    background: $panel2;
+    color: $dim;
+    font: inherit;
+    font-size: 0.72rem;
+    text-transform: capitalize;
+    cursor: pointer;
+
+    &.on {
+      border-color: $amber;
+      background: rgb(229 160 69 / 15%);
+      color: $text;
+    }
+  }
+}
+
+.inherited {
+  display: block;
+  margin-top: 0.35rem;
+  color: $faint;
+  font-size: 0.7rem;
+}
+
 .primary {
   width: 100%;
   padding: 0.8rem;

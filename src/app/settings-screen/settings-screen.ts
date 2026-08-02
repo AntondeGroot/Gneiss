@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 
-import { schedule } from "../../vault";
+import { schedule, topicTiers, withTopicTier } from "../../vault";
 import type { GneissConfig, Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import { ReminderService } from "../services/reminder.service";
@@ -10,6 +10,9 @@ import { ReminderService } from "../services/reminder.service";
 const SAMPLE_INTERVAL = 10;
 const SAMPLE_EASE = 2.5;
 const PREVIEW_TIERS: readonly Tier[] = ["core", "standard", "optional"];
+
+/** The choices offered per topic. `null` is "inherit", which is not the same as `standard`. */
+export const TOPIC_CHOICES: readonly (Tier | null)[] = [null, "core", "standard", "optional"];
 
 export interface TierPreview {
   readonly tier: Tier;
@@ -47,6 +50,15 @@ export class SettingsScreen {
       }).interval,
     })),
   );
+
+  /** A row per topic tag in the vault — the primary way tiers get assigned. */
+  protected readonly topics = computed(() => topicTiers(this.deck.topicTags(), this.draft().tiers));
+
+  protected readonly choices = TOPIC_CHOICES;
+
+  protected setTopicTier(tag: string, tier: Tier | null): void {
+    this.update("tiers", withTopicTier(this.draft().tiers, tag, tier));
+  }
 
   protected update<K extends keyof GneissConfig>(key: K, value: GneissConfig[K]): void {
     this.draft.update((config) => ({ ...config, [key]: value }));

@@ -2,6 +2,7 @@ import { Injectable, computed, signal } from "@angular/core";
 
 import {
   DEFAULT_CONFIG,
+  distinctTopicTags,
   newReviewState,
   nextStreak,
   resolveTier,
@@ -21,6 +22,8 @@ export interface DeckCard {
   readonly back: string;
   readonly tier: Tier;
   readonly topicTags: string[];
+  /** Kept alongside the resolved tier so the card can be re-tiered in place. */
+  readonly tierOverride?: Tier;
   readonly review: ReviewState;
 }
 
@@ -35,6 +38,12 @@ export interface DeckCard {
 export class DeckService {
   private source: VaultSource | null = null;
   private readonly cards = signal<readonly DeckCard[]>([]);
+  /**
+   * The vault's topic tags, so Settings can offer a row per topic. Taken from the
+   * notes rather than the cards: a note tagged but not yet filled in still names
+   * a topic the user means to tier.
+   */
+  private readonly topics = signal<readonly string[]>([]);
   /** The open vault, so the UI can name it and know whether writes are possible. */
   readonly sourceLabel = signal("");
   readonly canWrite = signal(false);
@@ -46,6 +55,7 @@ export class DeckService {
   readonly writeError = signal<string | null>(null);
 
   readonly all = this.cards.asReadonly();
+  readonly topicTags = this.topics.asReadonly();
   /**
    * Today's queue: due reviews and new cards, each under its own cap, ordered
    * core-first and most-overdue-first. An imported vault's backlog drains over
@@ -85,12 +95,20 @@ export class DeckService {
    * against a folder Gneiss did not read through VaultService.
    */
   setNotes(notes: readonly ParsedNote[]): void {
+    this.topics.set(distinctTopicTags(notes));
     this.cards.set(notes.flatMap((note) => toCards(note, this.config().tiers)));
   }
 
-  /** Persists settings back into the vault. */
+  /**
+   * Persists settings back into the vault, and re-tiers the deck so an edit to
+   * the tag mapping takes effect on this session's cards rather than only on the
+   * next load.
+   */
   async saveConfig(config: GneissConfig): Promise<void> {
     this.config.set(config);
+    this.cards.update((cards) =>
+      cards.map((card) => ({ ...card, tier: resolveTier(card, config.tiers) })),
+    );
     await this.source?.writeConfig(config);
   }
 
@@ -151,6 +169,7 @@ function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
     back: card.back,
     tier,
     topicTags: note.topicTags,
+    ...(note.tierOverride ? { tierOverride: note.tierOverride } : {}),
     review: card.review ?? newReviewState(today()),
   }));
 }
