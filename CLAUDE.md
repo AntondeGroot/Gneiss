@@ -193,7 +193,14 @@ rest on. No real vault data lives in this repo — the prototype's `SEED` is inv
 - **Vault** — notes list with per-note tier buttons. Tap a note to open an editor
   showing raw markdown above and live-parsed cards below.
 - **Settings** — reminder + time, new-cards-per-day cap, core emphasis slider with
-  a live preview of resulting intervals.
+  a live preview of resulting intervals, and the tag→tier table: a row per topic tag
+  found in the vault, each offering **Inherit / Core / Standard / Optional**. Inherit is
+  a fourth state, not a synonym for `standard` — clearing a row lets a subtopic fall back
+  to its parent, whereas an explicit `standard` row *overrides* a parent mapped to `core`.
+  Rows also appear for mapped tags the vault no longer carries, so a stale rule can be
+  cleared rather than silently applying with nothing in the table to remove it. Saving
+  re-tiers the loaded deck, so an edit bites on the current session and not just the next
+  load.
 
 Navigation: bottom tab bar has **Today, Vault and Settings**. Only Review hides it —
 nothing should compete with the card being recalled.
