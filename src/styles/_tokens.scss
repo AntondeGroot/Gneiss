@@ -1,0 +1,51 @@
+/**
+ * Gneiss's palette, in one place.
+ *
+ * Every component stylesheet used to redeclare these — six copies of most of
+ * them — which is how the page background came to disagree with itself: a value
+ * changed in one file and stayed put in the others. A token defined once cannot
+ * drift.
+ *
+ * Named by role rather than by hue, so a stylesheet reads as intent and a
+ * repaint means editing this file alone.
+ *
+ * Use it with `@use "tokens" as *;` — `src/styles` is on the Sass include path
+ * (see `stylePreprocessorOptions` in angular.json), so the path is the same from
+ * any depth.
+ */
+
+// ——— Surfaces, darkest first ———
+
+/// The app's ground, sampled from the logo's own background. Also the splash,
+/// the body and the theme-color meta — see the note in styles.scss.
+$base: #07050c;
+/// Raised surfaces: cards, the tab bar, grouped settings.
+$panel: #1c1916;
+/// Inset surfaces: inputs, wells, the segment behind a filled bar.
+$panel2: #221e1a;
+/// Hairline borders and dividers.
+$line: #2c2722;
+
+// ——— Type ———
+
+$text: #ede6dc;
+/// Secondary copy: hints, captions, inactive navigation.
+$dim: #9a9087;
+/// Tertiary copy: units, metadata, anything that must recede.
+$faint: #6e665e;
+/// Dark type on a light fill — an amber button's own label.
+$ink: #131110;
+
+// ——— Accents ———
+
+/// The one accent: core tier, the primary action, an active tab.
+$amber: #e5a045;
+/// The standard tier, and a pace that is on track.
+$teal: #7fa8a0;
+/// Destructive actions, and the Difficult grade.
+///
+/// These were #c8674f and #c9685a in separate files — a difference of a few
+/// values per channel that nothing could see, and nobody chose. One red now.
+$red: #c8674f;
+/// The Easy grade.
+$green: #8fae7e;

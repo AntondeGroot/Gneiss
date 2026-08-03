@@ -1,12 +1,4 @@
-$panel: #1c1916;
-$panel2: #221e1a;
-$line: #2c2722;
-$text: #ede6dc;
-$dim: #9a9087;
-$faint: #6e665e;
-$amber: #e5a045;
-$red: #c8674f;
-$bg: #131110;
+@use "styles" as *;
 
 :host {
   display: block;
@@ -73,7 +65,7 @@ $bg: #131110;
   .primary {
     background: $amber;
     border-color: $amber;
-    color: $bg;
+    color: $ink;
     font-weight: 600;
   }
 

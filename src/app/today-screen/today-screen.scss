@@ -1,11 +1,4 @@
-$bg: #131110;
-$panel2: #221e1a;
-$line: #2c2722;
-$text: #ede6dc;
-$dim: #9a9087;
-$faint: #6e665e;
-$amber: #e5a045;
-$teal: #7fa8a0;
+@use "styles" as *;
 
 :host {
   display: block;
@@ -224,7 +217,7 @@ circle {
   border: none;
   border-radius: 0.75rem;
   background: $amber;
-  color: $bg;
+  color: $ink;
   font: inherit;
   font-weight: 600;
   font-size: 0.95rem;

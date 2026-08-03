@@ -1,14 +1,14 @@
-// Sampled from the logo's own background so the artwork blends into the screen
-// rather than sitting on it as a visible square.
-$splash-bg: #07050c;
+@use "styles" as *;
 
+// $base is sampled from the logo's own background, so the artwork blends into
+// the screen rather than sitting on it as a visible square.
 .splash {
   position: fixed;
   inset: 0;
   z-index: 10;
   display: grid;
   place-items: center;
-  background: $splash-bg;
+  background: $base;
   animation: splash-out 1.3s ease forwards;
 
   img {

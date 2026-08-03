@@ -1,9 +1,4 @@
-$panel: #1c1916;
-$line: #2c2722;
-$dim: #9a9087;
-$faint: #6e665e;
-$amber: #e5a045;
-$bg: #131110;
+@use "styles" as *;
 
 nav {
   position: fixed;
@@ -17,17 +12,53 @@ nav {
 }
 
 a {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.9rem 0;
-  color: $faint;
-  font-size: 0.82rem;
+  padding: 0.95rem 0;
+  color: $dim;
+  font-size: 0.86rem;
+  letter-spacing: 0.02em;
   text-decoration: none;
 
-  &.active {
-    color: $dim;
+  // A rule between each pair, so the bar reads as three targets rather than one
+  // grey strip. Between only, so the bar keeps clean outer edges.
+  & + a {
+    border-left: 1px solid $line;
+  }
+
+  &:hover {
+    color: $text;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $amber;
+    outline-offset: -2px;
+  }
+}
+
+/**
+ * The current tab as a lit band: an amber stratum along its top edge, with the
+ * cell lifted a shade beneath it.
+ *
+ * Gneiss is banded rock, so a stratum is the app's own vocabulary for "this
+ * layer, not that one". It also carries the state three ways — colour, weight
+ * and the band — so the active tab is still obvious to anyone who cannot pick
+ * two greys apart.
+ */
+a.active {
+  color: $text;
+  font-weight: 600;
+  background: linear-gradient($panel2, $panel);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: $amber;
   }
 }
 
@@ -36,7 +67,7 @@ a {
   padding: 0.05rem 0.35rem;
   border-radius: 1rem;
   background: $amber;
-  color: $bg;
+  color: $base;
   font-size: 0.7rem;
   font-weight: 600;
 }
