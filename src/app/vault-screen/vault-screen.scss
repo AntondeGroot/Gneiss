@@ -1,13 +1,6 @@
+@use "styles" as *;
+
 // Palette inherited from the prototype: charcoal panels, safelight amber.
-$bg: #131110;
-$panel: #1c1916;
-$panel2: #221e1a;
-$line: #2c2722;
-$text: #ede6dc;
-$dim: #9a9087;
-$faint: #6e665e;
-$amber: #e5a045;
-$teal: #7fa8a0;
 
 :host {
   display: block;
@@ -75,7 +68,7 @@ button {
   &.primary {
     background: $amber;
     border-color: $amber;
-    color: $bg;
+    color: $ink;
     font-weight: 600;
   }
 

@@ -71,9 +71,11 @@ export class DeckService {
   readonly all = this.cards.asReadonly();
   readonly topicTags = this.topics.asReadonly();
   /**
-   * Today's queue: due reviews and new cards, each under its own cap, ordered
-   * core-first and most-overdue-first. An imported vault's backlog drains over
-   * days rather than arriving all at once.
+   * This session's queue: due reviews and new cards, each under its own portion,
+   * ordered core-first and most-overdue-first. An imported vault's backlog is
+   * served a portion at a time rather than all at once — and since grading a
+   * card takes it out of the due set, finishing a session and starting another
+   * walks straight on through it.
    */
   private readonly selection = computed(() =>
     selectDue(this.cards(), today(), {
@@ -84,10 +86,10 @@ export class DeckService {
   );
 
   readonly due = computed(() => this.selection().queue);
-  /** Cards held back by today's caps, so the UI can say so rather than hide it. */
+  /** Cards beyond this session's portion, so the UI can say so rather than hide it. */
   readonly heldBackNew = computed(() => this.selection().heldBackNew);
   readonly heldBackReviews = computed(() => this.selection().heldBackReviews);
-  /** Crammed cards beyond today's chosen pace — next in line, not withheld. */
+  /** Crammed cards beyond the chosen pace — next in line, not withheld. */
   readonly heldCrammed = computed(() => this.selection().heldCrammed);
 
   /**

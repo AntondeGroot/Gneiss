@@ -1,0 +1,22 @@
+/**
+ * The Gneiss look, in one import.
+ *
+ * Every stylesheet says `@use "styles" as *;` and gets everything forwarded
+ * below. Growing the system means adding a partial and one line here — never an
+ * edit in each component, which is the failure this replaced: the palette was
+ * copied into six files, and they drifted apart.
+ *
+ * Where things go:
+ *
+ * - `_tokens` — **values**, with no opinion about markup: colour today, and a
+ *   type scale, spacing steps and radii when they are needed.
+ * - future partials — **rules**, which are opinions: `_controls` for the shared
+ *   shape of buttons and fields, as mixins or placeholder selectors.
+ *
+ * Keeping those apart is the reason this file exists rather than one growing
+ * bucket. A value can be used anywhere and costs nothing; a rule emits CSS and
+ * belongs to a kind of element. Mixing them makes it impossible to tell which
+ * you are reaching for.
+ */
+
+@forward "tokens";

@@ -1,0 +1,27 @@
+// The document-level rules: the ground everything sits on, the fonts, and the
+// box model. Everything else lives with the component it belongs to.
+//
+// Sass requires @use before any other rule. It emits nothing itself, so the font
+// @import below still lands first in the compiled CSS, where it must be.
+@use "styles" as *;
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+// The ground is set on BOTH html and body deliberately. Body is only as tall as
+// its content, so while the two disagreed the html colour showed through
+// underneath — a seam straight across the screen wherever the content happened
+// to stop. The one value that is not a token is the inline background in
+// index.html, which has to be literal because it is painted before any
+// stylesheet loads; keep it and the theme-color meta in step with $base.
+html,
+body {
+  margin: 0;
+  // dvh, not vh: on mobile the browser chrome shrinks the viewport, and vh would
+  // leave a strip of unpainted page below the fold.
+  min-height: 100dvh;
+  background: $base;
+}
+
+* {
+  box-sizing: border-box;
+}
