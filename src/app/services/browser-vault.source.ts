@@ -43,12 +43,20 @@ export class BrowserVaultSource implements VaultSource {
     return this.readFolder(this.requireRoot(), "");
   }
 
-  async writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void> {
+  writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void> {
+    return this.editNote(notePath, (md) => withReviewState(md, front, review));
+  }
+
+  async editNote(notePath: string, transform: (md: string) => string): Promise<void> {
     if (!this.writable) return;
 
     const file = await this.fileAt(notePath);
-    const updated = withReviewState(await (await file.getFile()).text(), front, review);
-    await write(file, updated);
+    await write(file, transform(await (await file.getFile()).text()));
+  }
+
+  /** The folder the user picked, which is the vault root by our own convention. */
+  vaultName(): string {
+    return this.root?.name ?? "";
   }
 
   async readConfig(): Promise<GneissConfig> {
@@ -130,6 +138,7 @@ interface FileHandle {
 
 interface DirectoryHandle {
   readonly kind: "directory";
+  readonly name: string;
   entries(): AsyncIterableIterator<[string, DirectoryHandle | FileHandle]>;
   getDirectoryHandle(name: string, options?: { create: boolean }): Promise<DirectoryHandle>;
   getFileHandle(name: string, options?: { create: boolean }): Promise<FileHandle>;

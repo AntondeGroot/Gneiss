@@ -1,0 +1,63 @@
+<section class="editor">
+  <label class="field">
+    <span>Question</span>
+    <textarea
+      name="front"
+      rows="2"
+      [ngModel]="draftFront()"
+      (ngModelChange)="draftFront.set($event)"
+    ></textarea>
+  </label>
+
+  <label class="field">
+    <span>Answer</span>
+    <textarea
+      name="back"
+      rows="5"
+      [ngModel]="draftBack()"
+      (ngModelChange)="draftBack.set($event)"
+    ></textarea>
+  </label>
+
+  <div class="actions">
+    <button
+      type="button"
+      class="trash"
+      [attr.aria-label]="'Delete this card'"
+      (click)="armDelete()"
+      [disabled]="confirmingDelete()"
+    >
+      🗑
+    </button>
+    <button type="button" (click)="onCancel()">Cancel</button>
+    <button
+      type="button"
+      class="primary"
+      (click)="onSave()"
+      [disabled]="incomplete() || unchanged()"
+    >
+      Save
+    </button>
+  </div>
+
+  <!-- Armed rather than immediate: deleting edits a note Gneiss does not own,
+       and there is no undo once the file is written. -->
+  @if (confirmingDelete()) {
+  <div class="confirm">
+    <p>Delete this card from the note? The rest of the note is untouched.</p>
+    <div class="actions">
+      <button type="button" (click)="confirmingDelete.set(false)">Keep it</button>
+      <button type="button" class="danger" (click)="onDelete()">Delete card</button>
+    </div>
+  </div>
+  }
+
+  <footer class="where">
+    <span class="path">{{ folder() || "vault root" }}</span>
+    @if (noteUri()) {
+    <a class="open" [href]="noteUri()">Open in Obsidian ↗</a>
+    } @else {
+    <span class="unavailable">{{ notePath() }}</span>
+    }
+  </footer>
+</section>

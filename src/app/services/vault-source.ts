@@ -32,6 +32,23 @@ export interface VaultSource {
   /** Records one card's review state. No-op on a read-only source. */
   writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void>;
 
+  /**
+   * Reads a note, applies a pure transform, writes the result back. No-op on a
+   * read-only source.
+   *
+   * One primitive rather than a method per operation: editing a card, removing
+   * one, and anything later that rewrites a note are all the same read-modify-
+   * write, and the interesting part belongs in the vault module where it can be
+   * tested without a filesystem.
+   */
+  editNote(notePath: string, transform: (md: string) => string): Promise<void>;
+
+  /**
+   * The vault's own folder name, which is what Obsidian knows it by. Empty when
+   * the source cannot say.
+   */
+  vaultName(): string;
+
   readConfig(): Promise<GneissConfig>;
   writeConfig(config: GneissConfig): Promise<void>;
 }

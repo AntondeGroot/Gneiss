@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG } from "../../vault";
+import { DEFAULT_CONFIG, parseNote } from "../../vault";
 import type { ParsedNote, Tier } from "../../vault";
 
 import { DeckService } from "./deck.service";
@@ -87,5 +87,81 @@ describe("DeckService sessions", () => {
     }
 
     expect(deck.due()).toHaveLength(0);
+  });
+});
+
+/** A vault source backed by an in-memory note, so edits can be read back. */
+function fakeSource(notes: Record<string, string>) {
+  return {
+    label: "Fake",
+    isAvailable: () => true,
+    canWrite: () => true,
+    open: () => Promise.resolve(),
+    readNotes: () => Promise.resolve([]),
+    writeReviewState: () => Promise.resolve(),
+    editNote: (path: string, transform: (md: string) => string) => {
+      notes[path] = transform(notes[path] ?? "");
+      return Promise.resolve();
+    },
+    vaultName: () => "MyVault",
+    readConfig: () => Promise.resolve(DEFAULT_CONFIG),
+    writeConfig: () => Promise.resolve(),
+  };
+}
+
+const NOTE_MD =
+  "What does grep do? :: search text <!--SR:!2026-09-01,12,250-->\n\n#flashcards/shell\n";
+
+describe("DeckService card editing", () => {
+  it("writes a correction into the note and keeps the card's review state", async () => {
+    const notes = { "shell.md": NOTE_MD };
+    const deck = new DeckService();
+    await deck.open(fakeSource(notes), "");
+    deck.setNotes([parseNote(NOTE_MD, "shell.md")]);
+    const card = deck.all()[0]!;
+
+    await deck.editCard(card, { front: "What does grep actually do?", back: "search text" });
+
+    expect(notes["shell.md"]).toContain("What does grep actually do? :: search text");
+    // Correcting a typo must not cost the card its schedule.
+    expect(notes["shell.md"]).toContain("<!--SR:!2026-09-01,12,250-->");
+  });
+
+  it("re-keys the edited card so the next grade finds it in the note", async () => {
+    const notes = { "shell.md": NOTE_MD };
+    const deck = new DeckService();
+    await deck.open(fakeSource(notes), "");
+    deck.setNotes([parseNote(NOTE_MD, "shell.md")]);
+
+    await deck.editCard(deck.all()[0]!, { front: "Corrected?", back: "search text" });
+
+    // Identity is the question text, so a stale id would point at a question the
+    // note no longer contains and the next write would silently do nothing.
+    expect(deck.all()[0]?.id).toBe("shell.md::Corrected?");
+    expect(deck.all()[0]?.front).toBe("Corrected?");
+  });
+
+  it("removes a deleted card from the note and from the deck", async () => {
+    const notes = { "shell.md": NOTE_MD };
+    const deck = new DeckService();
+    await deck.open(fakeSource(notes), "");
+    deck.setNotes([parseNote(NOTE_MD, "shell.md")]);
+
+    await deck.deleteCard(deck.all()[0]!);
+
+    expect(notes["shell.md"]).not.toContain("What does grep do?");
+    expect(notes["shell.md"]).toContain("#flashcards/shell");
+    expect(deck.all()).toHaveLength(0);
+  });
+
+  it("builds an Obsidian link for the note being reviewed", async () => {
+    const deck = new DeckService();
+    await deck.open(fakeSource({}), "");
+    deck.setNotes([parseNote(NOTE_MD, "Programming/Old Job/shell.md")]);
+
+    expect(deck.noteLink(deck.all()[0]!)).toEqual({
+      folder: "Programming/Old Job",
+      uri: "obsidian://open?vault=MyVault&file=Programming%2FOld%20Job%2Fshell",
+    });
   });
 });

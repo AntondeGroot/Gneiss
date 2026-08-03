@@ -43,6 +43,15 @@ export class CapacitorVaultSource implements VaultSource {
     return this.vault.writeReviewState(this.path, notePath, front, review);
   }
 
+  editNote(notePath: string, transform: (md: string) => string): Promise<void> {
+    return this.vault.editNote(this.path, notePath, transform);
+  }
+
+  /** The vault folder's own name — what Obsidian lists it under. */
+  vaultName(): string {
+    return this.path.split("/").filter(Boolean).pop() ?? "";
+  }
+
   readConfig(): Promise<GneissConfig> {
     return this.config.read(this.path);
   }
