@@ -4,15 +4,27 @@ import {
   DEFAULT_CONFIG,
   cramPlan,
   distinctTopicTags,
+  folderOf,
   isCrammed,
   newReviewState,
   nextStreak,
   resolveTier,
   schedule,
+  obsidianNoteUri,
   selectDue,
   standingStreak,
+  withEditedCard,
+  withoutCard,
 } from "../../vault";
-import type { GneissConfig, Grade, ParsedNote, ReviewState, Tier, TierMapping } from "../../vault";
+import type {
+  CardText,
+  GneissConfig,
+  Grade,
+  ParsedNote,
+  ReviewState,
+  Tier,
+  TierMapping,
+} from "../../vault";
 import type { VaultSource } from "./vault-source";
 
 /** A parsed card plus everything scheduling needs to act on it. */
@@ -134,6 +146,44 @@ export class DeckService {
     await this.source?.writeConfig(config);
   }
 
+  /**
+   * Rewrites a card's question and answer in its note.
+   *
+   * The card keeps its review state: `withEditedCard` carries the `<!--SR:-->`
+   * comment across, so fixing a typo does not cost the card its schedule. Its
+   * identity does change, since that is the question text — so the in-memory
+   * card is re-keyed too, or the next grade would look for a question the note
+   * no longer contains.
+   */
+  async editCard(card: DeckCard, next: CardText): Promise<void> {
+    const edited: DeckCard = {
+      ...card,
+      id: `${card.note}::${next.front}`,
+      front: next.front,
+      back: next.back,
+    };
+    this.replace(card, edited);
+
+    await this.persist(() =>
+      this.source?.editNote(card.note, (md) => withEditedCard(md, card.front, next)),
+    );
+  }
+
+  /** Removes a card from its note, and from the session in progress. */
+  async deleteCard(card: DeckCard): Promise<void> {
+    this.cards.update((cards) => cards.filter((existing) => existing.id !== card.id));
+
+    await this.persist(() => this.source?.editNote(card.note, (md) => withoutCard(md, card.front)));
+  }
+
+  /** Where a note lives in the vault, and the link that opens it in Obsidian. */
+  noteLink(card: DeckCard): { folder: string; uri: string } {
+    return {
+      folder: folderOf(card.note),
+      uri: obsidianNoteUri(this.source?.vaultName() ?? "", card.note),
+    };
+  }
+
   /** What the interval would become, without committing the grade. */
   preview(card: DeckCard, grade: Grade): ReviewState {
     return schedule(card.review, grade, this.optionsFor(card));
@@ -146,13 +196,29 @@ export class DeckService {
    */
   async grade(card: DeckCard, grade: Grade): Promise<void> {
     const review = this.preview(card, grade);
-    this.cards.update((cards) =>
-      cards.map((existing) => (existing.id === card.id ? { ...existing, review } : existing)),
-    );
+    this.replace(card, { ...card, review });
 
-    try {
+    await this.persist(async () => {
       await this.source?.writeReviewState(card.note, card.front, review);
       await this.recordReviewDay();
+    });
+  }
+
+  private replace(card: DeckCard, next: DeckCard): void {
+    this.cards.update((cards) =>
+      cards.map((existing) => (existing.id === card.id ? next : existing)),
+    );
+  }
+
+  /**
+   * Runs a write against the vault, recording a failure rather than throwing it
+   * at the screen. The in-memory change is never rolled back: the user's action
+   * genuinely happened, and discarding it would be worse than a note that is
+   * briefly out of date, which the surfaced error tells them about.
+   */
+  private async persist(write: () => Promise<unknown> | undefined): Promise<void> {
+    try {
+      await write();
       this.writeError.set(null);
     } catch (error) {
       this.writeError.set(error instanceof Error ? error.message : String(error));

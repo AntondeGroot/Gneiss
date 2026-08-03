@@ -15,12 +15,25 @@
   <header class="bar">
     <span class="note">{{ card.note }}</span>
     <span class="tier" [class]="'tier-' + card.tier">{{ card.tier }}</span>
+    <!-- Small and out of the way: nothing should compete with the recall. -->
+    <button type="button" class="edit" aria-label="Edit this card" (click)="openEditor()">✎</button>
     <span class="left">{{ remaining() }} left</span>
   </header>
 
   <p class="front">{{ card.front }}</p>
 
-  @if (revealed()) {
+  @if (editing()) {
+  <gn-card-editor
+    [front]="card.front"
+    [back]="card.back"
+    [folder]="link().folder"
+    [noteUri]="link().uri"
+    [notePath]="card.note"
+    (save)="saveEdit($event)"
+    (remove)="deleteCard()"
+    (dismissed)="closeEditor()"
+  />
+  } @else if (revealed()) {
   <pre class="back">{{ card.back }}</pre>
   <div class="grades">
     <!-- Named `choice`, not `grade`: a loop variable called `grade` shadows the

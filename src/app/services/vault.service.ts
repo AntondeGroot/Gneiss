@@ -19,10 +19,16 @@ interface VaultLocation {
 
 /**
  * Reads an Obsidian vault off the filesystem and parses it into cards, and
- * records review state back into the notes.
+ * writes back into the notes.
  *
- * Gneiss does not own the vault. The only thing it ever writes to a note is that
- * card's `<!--SR:-->` comment — never its content, and never its structure.
+ * Gneiss does not own the vault, and writes only what the user asked for: a
+ * card's `<!--SR:-->` comment as they grade it, and a card's own text when they
+ * edit or remove one during review. Prose around a card, headings, tags and
+ * every other note are never the app's to change.
+ *
+ * **CORRECTED:** this once said the SR comment was the only thing ever written.
+ * Editing a card during review makes that false — but the boundary it was
+ * protecting still holds, one card's span at a time.
  */
 @Injectable({ providedIn: "root" })
 export class VaultService {
@@ -40,33 +46,39 @@ export class VaultService {
     return Promise.all(paths.map((notePath) => this.readNote(location, notePath)));
   }
 
-  /**
-   * Records a card's review state in its note.
-   *
-   * The only write Gneiss makes to a note. Read-modify-write on the file as it is
-   * on disk right now, not on a cached copy, so a note edited in Obsidian since
-   * the last read keeps those edits.
-   */
-  async writeReviewState(
+  /** Records a card's review state in its note. */
+  writeReviewState(
     vaultPath: string,
     notePath: string,
     front: string,
     review: ReviewState,
   ): Promise<void> {
-    const location: VaultLocation = { path: vaultPath, directory: this.directory };
+    return this.editNote(vaultPath, notePath, (md) => withReviewState(md, front, review));
+  }
+
+  /**
+   * Rewrites one note through a pure transform.
+   *
+   * Read-modify-write on the file as it is on disk right now, not on a cached
+   * copy, so a note edited in Obsidian since the last read keeps those edits.
+   */
+  async editNote(
+    vaultPath: string,
+    notePath: string,
+    transform: (md: string) => string,
+  ): Promise<void> {
     const full = joinPath(vaultPath, notePath);
 
     const { data } = await Filesystem.readFile({
       path: full,
-      directory: location.directory,
+      directory: this.directory,
       encoding: Encoding.UTF8,
     });
-    const updated = withReviewState(await asText(data), front, review);
 
     await Filesystem.writeFile({
       path: full,
-      data: updated,
-      directory: location.directory,
+      data: transform(await asText(data)),
+      directory: this.directory,
       encoding: Encoding.UTF8,
     });
   }

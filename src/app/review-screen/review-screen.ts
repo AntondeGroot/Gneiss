@@ -1,7 +1,9 @@
 import { Component, computed, inject, signal } from "@angular/core";
 import { RouterLink } from "@angular/router";
 
-import type { Grade } from "../../vault";
+import { CardEditor } from "../card-editor/card-editor";
+
+import type { CardText, Grade } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import type { DeckCard } from "../services/deck.service";
 
@@ -9,7 +11,7 @@ const GRADES: readonly Grade[] = ["difficult", "medium", "easy"];
 
 @Component({
   selector: "gn-review-screen",
-  imports: [RouterLink],
+  imports: [RouterLink, CardEditor],
   templateUrl: "./review-screen.html",
   styleUrl: "./review-screen.scss",
 })
@@ -56,6 +58,57 @@ export class ReviewScreen {
 
   protected reveal(): void {
     this.revealed.set(true);
+  }
+
+  /** Whether the correction box is open over the current card. */
+  protected readonly editing = signal(false);
+
+  /** Where the note lives, and the link that hands over to Obsidian. */
+  protected readonly link = computed(() => {
+    const card = this.current();
+    return card ? this.deck.noteLink(card) : { folder: "", uri: "" };
+  });
+
+  protected openEditor(): void {
+    this.editing.set(true);
+  }
+
+  protected closeEditor(): void {
+    this.editing.set(false);
+  }
+
+  /**
+   * Saves the correction and swaps it into the session in progress.
+   *
+   * The queue was frozen when the session began, so it still holds the old text —
+   * without this the card would go on showing the typo that was just fixed.
+   */
+  protected saveEdit(next: CardText): void {
+    const card = this.current();
+    if (!card) return;
+
+    void this.deck.editCard(card, next);
+    this.queue.update((cards) =>
+      cards.map((existing) =>
+        existing.id === card.id
+          ? { ...existing, id: `${card.note}::${next.front}`, ...next }
+          : existing,
+      ),
+    );
+    this.closeEditor();
+  }
+
+  /** Drops the card from the note and from the session — nothing left to grade. */
+  protected deleteCard(): void {
+    const card = this.current();
+    if (!card) return;
+
+    void this.deck.deleteCard(card);
+    // Removing at the current position slides the next card into it, so the
+    // position stays put and the session simply carries on.
+    this.queue.update((cards) => cards.filter((existing) => existing.id !== card.id));
+    this.closeEditor();
+    this.revealed.set(false);
   }
 
   /** When this grade would bring the card back, computed live from the settings. */

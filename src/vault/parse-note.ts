@@ -23,7 +23,20 @@ export interface CardLocation {
   readonly front: string;
   /** Inline cards carry their comment on the same line; block cards on the next. */
   readonly kind: "inline" | "block";
-  /** Index into the note's lines, counting from the top of the file. */
+  /**
+   * First line of the card — the question. With `answerEndLine` this gives the
+   * card's whole span, which is what lets a card be rewritten or removed without
+   * disturbing a byte of the note around it.
+   */
+  readonly startLine: number;
+  /**
+   * Index into the note's lines, counting from the top of the file.
+   *
+   * Note this is the last line the card *occupies*, which for a block card that
+   * already carries review state is the `<!--SR:-->` line rather than the last
+   * line of prose — the scanner takes that line as content and strips it from
+   * the answer afterwards.
+   */
   readonly answerEndLine: number;
 }
 
@@ -61,7 +74,11 @@ function scanBody(normalized: string): ScanResult {
   // index the whole file.
   return {
     cards: result.cards,
-    locations: result.locations.map((at) => ({ ...at, answerEndLine: at.answerEndLine + offset })),
+    locations: result.locations.map((at) => ({
+      ...at,
+      startLine: at.startLine + offset,
+      answerEndLine: at.answerEndLine + offset,
+    })),
   };
 }
 
@@ -89,6 +106,9 @@ class CardScanner {
   /** Index of the last line taken as content — where a card's answer ends. */
   private lastContentLine = -1;
   private lineIndex = -1;
+  /** Where the current buffer began, and where the pending question began. */
+  private bufferStartLine = -1;
+  private pendingFrontLine = -1;
 
   scan(lines: string[]): ScanResult {
     for (const [index, line] of lines.entries()) {
@@ -127,6 +147,7 @@ class CardScanner {
   }
 
   private take(line: string): void {
+    if (this.buffer.length === 0) this.bufferStartLine = this.lineIndex;
     this.buffer.push(line);
     this.lastContentLine = this.lineIndex;
   }
@@ -142,6 +163,7 @@ class CardScanner {
     this.addCard(front, stripReviewComments(rest).trim(), parseReviewStates(rest), {
       front,
       kind: "inline",
+      startLine: this.lineIndex,
       answerEndLine: this.lineIndex,
     });
     this.buffer = [];
@@ -149,6 +171,8 @@ class CardScanner {
 
   private startBlockAnswer(): void {
     this.pendingFront = cleanFront(this.buffer.join(" ")) || null;
+    // The question's first line, held while the answer accumulates below it.
+    this.pendingFrontLine = this.bufferStartLine;
     this.buffer = [];
   }
 
@@ -158,6 +182,7 @@ class CardScanner {
       this.addCard(this.pendingFront, stripReviewComments(raw).trim(), parseReviewStates(raw), {
         front: this.pendingFront,
         kind: "block",
+        startLine: this.pendingFrontLine,
         answerEndLine: this.lastContentLine,
       });
       this.pendingFront = null;
