@@ -128,6 +128,61 @@ Two properties are why the date is part of the design:
 While cram is active, its scope also overrides the new-cards-per-day cap, and the Today
 screen leads with `<topic> · 12 days · 34 due` instead of the normal tier ring.
 
+### Report the pace, never ration the cards (DECIDED)
+
+**Gneiss does not withhold cards.** An earlier version of this design held back unseen cards
+once the exam was too close to learn them properly. That was **rejected**: withholding treats
+the learner as the problem, when the app's actual job is to say what the deadline costs per
+day and let them decide. A pace that is too slow is *reported*, not enforced.
+
+So a cram carries its own **pace** (`cram.perDay`) — the intensity knob, gentle to intensive —
+which replaces the ordinary `newPerDay` ceiling for its topic. It is a target for one day, not
+a wall: nothing stops starting another session, so anything not reached today is simply next
+in line rather than withheld.
+
+Today then shows, for the crammed topic:
+
+- a **progress bar and percentage** — cards *met at least once*, out of the topic's total
+- the **pace the deadline demands**, and whether the chosen one still gets there:
+  `At 3 a day you will not finish. Start 10 a day to meet all 60 remaining in time.`
+
+Progress counts cards **met**, not passes completed, because that is what the vault can
+actually tell us: the SR comment stores `due,interval,ease` and no tally of passes. Inventing
+one would break round-trip with the Obsidian plugin, which is a core constraint.
+
+### The clamp cannot make a card learnable (DECIDED)
+
+Learning needs repetition, so a card first met the day before an exam is not learned — it is
+merely seen. **The clamp cannot fix this, and tuning `RUNWAY_FRACTION` is the wrong lever.**
+Tracing exposure counts shows why: the clamp already bottoms out at a one-day interval near
+the deadline, so a card introduced with one day left gets exactly one look no matter what
+fraction is used. Exposure count is dominated by *when a card is first introduced*, not by
+how the interval is capped.
+
+| Card first seen | 0.4 runway | guarantee-3 | guarantee-4 |
+|---|---|---|---|
+| 10 days out | 6 exposures | 6 | 7 |
+| 3 days out | 3 | 3 | 3 |
+| 1 day out | **1** | **1** | **1** |
+
+This is why `cramMinPasses` exists, but note what it is *not* used for: it withholds nothing.
+It sets how late a card can still be **usefully started**, which is what makes the required
+pace honest. `cramPlan` counts only `daysLeft - minPasses + 2` days as available for new
+material — treating the final days as usable would quietly understate how much there is to do
+each day, which is precisely the number the user is relying on.
+
+`cramMinPasses` is **configurable in Settings** (default 3) and lives at the top level of
+`.gneiss/config.md`, not inside the `cram:` block: how much repetition you need to learn
+something is a property of *you*, and outlives any single exam. `cram.perDay` sits inside the
+block instead, because the intensity you pick is a property of *that exam*.
+
+**OPEN:** `reviewsPerDay` is untouched by cram, so a crammed topic's cards already in rotation
+still compete for the ordinary review ceiling. Only the *new*-card ceiling is replaced.
+
+**OPEN:** "start another session to practise more" is the stated escape hatch for the daily
+pace being a target rather than a wall, but it is not built — the Review screen walks today's
+queue and stops. Until it exists, the pace is in practice a soft wall.
+
 **Where cram state lives:** a `.gneiss/config.md` file *inside the vault*, alongside the
 tag→tier mapping and `spread`. It is app config, not note content, so it stays out of the
 notes — but putting it in the vault means it rides the existing vault sync for free,

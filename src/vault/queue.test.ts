@@ -5,19 +5,26 @@ import type { DailyLimits, Schedulable } from "./queue.js";
 import type { Tier } from "./types.js";
 
 const TODAY = "2026-08-01";
-const GENEROUS: DailyLimits = { newPerDay: 100, reviewsPerDay: 100 };
+const NO_CRAM = { cram: null, cramMinPasses: 3 };
+const GENEROUS: DailyLimits = { newPerDay: 100, reviewsPerDay: 100, ...NO_CRAM };
 
 interface TestCard extends Schedulable {
   readonly id: string;
 }
 
-function card(id: string, tier: Tier, due: string, interval = 5): TestCard {
-  return { id, tier, review: { due, interval, ease: 2.5 } };
+function card(
+  id: string,
+  tier: Tier,
+  due: string,
+  interval = 5,
+  topicTags: string[] = [],
+): TestCard {
+  return { id, tier, topicTags, review: { due, interval, ease: 2.5 } };
 }
 
 /** interval 0 marks a card that has never been reviewed. */
-function newCard(id: string, tier: Tier): TestCard {
-  return card(id, tier, TODAY, 0);
+function newCard(id: string, tier: Tier, topicTags: string[] = []): TestCard {
+  return card(id, tier, TODAY, 0, topicTags);
 }
 
 describe("selectDue", () => {
@@ -27,7 +34,7 @@ describe("selectDue", () => {
       card(`c${index}`, "standard", "2024-06-01"),
     );
 
-    const selection = selectDue(backlog, TODAY, { newPerDay: 8, reviewsPerDay: 30 });
+    const selection = selectDue(backlog, TODAY, { newPerDay: 8, reviewsPerDay: 30, ...NO_CRAM });
 
     expect(selection.queue).toHaveLength(30);
     expect(selection.heldBackReviews).toBe(170);
@@ -40,7 +47,7 @@ describe("selectDue", () => {
       card("older", "standard", "2025-03-02"),
     ];
 
-    const selection = selectDue(cards, TODAY, { newPerDay: 0, reviewsPerDay: 2 });
+    const selection = selectDue(cards, TODAY, { newPerDay: 0, reviewsPerDay: 2, ...NO_CRAM });
 
     // Ordering has to precede the cap, or the two kept would be arbitrary.
     expect(selection.queue.map((c) => c.id)).toEqual(["ancient", "older"]);
@@ -68,7 +75,7 @@ describe("selectDue", () => {
       ...Array.from({ length: 20 }, (_, i) => newCard(`new${i}`, "standard")),
     ];
 
-    const selection = selectDue(cards, TODAY, { newPerDay: 3, reviewsPerDay: 10 });
+    const selection = selectDue(cards, TODAY, { newPerDay: 3, reviewsPerDay: 10, ...NO_CRAM });
 
     // A backlog of reviews must not eat the day's allowance of new material.
     expect(selection.queue).toHaveLength(8);
@@ -82,5 +89,70 @@ describe("selectDue", () => {
     const selection = selectDue(cards, TODAY, GENEROUS);
 
     expect(selection.queue.map((c) => c.id)).toEqual(["today"]);
+  });
+});
+
+const EXAM_TAG = "#flashcards/lang/certexam";
+
+function cramming(examDate: string, perDay = 4): DailyLimits {
+  return {
+    newPerDay: 2,
+    reviewsPerDay: 100,
+    cram: { active: true, scope: EXAM_TAG, examDate, perDay },
+  };
+}
+
+describe("selectDue under a cram", () => {
+  it("puts the crammed topic on its own pace instead of the ordinary ceiling", () => {
+    const cards = Array.from({ length: 6 }, (_, i) => newCard(`exam${i}`, "standard", [EXAM_TAG]));
+
+    const selection = selectDue(cards, TODAY, cramming("2026-08-20"));
+
+    // newPerDay is 2, but the exam's own pace is 4 — a deadline gets its own knob.
+    expect(selection.queue).toHaveLength(4);
+    expect(selection.heldCrammed).toBe(2);
+  });
+
+  it("never withholds cards for being close to the exam", () => {
+    const cards = Array.from({ length: 3 }, (_, i) => newCard(`exam${i}`, "standard", [EXAM_TAG]));
+
+    // The exam is tomorrow: too close to learn these properly, but that is the
+    // learner's call to make. The app reports the pace; it does not ration.
+    const selection = selectDue(cards, TODAY, cramming("2026-08-02"));
+
+    expect(selection.queue).toHaveLength(3);
+    expect(selection.heldCrammed).toBe(0);
+  });
+
+  it("keeps the crammed pace separate from every other topic's cap", () => {
+    const cards = [
+      ...Array.from({ length: 6 }, (_, i) => newCard(`exam${i}`, "standard", [EXAM_TAG])),
+      ...Array.from({ length: 5 }, (_, i) => newCard(`other${i}`, "standard", ["#flashcards/git"])),
+    ];
+
+    const selection = selectDue(cards, TODAY, cramming("2026-08-20"));
+
+    // Crammed cards lead, four of them at the cram's pace, then two on newPerDay.
+    expect(selection.queue.map((c) => c.id)).toEqual([
+      "exam0",
+      "exam1",
+      "exam2",
+      "exam3",
+      "other0",
+      "other1",
+    ]);
+    expect(selection.heldCrammed).toBe(2);
+    expect(selection.heldBackNew).toBe(3);
+  });
+
+  it("goes back to the ordinary cap once the exam has passed", () => {
+    const cards = Array.from({ length: 6 }, (_, i) => newCard(`exam${i}`, "standard", [EXAM_TAG]));
+
+    const selection = selectDue(cards, TODAY, cramming("2026-07-20"));
+
+    // The date is the off-switch: the topic loses its own pace and rejoins newPerDay.
+    expect(selection.queue).toHaveLength(2);
+    expect(selection.heldCrammed).toBe(0);
+    expect(selection.heldBackNew).toBe(4);
   });
 });

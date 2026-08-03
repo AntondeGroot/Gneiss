@@ -13,8 +13,14 @@ describe("config round trip", () => {
       lastReviewedOn: "2026-08-01",
       reminderOn: true,
       reminderAt: "07:15",
+      cramMinPasses: 4,
       tiers: { "#flashcards/git": "core", "#flashcards/lang/certexam": "optional" },
-      cram: { active: true, scope: "#flashcards/lang/certexam", examDate: "2026-09-01" },
+      cram: {
+        active: true,
+        scope: "#flashcards/lang/certexam",
+        examDate: "2026-09-01",
+        perDay: 12,
+      },
     };
 
     expect(parseConfig(formatConfig(config))).toEqual(config);
@@ -48,8 +54,11 @@ Notes below the frontmatter are ignored.
       lastReviewedOn: "",
       reminderOn: false,
       reminderAt: "08:30",
+      // Absent from the file, so the default stands — an older config still reads.
+      cramMinPasses: 3,
       tiers: { "#flashcards/git": "core", "#flashcards/tools": "standard" },
-      cram: { active: true, scope: "#flashcards/lang", examDate: "2026-12-01" },
+      // perDay is absent from the file, so a config written before it still reads.
+      cram: { active: true, scope: "#flashcards/lang", examDate: "2026-12-01", perDay: 10 },
     });
   });
 

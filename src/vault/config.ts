@@ -32,6 +32,18 @@ export interface GneissConfig {
   /** Daily on-device reminder, and the local time it fires at (HH:MM). */
   readonly reminderOn: boolean;
   readonly reminderAt: string;
+  /**
+   * How many times a card must come round before an exam to count as learned.
+   *
+   * Nothing is withheld on the strength of it. It sets how late a card can still
+   * be *usefully* started, which is what makes the required daily pace honest:
+   * counting the final days as available for new material would quietly
+   * understate how much there is to do.
+   *
+   * A property of the user rather than of any one exam, so it sits here and not
+   * in `cram`, which is cleared when the deadline passes.
+   */
+  readonly cramMinPasses: number;
   readonly tiers: TierMapping;
   readonly cram: CramState | null;
 }
@@ -44,9 +56,16 @@ export const DEFAULT_CONFIG: GneissConfig = {
   lastReviewedOn: NEVER,
   reminderOn: false,
   reminderAt: "08:30",
+  cramMinPasses: 3,
   tiers: {},
   cram: null,
 };
+
+/** Below this a card cannot be repeated at all, so the passes figure would mean nothing. */
+const FEWEST_PASSES = 1;
+
+/** The pace a fresh cram starts at, until the user picks their own intensity. */
+export const DEFAULT_CRAM_PER_DAY = 10;
 
 export function parseConfig(md: string): GneissConfig {
   const sections = readSections(frontmatterOf(md));
@@ -59,6 +78,10 @@ export function parseConfig(md: string): GneissConfig {
     lastReviewedOn: sections.top["lastReviewedOn"] ?? NEVER,
     reminderOn: sections.top["reminderOn"] === "true",
     reminderAt: sections.top["reminderAt"] ?? DEFAULT_CONFIG.reminderAt,
+    cramMinPasses: Math.max(
+      FEWEST_PASSES,
+      readCount(sections.top["cramMinPasses"], DEFAULT_CONFIG.cramMinPasses),
+    ),
     tiers: readTiers(sections.nested[TIERS] ?? {}),
     cram: readCram(sections.nested[CRAM] ?? {}),
   };
@@ -74,6 +97,7 @@ export function formatConfig(config: GneissConfig): string {
     `lastReviewedOn: ${config.lastReviewedOn}`,
     `reminderOn: ${config.reminderOn}`,
     `reminderAt: "${config.reminderAt}"`,
+    `cramMinPasses: ${config.cramMinPasses}`,
   ];
 
   lines.push(`${TIERS}:`);
@@ -86,6 +110,7 @@ export function formatConfig(config: GneissConfig): string {
     lines.push(`${INDENT}active: ${config.cram.active}`);
     lines.push(`${INDENT}scope: "${config.cram.scope}"`);
     lines.push(`${INDENT}examDate: ${config.cram.examDate}`);
+    lines.push(`${INDENT}perDay: ${config.cram.perDay}`);
   }
 
   lines.push(DELIMITER, "", ...EXPLANATION, "");
@@ -179,5 +204,10 @@ function readCram(entries: Record<string, string>): CramState | null {
   const examDate = entries["examDate"];
   if (!scope || !examDate) return null;
 
-  return { active: entries["active"] === "true", scope, examDate };
+  return {
+    active: entries["active"] === "true",
+    scope,
+    examDate,
+    perDay: readCount(entries["perDay"], DEFAULT_CRAM_PER_DAY),
+  };
 }

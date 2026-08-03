@@ -5,6 +5,46 @@
   </span>
 </header>
 
+@if (cram(); as plan) {
+<section class="cram">
+  <span class="topic">{{ cramTopic() }}</span>
+  <p class="countdown">
+    <span class="days">{{ plan.daysLeft }}</span>
+    <span class="unit">{{ plan.daysLeft === 1 ? "day" : "days" }}</span>
+    <span class="sep" aria-hidden="true">·</span>
+    <span class="days">{{ cramDue() }}</span>
+    <span class="unit">due</span>
+  </p>
+
+  <div
+    class="bar"
+    role="progressbar"
+    [attr.aria-valuenow]="cramPercent()"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-label]="'Topic covered'"
+  >
+    <span class="fill" [style.width.%]="cramPercent()"></span>
+  </div>
+  <p class="coverage">
+    <strong>{{ cramPercent() }}%</strong> met · {{ plan.met }} of {{ plan.total }}
+  </p>
+
+  @if (plan.remaining === 0) {
+  <p class="pace good">Everything started — the rest is repetition.</p>
+  } @else if (plan.onTrack) {
+  <p class="pace good">
+    {{ plan.targetPerDay }} a day keeps you on track — {{ plan.requiredPerDay }} a day is enough.
+  </p>
+  } @else {
+  <p class="pace behind">
+    At {{ plan.targetPerDay }} a day you will not finish. Start
+    <strong>{{ plan.requiredPerDay }} a day</strong> to meet all {{ plan.remaining }} remaining in
+    time.
+  </p>
+  }
+</section>
+} @else {
 <section class="ring-wrap">
   <svg
     viewBox="0 0 128 128"
@@ -37,20 +77,24 @@
   </li>
   }
 </ul>
-
-@if (due().length > 0) {
+} @if (due().length > 0) {
 <button type="button" class="primary" (click)="start()">Start review</button>
 } @else if (loaded()) {
 <p class="empty">Nothing due today.</p>
 } @else {
 <p class="empty">No vault loaded yet.</p>
 <a class="link" routerLink="/vault">Open Vault</a>
-} @if (heldBackReviews() > 0 || heldBackNew() > 0) {
+} @if (heldBackReviews() > 0 || heldBackNew() > 0 || heldCrammed() > 0) {
 <p class="held">
   @if (heldBackReviews() > 0) {
   <span>{{ heldBackReviews() }} overdue cards held back — the backlog drains a day at a time.</span>
   } @if (heldBackNew() > 0) {
   <span>{{ heldBackNew() }} new cards held back by today's cap.</span>
+  } @if (heldCrammed() > 0) {
+  <span>
+    {{ heldCrammed() }} more in this topic are next in line — raise the pace in Settings, or come
+    back for another session today.
+  </span>
   }
 </p>
 }

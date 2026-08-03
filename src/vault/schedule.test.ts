@@ -79,7 +79,7 @@ describe("schedule", () => {
     const card = { due: "2026-08-01", interval: 10, ease: 2.5 };
     const cramming: SchedulingOptions = {
       ...STANDARD,
-      cram: { active: true, scope: "#flashcards/shell", examDate: "2026-08-11" },
+      cram: { active: true, scope: "#flashcards/shell", examDate: "2026-08-11", perDay: 10 },
     };
 
     const next = schedule(card, "medium", cramming);
