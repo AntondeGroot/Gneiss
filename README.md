@@ -8,6 +8,15 @@ how aggressively its cards resurface.
 > prototype — the design and logic reference, not production code. See [`CLAUDE.md`](./CLAUDE.md)
 > for the full project context and open questions.
 
+
+# Run it in a browser
+
+https://antondegroot.github.io/Gneiss/
+
+this is just a frontend, your Obsidian Vault is the back-end and source of truth.
+
+
+
 ## Why it exists
 
 Standard spaced-repetition systems treat every card equally. But not all knowledge is worth
