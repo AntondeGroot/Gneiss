@@ -36,6 +36,14 @@ export class TodayScreen {
   protected readonly streak = this.deck.streak;
   protected readonly heldBackNew = this.deck.heldBackNew;
   protected readonly heldBackReviews = this.deck.heldBackReviews;
+  protected readonly heldCrammed = this.deck.heldCrammed;
+
+  /** While a cram runs the deadline leads, not the tier ring — see CLAUDE.md. */
+  protected readonly cram = this.deck.cram;
+  protected readonly cramDue = computed(() => this.deck.cramDue().length);
+  /** The tag's last segment: `#flashcards/lang/certexam` reads as `certexam`. */
+  protected readonly cramTopic = computed(() => lastSegment(this.deck.cramScope()));
+  protected readonly cramPercent = computed(() => Math.round((this.cram()?.progress ?? 0) * 100));
   protected readonly loaded = computed(() => this.deck.all().length > 0);
 
   protected readonly segments = computed(() => toSegments(this.due()));
@@ -43,6 +51,10 @@ export class TodayScreen {
   protected start(): void {
     void this.router.navigate(["/review"]);
   }
+}
+
+function lastSegment(tag: string): string {
+  return tag.split("/").pop()?.replace("#", "") ?? "";
 }
 
 /**

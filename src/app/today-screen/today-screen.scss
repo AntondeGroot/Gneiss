@@ -39,6 +39,97 @@ $teal: #7fa8a0;
   font-size: 0.8rem;
 }
 
+/**
+ * The cram header stands in for the ring while a deadline is running: one line
+ * of text where a chart was, because the only question that matters is how long
+ * is left and how much is left.
+ */
+.cram {
+  margin: 3.5rem auto 2.5rem;
+  padding: 1.4rem 1rem;
+  border: 1px solid $line;
+  border-radius: 0.9rem;
+  background: $panel2;
+
+  .topic {
+    display: block;
+    color: $amber;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .countdown {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.35rem;
+    margin: 0.6rem 0 0;
+  }
+
+  .days {
+    font-family: Fraunces, Georgia, serif;
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .unit,
+  .sep {
+    color: $dim;
+    font-size: 0.8rem;
+  }
+
+  .sep {
+    margin: 0 0.2rem;
+  }
+
+  .bar {
+    height: 0.4rem;
+    margin: 1.1rem 0 0.5rem;
+    border-radius: 0.2rem;
+    background: $line;
+    overflow: hidden;
+  }
+
+  .fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: $amber;
+    transition: width 0.3s ease;
+  }
+
+  .coverage {
+    margin: 0;
+    color: $dim;
+    font-size: 0.75rem;
+
+    strong {
+      color: $text;
+      font-weight: 600;
+    }
+  }
+
+  /* The pace line is the point of the screen during a cram: it says what today costs. */
+  .pace {
+    margin: 0.9rem 0 0;
+    font-size: 0.78rem;
+    line-height: 1.5;
+
+    &.good {
+      color: $teal;
+    }
+
+    &.behind {
+      color: $amber;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+  }
+}
+
 .ring-wrap {
   position: relative;
   margin: 2.2rem auto 0;

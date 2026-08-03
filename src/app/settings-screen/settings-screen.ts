@@ -1,8 +1,8 @@
 import { Component, computed, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 
-import { schedule, topicTiers, withTopicTier } from "../../vault";
-import type { GneissConfig, Tier } from "../../vault";
+import { DEFAULT_CRAM_PER_DAY, schedule, topicTiers, withTopicTier } from "../../vault";
+import type { CramState, GneissConfig, Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import { ReminderService } from "../services/reminder.service";
 
@@ -56,6 +56,23 @@ export class SettingsScreen {
 
   protected readonly choices = TOPIC_CHOICES;
 
+  /** Angular templates cannot call global functions, and the number input hands back a string. */
+  protected readonly Number = Number;
+
+  /**
+   * Patches one field of the cram, filling in a blank one on first touch. Kept
+   * here rather than in the template so enabling a cram cannot half-build it.
+   */
+  protected updateCram(patch: Partial<CramState>): void {
+    const current: CramState = this.draft().cram ?? {
+      active: false,
+      scope: "",
+      examDate: "",
+      perDay: DEFAULT_CRAM_PER_DAY,
+    };
+    this.update("cram", { ...current, ...patch });
+  }
+
   protected setTopicTier(tag: string, tier: Tier | null): void {
     this.update("tiers", withTopicTier(this.draft().tiers, tag, tier));
   }
@@ -64,7 +81,10 @@ export class SettingsScreen {
     this.draft.update((config) => ({ ...config, [key]: value }));
   }
 
-  protected onNumber(key: "spread" | "newPerDay" | "reviewsPerDay", value: string): void {
+  protected onNumber(
+    key: "spread" | "newPerDay" | "reviewsPerDay" | "cramMinPasses",
+    value: string,
+  ): void {
     this.update(key, Number(value));
   }
 

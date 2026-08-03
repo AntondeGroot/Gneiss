@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { cramClamp } from "./cram.js";
+import { cramClamp, cramPlan } from "./cram.js";
+import type { Countable } from "./cram.js";
 import type { CramState } from "./types.js";
 
 const EXAM_TAG = "#flashcards/lang/certexam";
@@ -9,6 +10,7 @@ const cram: CramState = {
   active: true,
   scope: EXAM_TAG,
   examDate: "2026-09-01",
+  perDay: 10,
 };
 
 describe("cramClamp", () => {
@@ -45,5 +47,70 @@ describe("cramClamp", () => {
 
     // Same tag and same date that clamped 30 down to 8 above — only the flag differs.
     expect(cramClamp(30, [EXAM_TAG], noCram, "2026-08-12")).toBe(30);
+  });
+});
+
+function inScope(count: number, met: boolean): Countable[] {
+  return Array.from({ length: count }, () => ({
+    topicTags: [EXAM_TAG],
+    review: { interval: met ? 5 : 0 },
+  }));
+}
+
+describe("cramPlan", () => {
+  it("works out the pace from the days that can still start new material", () => {
+    // 20 unseen cards, 11 days out, 3 passes each.
+    const plan = cramPlan(inScope(20, false), cram, 3, "2026-08-21");
+
+    // Not 20/11: a card begun on the last two days cannot get three looks, so
+    // counting those days would understate what today actually costs.
+    expect(plan?.daysLeft).toBe(11);
+    expect(plan?.usableDays).toBe(10);
+    expect(plan?.requiredPerDay).toBe(2);
+  });
+
+  it("says the pace is short when the chosen one will not finish in time", () => {
+    const gentle: CramState = { ...cram, perDay: 3 };
+
+    const plan = cramPlan(inScope(60, false), gentle, 3, "2026-08-25");
+
+    // 60 cards, 7 days left, 6 usable → 10 a day. Chosen pace is 3.
+    expect(plan?.requiredPerDay).toBe(10);
+    expect(plan?.targetPerDay).toBe(3);
+    expect(plan?.onTrack).toBe(false);
+  });
+
+  it("reports progress as the share of the topic already met", () => {
+    const cards = [...inScope(3, true), ...inScope(1, false)];
+
+    const plan = cramPlan(cards, cram, 3, "2026-08-21");
+
+    expect(plan?.met).toBe(3);
+    expect(plan?.total).toBe(4);
+    expect(plan?.progress).toBe(0.75);
+    expect(plan?.remaining).toBe(1);
+  });
+
+  it("asks for nothing more once every card has been started", () => {
+    const plan = cramPlan(inScope(12, true), cram, 3, "2026-08-21");
+
+    expect(plan?.remaining).toBe(0);
+    expect(plan?.requiredPerDay).toBe(0);
+    expect(plan?.onTrack).toBe(true);
+  });
+
+  it("puts the whole remainder on today once no day can still start a card", () => {
+    // The exam is tomorrow, so there is no day left that fits three passes.
+    const plan = cramPlan(inScope(5, false), cram, 3, "2026-08-31");
+
+    expect(plan?.usableDays).toBe(0);
+    // Reported honestly rather than as an impossible-to-read infinity.
+    expect(plan?.requiredPerDay).toBe(5);
+    expect(plan?.onTrack).toBe(true);
+  });
+
+  it("reads as no plan at all once the exam has passed", () => {
+    expect(cramPlan(inScope(5, false), cram, 3, "2026-09-02")).toBeNull();
+    expect(cramPlan(inScope(5, false), { ...cram, active: false }, 3, "2026-08-21")).toBeNull();
   });
 });

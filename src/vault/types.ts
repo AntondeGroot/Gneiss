@@ -44,4 +44,10 @@ export interface CramState {
   scope: string;
   /** ISO date (YYYY-MM-DD) of the exam. */
   examDate: string;
+  /**
+   * New cards a day the user intends to take on for this topic — the intensity
+   * knob, from gentle to hard. A target rather than a wall: finishing the day's
+   * queue never stops anyone starting another session.
+   */
+  perDay: number;
 }

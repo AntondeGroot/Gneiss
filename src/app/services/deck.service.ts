@@ -2,7 +2,9 @@ import { Injectable, computed, signal } from "@angular/core";
 
 import {
   DEFAULT_CONFIG,
+  cramPlan,
   distinctTopicTags,
+  isCrammed,
   newReviewState,
   nextStreak,
   resolveTier,
@@ -65,6 +67,7 @@ export class DeckService {
     selectDue(this.cards(), today(), {
       newPerDay: this.config().newPerDay,
       reviewsPerDay: this.config().reviewsPerDay,
+      cram: this.config().cram,
     }),
   );
 
@@ -72,6 +75,25 @@ export class DeckService {
   /** Cards held back by today's caps, so the UI can say so rather than hide it. */
   readonly heldBackNew = computed(() => this.selection().heldBackNew);
   readonly heldBackReviews = computed(() => this.selection().heldBackReviews);
+  /** Crammed cards beyond today's chosen pace — next in line, not withheld. */
+  readonly heldCrammed = computed(() => this.selection().heldCrammed);
+
+  /**
+   * How the cram is going and what pace the deadline demands, or null when none
+   * is running. An expired cram reads as absent, so the date is the off-switch
+   * here too and no manual reset is needed.
+   */
+  readonly cram = computed(() =>
+    cramPlan(this.cards(), this.config().cram, this.config().cramMinPasses, today()),
+  );
+
+  /** The cram's topic tag, for naming it on screen. */
+  readonly cramScope = computed(() => this.config().cram?.scope ?? "");
+
+  /** Due cards inside the cram's scope — what the countdown is actually about. */
+  readonly cramDue = computed(() =>
+    this.due().filter((card) => isCrammed(card.topicTags, this.config().cram)),
+  );
 
   /** Zero once a day has been missed — never claims a streak that is already broken. */
   readonly streak = computed(() =>

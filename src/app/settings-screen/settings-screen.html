@@ -112,20 +112,15 @@
 <section class="group">
   <h2>Cram</h2>
   <p class="hint">
-    Caps intervals so nothing schedules past an exam. It stops on its own the day after.
+    Deadline-scoped focus on one topic. Intervals are capped so nothing schedules past the exam, and
+    it stops on its own the day after — no reset step.
   </p>
   <label class="row">
     <input
       type="checkbox"
       name="cramActive"
       [ngModel]="draft().cram?.active ?? false"
-      (ngModelChange)="
-        update('cram', {
-          active: $event,
-          scope: draft().cram?.scope ?? '',
-          examDate: draft().cram?.examDate ?? '',
-        })
-      "
+      (ngModelChange)="updateCram({ active: $event })"
     />
     <span>Cramming for an exam</span>
   </label>
@@ -136,13 +131,7 @@
       name="cramScope"
       placeholder="#flashcards/lang/certexam"
       [ngModel]="draft().cram?.scope ?? ''"
-      (ngModelChange)="
-          update('cram', {
-            active: true,
-            scope: $event,
-            examDate: draft().cram?.examDate ?? '',
-          })
-        "
+      (ngModelChange)="updateCram({ scope: $event })"
     />
   </label>
   <label class="field">
@@ -151,11 +140,41 @@
       type="date"
       name="cramDate"
       [ngModel]="draft().cram?.examDate ?? ''"
-      (ngModelChange)="
-          update('cram', { active: true, scope: draft().cram?.scope ?? '', examDate: $event })
-        "
+      (ngModelChange)="updateCram({ examDate: $event })"
     />
   </label>
+  <label class="field">
+    <span>New cards a day</span>
+    <input
+      type="number"
+      name="cramPerDay"
+      min="1"
+      max="200"
+      [ngModel]="draft().cram?.perDay ?? 0"
+      (ngModelChange)="updateCram({ perDay: Number($event) })"
+    />
+  </label>
+  <p class="hint small">
+    Your pace for this topic, from gentle to intensive. It is a target, not a wall — Today shows how
+    far along you are and what pace the exam actually demands, and nothing stops you starting
+    another session when you want to push further.
+  </p>
+  <label class="field">
+    <span>Passes needed to learn a card</span>
+    <input
+      type="number"
+      name="cramMinPasses"
+      min="1"
+      max="10"
+      [ngModel]="draft().cramMinPasses"
+      (ngModelChange)="onNumber('cramMinPasses', $event)"
+    />
+  </label>
+  <p class="hint small">
+    Learning takes repetition, so a card first met the day before an exam is only seen, not learned.
+    This is not used to withhold anything — it is how the required pace is worked out, by not
+    counting the last {{ draft().cramMinPasses - 1 }} days as time to start new material.
+  </p>
   }
 </section>
 
