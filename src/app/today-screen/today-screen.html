@@ -87,14 +87,14 @@
 } @if (heldBackReviews() > 0 || heldBackNew() > 0 || heldCrammed() > 0) {
 <p class="held">
   @if (heldBackReviews() > 0) {
-  <span>{{ heldBackReviews() }} overdue cards held back — the backlog drains a day at a time.</span>
+  <span>{{ heldBackReviews() }} more overdue cards beyond today's portion.</span>
   } @if (heldBackNew() > 0) {
-  <span>{{ heldBackNew() }} new cards held back by today's cap.</span>
+  <span>{{ heldBackNew() }} more new cards beyond today's portion.</span>
   } @if (heldCrammed() > 0) {
-  <span>
-    {{ heldCrammed() }} more in this topic are next in line — raise the pace in Settings, or come
-    back for another session today.
-  </span>
+  <span>{{ heldCrammed() }} more in this topic, beyond the pace you set for it.</span>
   }
+  <span class="soft">
+    These are a day's portion, not a limit — finish a session and you can start another.
+  </span>
 </p>
 }

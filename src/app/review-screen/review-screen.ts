@@ -24,6 +24,12 @@ export class ReviewScreen {
   protected readonly revealed = signal(false);
   protected readonly started = signal(false);
   protected readonly graded = signal(0);
+  /**
+   * Sessions taken and cards graded across all of them, so a second helping is
+   * reported as extra practice rather than restarting the count at zero.
+   */
+  protected readonly sessions = signal(0);
+  protected readonly gradedAcrossSessions = signal(0);
 
   protected readonly dueCount = computed(() => this.deck.due().length);
   protected readonly writeError = this.deck.writeError;
@@ -31,12 +37,21 @@ export class ReviewScreen {
   protected readonly remaining = computed(() => this.queue().length - this.position());
   protected readonly finished = computed(() => this.started() && this.current() === null);
 
+  /**
+   * Begins a session on whatever is due now. Also how a *second* session starts:
+   * the cards graded a moment ago are no longer due, so re-reading the queue
+   * picks up what today's pace held back.
+   *
+   * The pace is a target, not a wall. Nothing here stops someone reviewing the
+   * whole backlog in one sitting if that is what they want.
+   */
   protected start(): void {
     this.queue.set([...this.deck.due()]);
     this.position.set(0);
     this.graded.set(0);
     this.revealed.set(false);
     this.started.set(true);
+    this.sessions.update((count) => count + 1);
   }
 
   protected reveal(): void {
@@ -55,6 +70,7 @@ export class ReviewScreen {
 
     void this.deck.grade(card, grade);
     this.graded.update((count) => count + 1);
+    this.gradedAcrossSessions.update((count) => count + 1);
     this.position.update((index) => index + 1);
     this.revealed.set(false);
   }
