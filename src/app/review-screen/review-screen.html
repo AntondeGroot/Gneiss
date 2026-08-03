@@ -40,10 +40,21 @@
 <section class="intro">
   <h1>Done</h1>
   <p class="count">{{ graded() }} reviewed</p>
-  @if (writeError(); as failure) {
+  @if (sessions() > 1) {
+  <p class="sub tally">{{ gradedAcrossSessions() }} across {{ sessions() }} sessions today</p>
+  } @if (writeError(); as failure) {
   <p class="sub warn">Some grades could not be saved — {{ failure }}</p>
   } @else {
   <p class="sub">Saved into each note's SR comment.</p>
+  }
+
+  <!-- The day's pace is a portion, not a limit: whatever it held back is offered
+       straight away rather than made to wait for tomorrow. -->
+  @if (dueCount() > 0) {
+  <p class="more">{{ dueCount() }} more ready now — today's pace is a target, not a limit.</p>
+  <button type="button" class="primary" (click)="start()">Another session</button>
+  } @else {
+  <p class="sub">Nothing else is due today.</p>
   }
   <a class="link" routerLink="/vault">Back to Vault</a>
 </section>

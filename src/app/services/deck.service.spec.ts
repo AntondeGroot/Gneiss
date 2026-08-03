@@ -44,3 +44,48 @@ describe("DeckService", () => {
     expect(deck.topicTags()).toEqual(["#flashcards/git"]);
   });
 });
+
+/** A note whose cards are all overdue, so the whole set counts as backlog. */
+function backlog(name: string, cards: number): ParsedNote {
+  return {
+    note: name,
+    cards: Array.from({ length: cards }, (_, i) => ({
+      front: `Q${i}`,
+      back: "A",
+      review: { due: "2024-01-01", interval: 5, ease: 2.5 },
+    })),
+    topicTags: ["#flashcards/git"],
+  };
+}
+
+describe("DeckService sessions", () => {
+  it("offers the next portion once the current one has been graded", async () => {
+    const deck = new DeckService();
+    await deck.saveConfig({ ...DEFAULT_CONFIG, reviewsPerDay: 2 });
+    deck.setNotes([backlog("git.md", 5)]);
+
+    const first = [...deck.due()];
+    expect(first).toHaveLength(2);
+
+    for (const card of first) await deck.grade(card, "medium");
+
+    // Graded cards are scheduled forward, so they leave the due set and the next
+    // two take their place. This is what makes "another session" work at all —
+    // the daily figure caps the queue in view, it does not lock out the day.
+    expect(deck.due()).toHaveLength(2);
+    expect(deck.due().map((c) => c.id)).not.toEqual(first.map((c) => c.id));
+  });
+
+  it("runs out only when nothing is left to review", async () => {
+    const deck = new DeckService();
+    await deck.saveConfig({ ...DEFAULT_CONFIG, reviewsPerDay: 2 });
+    deck.setNotes([backlog("git.md", 5)]);
+
+    // Session after session, the backlog drains rather than being rationed.
+    for (let session = 0; session < 5; session++) {
+      for (const card of [...deck.due()]) await deck.grade(card, "medium");
+    }
+
+    expect(deck.due()).toHaveLength(0);
+  });
+});

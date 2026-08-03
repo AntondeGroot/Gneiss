@@ -179,9 +179,10 @@ block instead, because the intensity you pick is a property of *that exam*.
 **OPEN:** `reviewsPerDay` is untouched by cram, so a crammed topic's cards already in rotation
 still compete for the ordinary review ceiling. Only the *new*-card ceiling is replaced.
 
-**OPEN:** "start another session to practise more" is the stated escape hatch for the daily
-pace being a target rather than a wall, but it is not built — the Review screen walks today's
-queue and stops. Until it exists, the pace is in practice a soft wall.
+**RESOLVED:** "start another session to practise more" is the escape hatch that makes the pace
+a target rather than a wall, and the Review screen now offers it — finishing a session re-reads
+what is due and offers **Another session** whenever more is ready. See *Importing existing SR
+state* for why this needed almost no machinery: the cap was never a daily lockout.
 
 **Where cram state lives:** a `.gneiss/config.md` file *inside the vault*, alongside the
 tag→tier mapping and `spread`. It is app config, not note content, so it stays out of the
@@ -376,8 +377,23 @@ contained change when it's actually needed.
   its date would be Gneiss lying about the user's own data — and would mean writing to
   every note on first run. Instead the *day's queue* is capped: `reviewsPerDay` for cards
   in rotation, `newPerDay` for unseen ones, counted separately so a backlog cannot eat
-  the day's new material. The backlog drains a day at a time and the Today screen says
-  how much is held back rather than hiding it.
+  the day's new material. The Today screen says how much is beyond the portion rather
+  than hiding it.
+
+  **CORRECTED:** this previously said "the backlog drains a day at a time", which is not
+  what the code does and was never what it did. `selectDue` caps *the queue in view at
+  any moment*, not the day — grading a card schedules it forward, so it leaves the due
+  set and the next one slides into the cap. Measured on a 100-card backlog with
+  `reviewsPerDay: 30`, all 100 can be graded in one sitting.
+
+  That behaviour is **kept, and now made explicit** rather than closed off, because it is
+  the same principle as *Report the pace, never ration the cards*: a daily figure is a
+  sensible default portion, not a lockout. The Review screen offers **Another session**
+  when more is ready, and both screens call the figure a portion rather than a limit.
+
+  **OPEN:** `reviewsPerDay` / `newPerDay` / `cram.perDay` are therefore misnamed — they
+  size a session, not a day. Renaming them would touch the config file format, so it is
+  deferred rather than done silently.
 
   Ordering happens **before** the cap — core tier first, then longest-overdue first —
   otherwise the cap keeps an arbitrary slice and the cards that matter never surface.
