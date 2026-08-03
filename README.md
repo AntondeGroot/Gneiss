@@ -82,7 +82,7 @@ vault doesn't use.
   next appear, computed live from the current emphasis.
 - **Vault** — open a vault folder, then a notes list showing each note's resolved tier; tap a
   note to see its cards parsed live with their review state.
-- **Settings** — reminder + time, new-cards-per-day cap, the core-emphasis slider with a
+- **Settings** — reminder + time, new-cards-per-session portion, the core-emphasis slider with a
   live interval preview, and a tag→tier table with a row per topic tag in the vault.
 
 ## Running the prototype

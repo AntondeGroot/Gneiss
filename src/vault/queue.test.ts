@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { selectDue } from "./queue.js";
-import type { DailyLimits, Schedulable } from "./queue.js";
+import type { SessionLimits, Schedulable } from "./queue.js";
 import type { Tier } from "./types.js";
 
 const TODAY = "2026-08-01";
 const NO_CRAM = { cram: null, cramMinPasses: 3 };
-const GENEROUS: DailyLimits = { newPerDay: 100, reviewsPerDay: 100, ...NO_CRAM };
+const GENEROUS: SessionLimits = { newPerSession: 100, reviewsPerSession: 100, ...NO_CRAM };
 
 interface TestCard extends Schedulable {
   readonly id: string;
@@ -34,7 +34,11 @@ describe("selectDue", () => {
       card(`c${index}`, "standard", "2024-06-01"),
     );
 
-    const selection = selectDue(backlog, TODAY, { newPerDay: 8, reviewsPerDay: 30, ...NO_CRAM });
+    const selection = selectDue(backlog, TODAY, {
+      newPerSession: 8,
+      reviewsPerSession: 30,
+      ...NO_CRAM,
+    });
 
     expect(selection.queue).toHaveLength(30);
     expect(selection.heldBackReviews).toBe(170);
@@ -47,7 +51,11 @@ describe("selectDue", () => {
       card("older", "standard", "2025-03-02"),
     ];
 
-    const selection = selectDue(cards, TODAY, { newPerDay: 0, reviewsPerDay: 2, ...NO_CRAM });
+    const selection = selectDue(cards, TODAY, {
+      newPerSession: 0,
+      reviewsPerSession: 2,
+      ...NO_CRAM,
+    });
 
     // Ordering has to precede the cap, or the two kept would be arbitrary.
     expect(selection.queue.map((c) => c.id)).toEqual(["ancient", "older"]);
@@ -75,7 +83,11 @@ describe("selectDue", () => {
       ...Array.from({ length: 20 }, (_, i) => newCard(`new${i}`, "standard")),
     ];
 
-    const selection = selectDue(cards, TODAY, { newPerDay: 3, reviewsPerDay: 10, ...NO_CRAM });
+    const selection = selectDue(cards, TODAY, {
+      newPerSession: 3,
+      reviewsPerSession: 10,
+      ...NO_CRAM,
+    });
 
     // A backlog of reviews must not eat the day's allowance of new material.
     expect(selection.queue).toHaveLength(8);
@@ -94,11 +106,11 @@ describe("selectDue", () => {
 
 const EXAM_TAG = "#flashcards/lang/certexam";
 
-function cramming(examDate: string, perDay = 4): DailyLimits {
+function cramming(examDate: string, perSession = 4): SessionLimits {
   return {
-    newPerDay: 2,
-    reviewsPerDay: 100,
-    cram: { active: true, scope: EXAM_TAG, examDate, perDay },
+    newPerSession: 2,
+    reviewsPerSession: 100,
+    cram: { active: true, scope: EXAM_TAG, examDate, perSession },
   };
 }
 
@@ -108,7 +120,7 @@ describe("selectDue under a cram", () => {
 
     const selection = selectDue(cards, TODAY, cramming("2026-08-20"));
 
-    // newPerDay is 2, but the exam's own pace is 4 — a deadline gets its own knob.
+    // newPerSession is 2, but the exam's own pace is 4 — a deadline gets its own knob.
     expect(selection.queue).toHaveLength(4);
     expect(selection.heldCrammed).toBe(2);
   });
@@ -132,7 +144,7 @@ describe("selectDue under a cram", () => {
 
     const selection = selectDue(cards, TODAY, cramming("2026-08-20"));
 
-    // Crammed cards lead, four of them at the cram's pace, then two on newPerDay.
+    // Crammed cards lead, four of them at the cram's pace, then two on newPerSession.
     expect(selection.queue.map((c) => c.id)).toEqual([
       "exam0",
       "exam1",
@@ -150,7 +162,7 @@ describe("selectDue under a cram", () => {
 
     const selection = selectDue(cards, TODAY, cramming("2026-07-20"));
 
-    // The date is the off-switch: the topic loses its own pace and rejoins newPerDay.
+    // The date is the off-switch: the topic loses its own pace and rejoins newPerSession.
     expect(selection.queue).toHaveLength(2);
     expect(selection.heldCrammed).toBe(0);
     expect(selection.heldBackNew).toBe(4);

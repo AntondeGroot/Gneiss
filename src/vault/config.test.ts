@@ -7,8 +7,8 @@ describe("config round trip", () => {
   it("survives being written and read back without losing a setting", () => {
     const config: GneissConfig = {
       spread: 0.65,
-      newPerDay: 12,
-      reviewsPerDay: 25,
+      newPerSession: 12,
+      reviewsPerSession: 25,
       streak: 4,
       lastReviewedOn: "2026-08-01",
       reminderOn: true,
@@ -19,7 +19,7 @@ describe("config round trip", () => {
         active: true,
         scope: "#flashcards/lang/certexam",
         examDate: "2026-09-01",
-        perDay: 12,
+        perSession: 12,
       },
     };
 
@@ -31,7 +31,7 @@ describe("parseConfig", () => {
   it("reads settings a user typed by hand", () => {
     const written = `---
 spread: 0.5
-newPerDay: 8
+newPerSession: 8
 tiers:
   "#flashcards/git": core
   "#flashcards/tools": standard
@@ -48,17 +48,17 @@ Notes below the frontmatter are ignored.
 
     expect(parseConfig(written)).toEqual({
       spread: 0.5,
-      newPerDay: 8,
-      reviewsPerDay: 30,
+      newPerSession: 8,
+      reviewsPerSession: 30,
       streak: 0,
       lastReviewedOn: "",
       reminderOn: false,
       reminderAt: "08:30",
-      // Absent from the file, so the default stands — an older config still reads.
+      // Absent from the file, so the default stands — a hand-written config
+      // need not list every setting.
       cramMinPasses: 3,
       tiers: { "#flashcards/git": "core", "#flashcards/tools": "standard" },
-      // perDay is absent from the file, so a config written before it still reads.
-      cram: { active: true, scope: "#flashcards/lang", examDate: "2026-12-01", perDay: 10 },
+      cram: { active: true, scope: "#flashcards/lang", examDate: "2026-12-01", perSession: 10 },
     });
   });
 

@@ -34,13 +34,16 @@
   <p class="pace good">Everything started — the rest is repetition.</p>
   } @else if (plan.onTrack) {
   <p class="pace good">
-    {{ plan.targetPerDay }} a day keeps you on track — {{ plan.requiredPerDay }} a day is enough.
+    One session of {{ plan.targetPerSession }} a day keeps you on track — {{ plan.requiredPerDay }}
+    a day is enough.
   </p>
   } @else {
+  <!-- Two cures, because onTrack assumes a single session a day: a bigger
+       portion, or more than one sitting. Both are the user's to choose. -->
   <p class="pace behind">
-    At {{ plan.targetPerDay }} a day you will not finish. Start
-    <strong>{{ plan.requiredPerDay }} a day</strong> to meet all {{ plan.remaining }} remaining in
-    time.
+    One session of {{ plan.targetPerSession }} a day will not finish {{ plan.remaining }} in time.
+    You need <strong>{{ plan.requiredPerDay }} a day</strong> — raise the pace in Settings, or sit
+    more than one session.
   </p>
   }
 </section>
@@ -94,7 +97,7 @@
   <span>{{ heldCrammed() }} more in this topic, beyond the pace you set for it.</span>
   }
   <span class="soft">
-    These are a day's portion, not a limit — finish a session and you can start another.
+    This is one session's portion, not a limit — finish it and you can start another.
   </span>
 </p>
 }

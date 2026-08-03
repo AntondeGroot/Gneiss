@@ -65,8 +65,8 @@ export class DeckService {
    */
   private readonly selection = computed(() =>
     selectDue(this.cards(), today(), {
-      newPerDay: this.config().newPerDay,
-      reviewsPerDay: this.config().reviewsPerDay,
+      newPerSession: this.config().newPerSession,
+      reviewsPerSession: this.config().reviewsPerSession,
       cram: this.config().cram,
     }),
   );

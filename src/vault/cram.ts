@@ -60,11 +60,15 @@ export interface CramPlan {
    * not learned, so the last days cannot be counted on for new material.
    */
   readonly usableDays: number;
-  /** New cards a day needed to meet the whole topic in time. */
+  /** New cards a day needed to meet the whole topic in time. Genuinely per day. */
   readonly requiredPerDay: number;
-  /** What the user set as their pace. */
-  readonly targetPerDay: number;
-  /** Whether that pace still gets there. */
+  /** What the user set as their pace, per session. */
+  readonly targetPerSession: number;
+  /**
+   * Whether that pace still gets there — **assuming one session a day**, which
+   * is what makes the two figures comparable. Falling behind therefore has two
+   * cures, and the UI offers both: raise the pace, or sit more than one session.
+   */
   readonly onTrack: boolean;
 }
 
@@ -110,8 +114,8 @@ export function cramPlan(
     remaining,
     usableDays,
     requiredPerDay,
-    targetPerDay: cram.perDay,
-    onTrack: requiredPerDay <= cram.perDay,
+    targetPerSession: cram.perSession,
+    onTrack: requiredPerDay <= cram.perSession,
   };
 }
 

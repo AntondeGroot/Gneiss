@@ -10,7 +10,7 @@ const cram: CramState = {
   active: true,
   scope: EXAM_TAG,
   examDate: "2026-09-01",
-  perDay: 10,
+  perSession: 10,
 };
 
 describe("cramClamp", () => {
@@ -70,13 +70,13 @@ describe("cramPlan", () => {
   });
 
   it("says the pace is short when the chosen one will not finish in time", () => {
-    const gentle: CramState = { ...cram, perDay: 3 };
+    const gentle: CramState = { ...cram, perSession: 3 };
 
     const plan = cramPlan(inScope(60, false), gentle, 3, "2026-08-25");
 
     // 60 cards, 7 days left, 6 usable → 10 a day. Chosen pace is 3.
     expect(plan?.requiredPerDay).toBe(10);
-    expect(plan?.targetPerDay).toBe(3);
+    expect(plan?.targetPerSession).toBe(3);
     expect(plan?.onTrack).toBe(false);
   });
 

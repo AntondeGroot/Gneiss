@@ -192,7 +192,7 @@ export default function Gneiss() {
   const [remindAt, setRemindAt] = useState("08:30");
   // settings
   const [spread, setSpread] = useState(0.8);   // core emphasis, 0..1
-  const [newPerDay, setNewPerDay] = useState(8);
+  const [newPerSession, setNewPerSession] = useState(8);
   // note markdown sources (the vault) — markdown is the source of truth
   const [noteSources, setNoteSources] = useState(
     () => Object.fromEntries(SEED.map((n) => [n.note, n.md]))
@@ -201,15 +201,15 @@ export default function Gneiss() {
   // review session
   const [session, setSession] = useState(null); // {queue:[ids], i, revealed, tally}
 
-  // Effective daily queue: all due reviews, plus at most newPerDay brand-new cards.
+  // The session's queue: all due reviews, plus at most newPerSession brand-new cards.
   const dueOrdered = useMemo(() => {
     const rank = { core: 0, standard: 1, optional: 2 };
     const byRank = (a, b) => rank[a.tier] - rank[b.tier] || a.id - b.id;
     const allDue = cards.filter((c) => c.due <= 0);
     const reviews = allDue.filter((c) => c.reps > 0);
-    const fresh = allDue.filter((c) => c.reps === 0).sort(byRank).slice(0, newPerDay);
+    const fresh = allDue.filter((c) => c.reps === 0).sort(byRank).slice(0, newPerSession);
     return [...reviews, ...fresh].sort(byRank);
-  }, [cards, newPerDay]);
+  }, [cards, newPerSession]);
   const due = dueOrdered;
 
   const byTier = useMemo(() => {
@@ -284,7 +284,7 @@ export default function Gneiss() {
         {tab === "settings" && (
           <Settings onBack={() => setTab("today")} onOpenVault={() => setTab("vault")}
             remindOn={remindOn} setRemindOn={setRemindOn} remindAt={remindAt} setRemindAt={setRemindAt}
-            spread={spread} setSpread={setSpread} newPerDay={newPerDay} setNewPerDay={setNewPerDay} />
+            spread={spread} setSpread={setSpread} newPerSession={newPerSession} setNewPerSession={setNewPerSession} />
         )}
 
         {tab !== "review" && tab !== "settings" && <TabBar tab={tab} setTab={setTab} due={due.length} />}
@@ -614,7 +614,7 @@ function NoteEditor({ note, md, onBack, onSave }) {
 }
 
 // ————————————————————————— SETTINGS —————————————————————————
-function Settings({ onBack, onOpenVault, remindOn, setRemindOn, remindAt, setRemindAt, spread, setSpread, newPerDay, setNewPerDay }) {
+function Settings({ onBack, onOpenVault, remindOn, setRemindOn, remindAt, setRemindAt, spread, setSpread, newPerSession, setNewPerSession }) {
   // live preview of what the emphasis knob does to a fresh card's next interval
   const sample = { interval: 1, ease: 2.3, reps: 0 };
   const previewCore = schedule({ ...sample, tier: "core" }, "medium", spread).interval;
@@ -651,15 +651,15 @@ function Settings({ onBack, onOpenVault, remindOn, setRemindOn, remindAt, setRem
           )}
         </Card>
 
-        {/* — New cards per day — */}
+        {/* — New cards per session — */}
         <SectionLabel>Pace</SectionLabel>
         <Card>
           <Row>
             <div>
-              <div style={{ fontSize: 14.5, color: C.text }}>New cards per day</div>
+              <div style={{ fontSize: 14.5, color: C.text }}>New cards per session</div>
               <div style={{ fontSize: 12.5, color: C.faint, marginTop: 2 }}>How many unseen cards to introduce daily</div>
             </div>
-            <Stepper value={newPerDay} min={0} max={40} step={2} onChange={setNewPerDay} />
+            <Stepper value={newPerSession} min={0} max={40} step={2} onChange={setNewPerSession} />
           </Row>
         </Card>
 
