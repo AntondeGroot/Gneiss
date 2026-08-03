@@ -22,10 +22,10 @@ const CRAM = "cram";
 export interface GneissConfig {
   /** Core emphasis, 0..1. */
   readonly spread: number;
-  /** Ceiling on brand-new cards introduced per day, so a big vault cannot flood day one. */
-  readonly newPerDay: number;
-  /** Ceiling on cards already in rotation — what drains an imported backlog. */
-  readonly reviewsPerDay: number;
+  /** Brand-new cards in one session, so a big vault cannot flood the first sitting. */
+  readonly newPerSession: number;
+  /** Cards already in rotation in one session — what portions out an imported backlog. */
+  readonly reviewsPerSession: number;
   /** Consecutive review days, and the day the last review happened. */
   readonly streak: number;
   readonly lastReviewedOn: string;
@@ -50,8 +50,8 @@ export interface GneissConfig {
 
 export const DEFAULT_CONFIG: GneissConfig = {
   spread: 0.8,
-  newPerDay: 8,
-  reviewsPerDay: 30,
+  newPerSession: 8,
+  reviewsPerSession: 30,
   streak: 0,
   lastReviewedOn: NEVER,
   reminderOn: false,
@@ -65,15 +65,18 @@ export const DEFAULT_CONFIG: GneissConfig = {
 const FEWEST_PASSES = 1;
 
 /** The pace a fresh cram starts at, until the user picks their own intensity. */
-export const DEFAULT_CRAM_PER_DAY = 10;
+export const DEFAULT_CRAM_PER_SESSION = 10;
 
 export function parseConfig(md: string): GneissConfig {
   const sections = readSections(frontmatterOf(md));
 
   return {
     spread: readSpread(sections.top["spread"]),
-    newPerDay: readCount(sections.top["newPerDay"], DEFAULT_CONFIG.newPerDay),
-    reviewsPerDay: readCount(sections.top["reviewsPerDay"], DEFAULT_CONFIG.reviewsPerDay),
+    newPerSession: readCount(sections.top["newPerSession"], DEFAULT_CONFIG.newPerSession),
+    reviewsPerSession: readCount(
+      sections.top["reviewsPerSession"],
+      DEFAULT_CONFIG.reviewsPerSession,
+    ),
     streak: readCount(sections.top["streak"], DEFAULT_CONFIG.streak),
     lastReviewedOn: sections.top["lastReviewedOn"] ?? NEVER,
     reminderOn: sections.top["reminderOn"] === "true",
@@ -91,8 +94,8 @@ export function formatConfig(config: GneissConfig): string {
   const lines = [
     DELIMITER,
     `spread: ${config.spread}`,
-    `newPerDay: ${config.newPerDay}`,
-    `reviewsPerDay: ${config.reviewsPerDay}`,
+    `newPerSession: ${config.newPerSession}`,
+    `reviewsPerSession: ${config.reviewsPerSession}`,
     `streak: ${config.streak}`,
     `lastReviewedOn: ${config.lastReviewedOn}`,
     `reminderOn: ${config.reminderOn}`,
@@ -110,7 +113,7 @@ export function formatConfig(config: GneissConfig): string {
     lines.push(`${INDENT}active: ${config.cram.active}`);
     lines.push(`${INDENT}scope: "${config.cram.scope}"`);
     lines.push(`${INDENT}examDate: ${config.cram.examDate}`);
-    lines.push(`${INDENT}perDay: ${config.cram.perDay}`);
+    lines.push(`${INDENT}perSession: ${config.cram.perSession}`);
   }
 
   lines.push(DELIMITER, "", ...EXPLANATION, "");
@@ -208,6 +211,6 @@ function readCram(entries: Record<string, string>): CramState | null {
     active: entries["active"] === "true",
     scope,
     examDate,
-    perDay: readCount(entries["perDay"], DEFAULT_CRAM_PER_DAY),
+    perSession: readCount(entries["perSession"], DEFAULT_CRAM_PER_SESSION),
   };
 }

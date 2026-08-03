@@ -125,7 +125,7 @@ Two properties are why the date is part of the design:
   passing it is not a reason to discard the knowledge. Cram supplies urgency before a
   deadline; it does not change what the material is worth afterwards.
 
-While cram is active, its scope also overrides the new-cards-per-day cap, and the Today
+While cram is active, its scope also overrides the new-cards-per-session portion, and the Today
 screen leads with `<topic> · 12 days · 34 due` instead of the normal tier ring.
 
 ### Report the pace, never ration the cards (DECIDED)
@@ -135,16 +135,21 @@ once the exam was too close to learn them properly. That was **rejected**: withh
 the learner as the problem, when the app's actual job is to say what the deadline costs per
 day and let them decide. A pace that is too slow is *reported*, not enforced.
 
-So a cram carries its own **pace** (`cram.perDay`) — the intensity knob, gentle to intensive —
-which replaces the ordinary `newPerDay` ceiling for its topic. It is a target for one day, not
-a wall: nothing stops starting another session, so anything not reached today is simply next
-in line rather than withheld.
+So a cram carries its own **pace** (`cram.perSession`) — the intensity knob, gentle to
+intensive — which replaces the ordinary `newPerSession` portion for its topic. It is a portion
+for one sitting, not a wall: nothing stops starting another session, so anything not reached
+now is simply next in line rather than withheld.
 
 Today then shows, for the crammed topic:
 
 - a **progress bar and percentage** — cards *met at least once*, out of the topic's total
 - the **pace the deadline demands**, and whether the chosen one still gets there:
-  `At 3 a day you will not finish. Start 10 a day to meet all 60 remaining in time.`
+  `One session of 3 a day will not finish 60 in time. You need 10 a day — raise the pace in
+  Settings, or sit more than one session.`
+
+Note the two figures are in different units: `requiredPerDay` is genuinely per day, while
+`targetPerSession` is per sitting. `onTrack` compares them, which **assumes one session a
+day** — and that assumption is why falling behind has two cures, both offered in the copy.
 
 Progress counts cards **met**, not passes completed, because that is what the vault can
 actually tell us: the SR comment stores `due,interval,ease` and no tally of passes. Inventing
@@ -173,10 +178,10 @@ each day, which is precisely the number the user is relying on.
 
 `cramMinPasses` is **configurable in Settings** (default 3) and lives at the top level of
 `.gneiss/config.md`, not inside the `cram:` block: how much repetition you need to learn
-something is a property of *you*, and outlives any single exam. `cram.perDay` sits inside the
+something is a property of *you*, and outlives any single exam. `cram.perSession` sits inside the
 block instead, because the intensity you pick is a property of *that exam*.
 
-**OPEN:** `reviewsPerDay` is untouched by cram, so a crammed topic's cards already in rotation
+**OPEN:** `reviewsPerSession` is untouched by cram, so a crammed topic's cards already in rotation
 still compete for the ordinary review ceiling. Only the *new*-card ceiling is replaced.
 
 **RESOLVED:** "start another session to practise more" is the escape hatch that makes the pace
@@ -248,7 +253,7 @@ rest on. No real vault data lives in this repo — the prototype's `SEED` is inv
   card will next appear, computed live from the current `spread`.
 - **Vault** — notes list with per-note tier buttons. Tap a note to open an editor
   showing raw markdown above and live-parsed cards below.
-- **Settings** — reminder + time, new-cards-per-day cap, core emphasis slider with
+- **Settings** — reminder + time, new-cards-per-session portion, core emphasis slider with
   a live preview of resulting intervals, and the tag→tier table: a row per topic tag
   found in the vault, each offering **Inherit / Core / Standard / Optional**. Inherit is
   a fourth state, not a synonym for `standard` — clearing a row lets a subtopic fall back
@@ -375,25 +380,29 @@ contained change when it's actually needed.
 
   **Nothing is rescheduled.** A card scheduled in 2024 genuinely is overdue, and moving
   its date would be Gneiss lying about the user's own data — and would mean writing to
-  every note on first run. Instead the *day's queue* is capped: `reviewsPerDay` for cards
-  in rotation, `newPerDay` for unseen ones, counted separately so a backlog cannot eat
-  the day's new material. The Today screen says how much is beyond the portion rather
+  every note on first run. Instead a *session* is portioned: `reviewsPerSession` for cards
+  in rotation, `newPerSession` for unseen ones, counted separately so a backlog cannot eat
+  the sitting's new material. The Today screen says how much is beyond the portion rather
   than hiding it.
 
   **CORRECTED:** this previously said "the backlog drains a day at a time", which is not
   what the code does and was never what it did. `selectDue` caps *the queue in view at
   any moment*, not the day — grading a card schedules it forward, so it leaves the due
   set and the next one slides into the cap. Measured on a 100-card backlog with
-  `reviewsPerDay: 30`, all 100 can be graded in one sitting.
+  `reviewsPerSession: 30`, all 100 can be graded in one sitting.
 
   That behaviour is **kept, and now made explicit** rather than closed off, because it is
   the same principle as *Report the pace, never ration the cards*: a daily figure is a
   sensible default portion, not a lockout. The Review screen offers **Another session**
   when more is ready, and both screens call the figure a portion rather than a limit.
 
-  **OPEN:** `reviewsPerDay` / `newPerDay` / `cram.perDay` are therefore misnamed — they
-  size a session, not a day. Renaming them would touch the config file format, so it is
-  deferred rather than done silently.
+  **RESOLVED:** these were once `reviewsPerDay` / `newPerDay` / `cram.perDay`, which was
+  simply wrong — they size a session, not a day. Renamed to `reviewsPerSession` /
+  `newPerSession` / `cram.perSession`, with **no back-compatibility shim**: the app has no
+  users yet, so the config format is written as intended rather than carrying a fallback for
+  files nobody has. Once it ships, renaming a key in `.gneiss/config.md` stops being free —
+  the file lives in the user's own vault, so a silent reset would be Gneiss losing their
+  settings.
 
   Ordering happens **before** the cap — core tier first, then longest-overdue first —
   otherwise the cap keeps an arbitrary slice and the cards that matter never surface.

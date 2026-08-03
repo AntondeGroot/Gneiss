@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 
-import { DEFAULT_CRAM_PER_DAY, schedule, topicTiers, withTopicTier } from "../../vault";
+import { DEFAULT_CRAM_PER_SESSION, schedule, topicTiers, withTopicTier } from "../../vault";
 import type { CramState, GneissConfig, Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import { ReminderService } from "../services/reminder.service";
@@ -68,7 +68,7 @@ export class SettingsScreen {
       active: false,
       scope: "",
       examDate: "",
-      perDay: DEFAULT_CRAM_PER_DAY,
+      perSession: DEFAULT_CRAM_PER_SESSION,
     };
     this.update("cram", { ...current, ...patch });
   }
@@ -82,7 +82,7 @@ export class SettingsScreen {
   }
 
   protected onNumber(
-    key: "spread" | "newPerDay" | "reviewsPerDay" | "cramMinPasses",
+    key: "spread" | "newPerSession" | "reviewsPerSession" | "cramMinPasses",
     value: string,
   ): void {
     this.update(key, Number(value));
