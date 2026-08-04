@@ -26,6 +26,7 @@ import type {
   TierMapping,
 } from "../../vault";
 import { DeckCacheService } from "./deck-cache.service";
+import { ReminderService } from "./reminder.service";
 import type { VaultSource } from "./vault-source";
 
 /** A parsed card plus everything scheduling needs to act on it. */
@@ -52,6 +53,7 @@ export interface DeckCard {
 @Injectable({ providedIn: "root" })
 export class DeckService {
   private readonly cache = inject(DeckCacheService);
+  private readonly reminders = inject(ReminderService);
   private source: VaultSource | null = null;
   private readonly cards = signal<readonly DeckCard[]>([]);
   /**
@@ -120,6 +122,17 @@ export class DeckService {
     this.due().filter((card) => isCrammed(card.topicTags, this.config().cram)),
   );
 
+  /**
+   * Whether a review session has been *finished* today — what settles the
+   * evening nudge.
+   *
+   * Not "has any card been graded": grading one card and putting the phone down
+   * is exactly the day the backup reminder exists for.
+   */
+  sessionDoneToday(): boolean {
+    return this.config().lastSessionOn === today();
+  }
+
   /** Zero once a day has been missed — never claims a streak that is already broken. */
   readonly streak = computed(() =>
     standingStreak(this.config().streak, this.config().lastReviewedOn, today()),
@@ -139,6 +152,7 @@ export class DeckService {
     this.sourceLabel.set(source.label);
     this.canWrite.set(source.canWrite());
     this.config.set(await source.readConfig());
+    this.syncReminders();
 
     // With cards already on screen from the cache, streaming a second set in
     // beneath the user would be worse than a brief wait: the queue would grow
@@ -323,6 +337,28 @@ export class DeckService {
       streak: nextStreak(config.streak, config.lastReviewedOn, today()),
       lastReviewedOn: today(),
     });
+  }
+
+  /**
+   * Records that a session was worked through to the end, which is what moves
+   * tonight's backup nudge to tomorrow.
+   */
+  async completeSession(): Promise<void> {
+    if (this.sessionDoneToday()) return;
+
+    await this.saveConfig({ ...this.config(), lastSessionOn: today() });
+    this.syncReminders();
+  }
+
+  /**
+   * Puts the reminders where the current config and today's progress say they
+   * belong.
+   *
+   * Fire-and-forget: a reminder that could not be scheduled — permission
+   * declined, notifications off at the system level — must not stop a review.
+   */
+  private syncReminders(): void {
+    void this.reminders.apply(this.config(), this.sessionDoneToday()).catch(() => undefined);
   }
 
   private optionsFor(card: DeckCard) {

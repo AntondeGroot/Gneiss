@@ -359,6 +359,29 @@ builds its registry — after is too late and the call fails at runtime.
 **OPEN:** iOS needs its own source. The document picker gives security-scoped bookmarks, which
 is the same shape again, so `VaultSource` should absorb it without changing.
 
+### The backup reminder is scheduled, not conditional (DECIDED)
+
+A second reminder (default 20:00) that **only arrives on a day you have not worked through a
+session**.
+
+Note what settles it: **finishing a session, not grading a card.** Opening the app, answering
+one question and putting the phone down is precisely the day this reminder exists for, so
+`lastSessionOn` is tracked separately from `lastReviewedOn` — one card still grades the day for
+the streak, but only reaching the end of a session counts as having done the reviewing.
+
+A local notification cannot ask a question when it fires — it is set ahead of time and goes off
+regardless — so "only if you haven't reviewed" cannot be a property of the notification. It is
+decided *when scheduling*, while the answer is known:
+
+- `nextBackup(at, sessionDoneToday, now)` returns tonight when no session has been finished,
+  and tomorrow when one has **or** tonight's time has already passed. Arriving at 20:01 to say
+  the evening was missed helps nobody.
+- It is a **single dated notification, not a repeat**, and `DeckService.syncReminders()` works
+  the next one out again whenever the config loads or a session is completed.
+
+Scheduling is fire-and-forget: a reminder that cannot be set — permission declined, system
+notifications off — must never stop a review.
+
 ### A cached slice starts the session (DECIDED)
 
 Streaming made a large vault *look* like it was working, but the first card still waited on
