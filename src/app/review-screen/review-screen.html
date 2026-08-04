@@ -11,6 +11,19 @@
   }
 </section>
 } @if (started() && current(); as card) {
+<!-- Where the session is up to. Thin and above the card, so it answers "how
+     much longer" without taking attention from the question. -->
+<div
+  class="progress"
+  role="progressbar"
+  [attr.aria-valuenow]="progress()"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-label="Session progress"
+>
+  <span class="fill" [style.width.%]="progress()"></span>
+</div>
+
 <section class="card">
   <header class="bar">
     <span class="note">{{ card.note }}</span>
@@ -18,6 +31,9 @@
     <!-- Small and out of the way: nothing should compete with the recall. -->
     <button type="button" class="edit" aria-label="Edit this card" (click)="openEditor()">✎</button>
     <span class="left">{{ remaining() }} left</span>
+    <!-- The tab bar is hidden while reviewing, so this is the way out. Nothing
+         is lost by leaving: every grade is already in the vault. -->
+    <button type="button" class="leave" aria-label="Leave the review" (click)="leave()">✕</button>
   </header>
 
   <gn-card-body class="front" [text]="card.front" />

@@ -14,6 +14,29 @@ function note(name: string, topicTags: string[], tierOverride?: Tier): ParsedNot
   };
 }
 
+/**
+ * Storage the tests own, cleared between them.
+ *
+ * At file scope on purpose: grading writes the deck to the cache, so a block
+ * left on the environment's own storage picks up whatever the last test left.
+ * A runner without storage hides that entirely — which is how this passed
+ * locally and failed in CI.
+ */
+const store = new Map<string, string>();
+
+beforeEach(() => {
+  store.clear();
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  });
+});
+
 describe("DeckService", () => {
   it("re-tiers the loaded deck when the tag mapping is saved", async () => {
     const deck = TestBed.inject(DeckService);
@@ -170,19 +193,6 @@ describe("DeckService card editing", () => {
 });
 
 describe("DeckService cached start", () => {
-  beforeEach(() => {
-    const store = new Map<string, string>();
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        store.set(key, value);
-      },
-      removeItem: (key: string) => {
-        store.delete(key);
-      },
-    });
-  });
-
   it("keeps a grade given while the vault was still being read", async () => {
     const deck = TestBed.inject(DeckService);
     const note = parseNote(NOTE_MD, "shell.md");

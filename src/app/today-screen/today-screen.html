@@ -72,7 +72,20 @@
     </defs>
 
     <circle class="track" cx="64" cy="64" [attr.r]="radius" />
-    @for (segment of segments(); track segment.paint) {
+
+    <!-- An open session, drawn inside the tier ring: the outer ring is what the
+         day holds, the inner arc is how far into it you are. -->
+    @if (unfinished()) {
+    <circle class="session-track" cx="64" cy="64" [attr.r]="innerRadius" />
+    <circle
+      class="session"
+      cx="64"
+      cy="64"
+      [attr.r]="innerRadius"
+      [attr.stroke-dasharray]="sessionArc()"
+      stroke-dashoffset="0"
+    />
+    } @for (segment of segments(); track segment.paint) {
     <circle
       [class]="'segment ' + segment.paint"
       cx="64"
@@ -97,8 +110,12 @@
   </li>
   }
 </ul>
+} @if (unfinished()) {
+<p class="left">{{ left() }} cards left</p>
 } @if (due().length > 0) {
-<button type="button" class="primary" (click)="start()">Start review</button>
+<button type="button" class="primary" (click)="start()">
+  {{ unfinished() ? "Continue review" : "Start review" }}
+</button>
 } @else if (loaded()) {
 <p class="empty">Nothing due today.</p>
 } @else {

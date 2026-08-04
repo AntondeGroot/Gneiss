@@ -16,23 +16,24 @@ function card(id: string, due: string): DeckCard {
   };
 }
 
-describe("DeckCacheService", () => {
-  let cache: DeckCacheService;
+/** Storage the tests own, cleared between them. */
+let cache: DeckCacheService;
 
-  beforeEach(() => {
-    store.clear();
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        store.set(key, value);
-      },
-      removeItem: (key: string) => {
-        store.delete(key);
-      },
-    });
-    cache = new DeckCacheService();
+beforeEach(() => {
+  store.clear();
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
   });
+  cache = new DeckCacheService();
+});
 
+describe("DeckCacheService", () => {
   it("gives back the deck it was handed", () => {
     const config = { ...DEFAULT_CONFIG, spread: 0.4, newPerSession: 3 };
     cache.save("Obsidian", config, [card("a", "2026-08-01")], ["#flashcards/git"]);
@@ -89,5 +90,37 @@ describe("DeckCacheService", () => {
     cache.save("", DEFAULT_CONFIG, [card("a", "2026-08-01")], []);
 
     expect(store.size).toBe(0);
+  });
+});
+
+describe("DeckCacheService with a backlog", () => {
+  /** interval 0 marks a card that has never been reviewed. */
+  function fresh(id: string): DeckCard {
+    return { ...card(id, "2026-08-04"), review: { due: "2026-08-04", interval: 0, ease: 2.3 } };
+  }
+
+  it("caches new cards even when the backlog is years deep", () => {
+    const backlog = Array.from({ length: 400 }, (_, i) => card(`old${i}`, "2024-01-01"));
+    const unseen = Array.from({ length: 40 }, (_, i) => fresh(`new${i}`));
+
+    cache.save("Obsidian", DEFAULT_CONFIG, [...backlog, ...unseen], []);
+
+    // Sorting everything by date put every overdue review first, so a session
+    // run from the cache had no new material in it at all.
+    const kept = cache.load("Obsidian")?.cards ?? [];
+    expect(kept.some((c) => c.id.startsWith("new"))).toBe(true);
+    expect(kept.some((c) => c.id.startsWith("old"))).toBe(true);
+  });
+
+  it("keeps the pools to a few sessions each rather than the whole vault", () => {
+    const config = { ...DEFAULT_CONFIG, reviewsPerSession: 10, newPerSession: 2 };
+    const backlog = Array.from({ length: 400 }, (_, i) => card(`old${i}`, "2024-01-01"));
+    const unseen = Array.from({ length: 400 }, (_, i) => fresh(`new${i}`));
+
+    cache.save("Obsidian", config, [...backlog, ...unseen], []);
+
+    const kept = cache.load("Obsidian")?.cards ?? [];
+    expect(kept.filter((c) => c.review.interval > 0)).toHaveLength(40);
+    expect(kept.filter((c) => c.review.interval === 0)).toHaveLength(8);
   });
 });
