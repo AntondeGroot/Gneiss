@@ -29,9 +29,26 @@ export interface GneissConfig {
   /** Consecutive review days, and the day the last review happened. */
   readonly streak: number;
   readonly lastReviewedOn: string;
+  /**
+   * The day a review session was last *finished*.
+   *
+   * Kept apart from `lastReviewedOn` because they answer different questions:
+   * one card grades the day for the streak, but only working through a session
+   * settles the evening nudge. Opening the app and grading a single card is not
+   * the same as having done the day's reviewing.
+   */
+  readonly lastSessionOn: string;
   /** Daily on-device reminder, and the local time it fires at (HH:MM). */
   readonly reminderOn: boolean;
   readonly reminderAt: string;
+  /**
+   * A later nudge that only arrives on a day with no review in it.
+   *
+   * Not a second alarm: it is cancelled and moved to tomorrow the moment a
+   * session is graded, so a day that went well stays quiet.
+   */
+  readonly backupReminderOn: boolean;
+  readonly backupReminderAt: string;
   /**
    * How many times a card must come round before an exam to count as learned.
    *
@@ -54,8 +71,11 @@ export const DEFAULT_CONFIG: GneissConfig = {
   reviewsPerSession: 30,
   streak: 0,
   lastReviewedOn: NEVER,
+  lastSessionOn: NEVER,
   reminderOn: false,
   reminderAt: "08:30",
+  backupReminderOn: false,
+  backupReminderAt: "20:00",
   cramMinPasses: 3,
   tiers: {},
   cram: null,
@@ -79,8 +99,11 @@ export function parseConfig(md: string): GneissConfig {
     ),
     streak: readCount(sections.top["streak"], DEFAULT_CONFIG.streak),
     lastReviewedOn: sections.top["lastReviewedOn"] ?? NEVER,
+    lastSessionOn: sections.top["lastSessionOn"] ?? NEVER,
     reminderOn: sections.top["reminderOn"] === "true",
     reminderAt: sections.top["reminderAt"] ?? DEFAULT_CONFIG.reminderAt,
+    backupReminderOn: sections.top["backupReminderOn"] === "true",
+    backupReminderAt: sections.top["backupReminderAt"] ?? DEFAULT_CONFIG.backupReminderAt,
     cramMinPasses: Math.max(
       FEWEST_PASSES,
       readCount(sections.top["cramMinPasses"], DEFAULT_CONFIG.cramMinPasses),
@@ -98,8 +121,11 @@ export function formatConfig(config: GneissConfig): string {
     `reviewsPerSession: ${config.reviewsPerSession}`,
     `streak: ${config.streak}`,
     `lastReviewedOn: ${config.lastReviewedOn}`,
+    `lastSessionOn: ${config.lastSessionOn}`,
     `reminderOn: ${config.reminderOn}`,
     `reminderAt: "${config.reminderAt}"`,
+    `backupReminderOn: ${config.backupReminderOn}`,
+    `backupReminderAt: "${config.backupReminderAt}"`,
     `cramMinPasses: ${config.cramMinPasses}`,
   ];
 

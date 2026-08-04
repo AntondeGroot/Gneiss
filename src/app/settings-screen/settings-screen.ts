@@ -97,7 +97,7 @@ export class SettingsScreen {
     const config = this.draft();
     try {
       await this.deck.saveConfig(config);
-      await this.reminders.apply(config.reminderOn, config.reminderAt);
+      await this.reminders.apply(config, this.deck.sessionDoneToday());
       this.message.set("Saved to .gneiss/config.md in the vault.");
     } catch (error) {
       // The config still saved; only the reminder failed. Say which.

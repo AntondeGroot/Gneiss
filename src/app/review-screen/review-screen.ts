@@ -126,6 +126,10 @@ export class ReviewScreen {
     this.gradedAcrossSessions.update((count) => count + 1);
     this.position.update((index) => index + 1);
     this.revealed.set(false);
+
+    // Worked through to the end, which is what settles the evening nudge —
+    // grading one card and stopping is the day that nudge is there for.
+    if (this.position() >= this.queue().length) void this.deck.completeSession();
   }
 }
 

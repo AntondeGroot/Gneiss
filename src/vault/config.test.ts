@@ -11,8 +11,11 @@ describe("config round trip", () => {
       reviewsPerSession: 25,
       streak: 4,
       lastReviewedOn: "2026-08-01",
+      lastSessionOn: "2026-08-01",
       reminderOn: true,
       reminderAt: "07:15",
+      backupReminderOn: true,
+      backupReminderAt: "21:30",
       cramMinPasses: 4,
       tiers: { "#flashcards/git": "core", "#flashcards/lang/certexam": "optional" },
       cram: {
@@ -52,8 +55,11 @@ Notes below the frontmatter are ignored.
       reviewsPerSession: 30,
       streak: 0,
       lastReviewedOn: "",
+      lastSessionOn: "",
       reminderOn: false,
       reminderAt: "08:30",
+      backupReminderOn: false,
+      backupReminderAt: "20:00",
       // Absent from the file, so the default stands — a hand-written config
       // need not list every setting.
       cramMinPasses: 3,

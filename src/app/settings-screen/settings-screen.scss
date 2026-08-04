@@ -83,6 +83,14 @@ input[name="cramScope"] {
   font-size: 0.88rem;
   margin-bottom: 0.7rem;
 
+  // Sets the backup nudge apart from the daily one: they are two settings, not
+  // one with a sub-option.
+  &.spaced {
+    margin-top: 1.1rem;
+    padding-top: 1rem;
+    border-top: 1px solid $line;
+  }
+
   input {
     accent-color: $amber;
     width: 1rem;

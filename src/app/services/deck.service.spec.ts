@@ -207,3 +207,39 @@ describe("DeckService cached start", () => {
     expect(deck.all()[0]?.review.due).not.toBe("2026-09-01");
   });
 });
+
+describe("DeckService session completion", () => {
+  const TWO_CARDS = ["Q1? :: A1", "", "Q2? :: A2", "", "#flashcards/git", ""].join("\n");
+
+  it("does not count a day as done just because a card was graded", async () => {
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource({ "git.md": TWO_CARDS }), "");
+    deck.setNotes([parseNote(TWO_CARDS, "git.md")]);
+
+    await deck.grade(deck.all()[0]!, "medium");
+
+    // Grading one card and putting the phone down is exactly the day the
+    // evening nudge exists for.
+    expect(deck.sessionDoneToday()).toBe(false);
+  });
+
+  it("counts the day as done once a session is worked through", async () => {
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource({ "git.md": TWO_CARDS }), "");
+    deck.setNotes([parseNote(TWO_CARDS, "git.md")]);
+
+    await deck.completeSession();
+
+    expect(deck.sessionDoneToday()).toBe(true);
+  });
+
+  it("records the finished day in the vault, so it survives a restart", async () => {
+    const notes = { "git.md": TWO_CARDS, ".gneiss/config.md": "" };
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource(notes), "");
+
+    await deck.completeSession();
+
+    expect(deck.config().lastSessionOn).not.toBe("");
+  });
+});
