@@ -1,5 +1,4 @@
 import { Component, computed, inject, signal } from "@angular/core";
-import type { OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterLink } from "@angular/router";
 
@@ -24,7 +23,7 @@ export interface NoteGroup {
   templateUrl: "./vault-screen.html",
   styleUrl: "./vault-screen.scss",
 })
-export class VaultScreen implements OnInit {
+export class VaultScreen {
   private readonly deck = inject(DeckService);
   private readonly samples = inject(SampleVaultService);
   private readonly deviceSource = inject(CapacitorVaultSource);
@@ -75,15 +74,6 @@ export class VaultScreen implements OnInit {
 
   protected onOpenFolder(): void {
     void this.openFolder("");
-  }
-
-  /**
-   * Reopens the folder picked last time, so a vault is chosen once rather than
-   * on every launch. Silent when there is nothing remembered.
-   */
-  ngOnInit(): void {
-    const remembered = this.androidSource.remembered();
-    if (remembered) void this.openFolder(remembered);
   }
 
   protected toggle(note: string): void {

@@ -85,6 +85,9 @@ export class DeckService {
   /** Images already fetched this session, keyed by what the note wrote. */
   private readonly attachments = new Map<string, string>();
 
+  /** The read in flight, so a second request for the same vault joins it. */
+  private opening: { location: string; done: Promise<void> } | null = null;
+
   readonly all = this.cards.asReadonly();
   readonly topicTags = this.topics.asReadonly();
   /**
@@ -151,6 +154,22 @@ export class DeckService {
    * instead of an empty list that looks like a hang.
    */
   async open(source: VaultSource, location: string): Promise<void> {
+    // Two screens asking for the same vault at once used to start two reads,
+    // and both appended their notes — the same question, twice in a row. The
+    // second caller now waits on the first instead. A *different* location is a
+    // genuine second request and goes ahead.
+    if (this.opening?.location === location) return this.opening.done;
+
+    const done = this.readVault(source, location);
+    this.opening = { location, done };
+    try {
+      await done;
+    } finally {
+      if (this.opening?.done === done) this.opening = null;
+    }
+  }
+
+  private async readVault(source: VaultSource, location: string): Promise<void> {
     await source.open(location);
     this.source = source;
     this.sourceLabel.set(source.label);
@@ -221,11 +240,18 @@ export class DeckService {
     this.gradedWhileReading.clear();
   }
 
-  /** Adds a batch of notes to the deck already loaded. */
+  /**
+   * Adds a batch of notes to the deck already loaded.
+   *
+   * Keyed by card id, so a note that arrives twice replaces itself rather than
+   * showing up as a second copy of the same question.
+   */
   addNotes(notes: readonly ParsedNote[]): void {
     const tiers = this.config().tiers;
     this.topics.update((topics) => [...new Set([...topics, ...distinctTopicTags(notes)])]);
-    this.cards.update((cards) => [...cards, ...notes.flatMap((note) => toCards(note, tiers))]);
+    this.cards.update((cards) =>
+      withoutRepeats([...cards, ...notes.flatMap((note) => toCards(note, tiers))]),
+    );
   }
 
   /**
@@ -235,7 +261,7 @@ export class DeckService {
    */
   setNotes(notes: readonly ParsedNote[]): void {
     this.topics.set(distinctTopicTags(notes));
-    this.cards.set(notes.flatMap((note) => toCards(note, this.config().tiers)));
+    this.cards.set(withoutRepeats(notes.flatMap((note) => toCards(note, this.config().tiers))));
   }
 
   /**
@@ -425,6 +451,18 @@ function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
     ...(note.tierOverride ? { tierOverride: note.tierOverride } : {}),
     review: card.review ?? newReviewState(today()),
   }));
+}
+
+/**
+ * One card per id, keeping the last seen.
+ *
+ * A card's id is its note path and question, so a repeat means the same note was
+ * read twice — never two genuinely different cards. Two notes that happen to ask
+ * the same thing have different paths and both survive, which is right: they are
+ * two cards in the vault.
+ */
+function withoutRepeats(cards: readonly DeckCard[]): DeckCard[] {
+  return [...new Map(cards.map((card) => [card.id, card])).values()];
 }
 
 export function today(): string {
