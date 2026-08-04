@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      The wordmark, which Android draws along the bottom of the splash.
+
+      Only from API 31: `windowSplashScreenBrandingImage` is a platform
+      attribute, not one androidx backports, so asking for it unconditionally
+      fails to link. Older devices get the ground and the rock — the same splash
+      without the name.
+
+      The box is anchored to the bottom of the screen and cannot be moved, so how
+      high the text sits is decided inside the image: it is drawn at the top of
+      the box with transparent space beneath it. Putting the rock and the
+      wordmark in one centred icon instead was tried and lost too much size from
+      the rock, which has to fit the 192dp circle the system masks to.
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_branding</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+</resources>

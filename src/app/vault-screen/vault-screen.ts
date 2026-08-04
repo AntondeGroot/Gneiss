@@ -11,6 +11,12 @@ import { BrowserVaultSource } from "../services/browser-vault.source";
 import { CapacitorVaultSource } from "../services/capacitor-vault.source";
 import { SampleVaultService } from "../services/sample-vault.service";
 
+/** Rows drawn at once. Search reaches whatever is past this. */
+const SHOWN = 60;
+
+export type TierFilter = Tier | "all";
+const TIER_CHOICES: readonly TierFilter[] = ["all", "core", "standard", "optional"];
+
 export interface NoteGroup {
   readonly note: string;
   readonly tier: Tier;
@@ -50,6 +56,35 @@ export class VaultScreen {
   protected readonly expanded = signal<string | null>(null);
 
   protected readonly notes = computed(() => groupByNote(this.deck.all()));
+
+  /** What has been typed, and what has actually been searched for. */
+  protected readonly search = signal("");
+  protected readonly query = signal("");
+  protected readonly tier = signal<TierFilter>("all");
+  protected readonly tierChoices = TIER_CHOICES;
+
+  /** Notes matching the tier and the search, before the list is trimmed. */
+  protected readonly matching = computed(() => {
+    const wanted = this.tier();
+    const query = this.query().toLowerCase();
+
+    return this.notes().filter(
+      (group) =>
+        (wanted === "all" || group.tier === wanted) &&
+        (query === "" || group.note.toLowerCase().includes(query)),
+    );
+  });
+
+  /**
+   * The rows actually drawn.
+   *
+   * A real vault runs to hundreds of notes, and putting every one in the DOM
+   * costs more than anyone gains from scrolling past them. Search is how you
+   * reach the rest, which is why it exists.
+   */
+  protected readonly shown = computed(() => this.matching().slice(0, SHOWN));
+  protected readonly beyond = computed(() => this.matching().length - this.shown().length);
+  protected readonly filtered = computed(() => this.query() !== "" || this.tier() !== "all");
   protected readonly dueCount = computed(() => this.deck.due().length);
   protected readonly reading = this.deck.reading;
 
@@ -63,6 +98,26 @@ export class VaultScreen {
       ? `Reading… ${describeResult(this.notes().length, this.deck.all().length)}`
       : this.status(),
   );
+
+  /**
+   * Applies what was typed.
+   *
+   * On a button rather than as you type: filtering hundreds of notes on every
+   * keystroke is work the phone can feel, and a search here is usually one
+   * deliberate look for one note.
+   */
+  protected applySearch(): void {
+    this.query.set(this.search().trim());
+  }
+
+  protected clearSearch(): void {
+    this.search.set("");
+    this.query.set("");
+  }
+
+  protected showTier(tier: TierFilter): void {
+    this.tier.set(tier);
+  }
 
   protected onLoad(): void {
     void this.load();

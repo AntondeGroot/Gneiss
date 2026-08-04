@@ -45,7 +45,41 @@
   }
 </p>
 
-@for (group of notes(); track group.note) {
+@if (notes().length > 0) {
+<div class="find">
+  <div class="search">
+    <input
+      name="search"
+      type="search"
+      placeholder="Find a note…"
+      spellcheck="false"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      (keyup.enter)="applySearch()"
+    />
+    @if (query()) {
+    <button type="button" class="clear" aria-label="Clear the search" (click)="clearSearch()">
+      ✕
+    </button>
+    }
+    <button type="button" class="primary" (click)="applySearch()">Search</button>
+  </div>
+
+  <div class="tiers" role="group" aria-label="Filter by tier">
+    @for (choice of tierChoices; track choice) {
+    <button
+      type="button"
+      [class]="'tier-choice tier-' + choice"
+      [class.on]="tier() === choice"
+      [attr.aria-pressed]="tier() === choice"
+      (click)="showTier(choice)"
+    >
+      {{ choice }}
+    </button>
+    }
+  </div>
+</div>
+} @for (group of shown(); track group.note) {
 <section class="note">
   <button type="button" class="note-head" (click)="toggle(group.note)">
     <span class="name">{{ group.note }}</span>
@@ -70,6 +104,12 @@
   </ul>
   }
 </section>
-} @empty {
+} @empty { @if (filtered()) {
+<p class="empty">Nothing matches that.</p>
+} @else {
 <p class="empty">No notes loaded.</p>
+} } @if (beyond() > 0) {
+<!-- The list is trimmed on purpose: hundreds of rows cost more than scrolling
+     past them is worth. Search is how the rest is reached. -->
+<p class="beyond">{{ beyond() }} more match — search to narrow them down.</p>
 }

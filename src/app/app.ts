@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, signal } from "@angular/core";
+import { Component, computed, inject } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { NavigationEnd, Router, RouterOutlet } from "@angular/router";
 import { filter, map } from "rxjs";
@@ -6,12 +6,6 @@ import { filter, map } from "rxjs";
 import { AndroidVaultSource } from "./services/android-vault.source";
 import { DeckService } from "./services/deck.service";
 import { TabBar } from "./tab-bar/tab-bar";
-
-/**
- * How long the splash holds before fading. Long enough to read the wordmark,
- * short enough not to be in the way of a daily-use app.
- */
-const SPLASH_MS = 1300;
 
 /** Only reviewing takes the whole screen — nothing should compete with the card. */
 const HIDDEN_ON = ["/review"];
@@ -27,8 +21,6 @@ export class App {
   private readonly deck = inject(DeckService);
   private readonly androidVault = inject(AndroidVaultSource);
 
-  protected readonly booting = signal(true);
-
   /** Review hides the bar so nothing competes with the card being recalled. */
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -42,11 +34,6 @@ export class App {
   );
 
   constructor() {
-    const timer = setTimeout(() => this.booting.set(false), SPLASH_MS);
-    inject(DestroyRef).onDestroy(() => {
-      clearTimeout(timer);
-    });
-
     this.openLastVault();
   }
 
