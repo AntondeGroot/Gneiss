@@ -310,6 +310,46 @@ then open the native IDE.
   in `~/.gradle/gradle.properties` — user-level, so no machine-specific path is committed.
 - **iOS needs full Xcode plus CocoaPods**, not just the Command Line Tools. The platform is
   not added yet for that reason.
+
+### Reading the vault on Android (DECIDED)
+
+The hard part named above, now built. `Directory.Documents` in Capacitor's Filesystem maps to
+`Environment.getExternalStoragePublicDirectory(DIRECTORY_DOCUMENTS)` — real shared storage, not
+an app sandbox — but since Android 11 an app cannot read it without a grant, and the app's
+manifest carries only `INTERNET`. So on a phone, "Read vault" against a path returns nothing.
+
+Two ways out, and **the folder picker won**:
+
+| | Storage Access Framework | `MANAGE_EXTERNAL_STORAGE` |
+|---|---|---|
+| Permission | none; one folder, chosen by the user | "All files access" |
+| Play Store | fine | restricted to file managers |
+| Cost | a native plugin — Capacitor cannot read tree URIs | one manifest line |
+
+**Rejected:** all-files access. It would have worked unchanged with `VaultService`, but it
+asks for the whole device to read one folder, and closes the door on ever shipping to Play.
+
+`VaultAccessPlugin.kt` implements the picker half in Kotlin: `pick` (folder chooser, with the
+grant persisted so the vault is chosen once, not daily), `reopen`, `readNotes`, `readFile`,
+`writeFile`. Two details in there are load-bearing:
+
+- **The walk uses a `DocumentsContract` cursor, not `DocumentFile`.** `DocumentFile.listFiles()`
+  issues a query per entry, which turns a real vault into a long wait.
+- **`readNotes` returns every note in one call.** Each hop across the bridge costs, and a
+  listing followed by a read per file would pay that hundreds of times.
+
+`AndroidVaultSource` is the TypeScript half, and is just another `VaultSource` — the same
+"pick your vault once" bargain `BrowserVaultSource` already strikes with the File System
+Access API, which is why the screens needed almost no change.
+
+**Adding Kotlin to the app module** meant `ext.kotlin_version` in `android/build.gradle` and
+`apply plugin: 'kotlin-android'` in `android/app/build.gradle`. The version matches what the
+Capacitor plugins already build against, so the build does not pull two Kotlin toolchains.
+`MainActivity` registers the plugin **before** `super.onCreate`, which is when the bridge
+builds its registry — after is too late and the call fails at runtime.
+
+**OPEN:** iOS needs its own source. The document picker gives security-scoped bookmarks, which
+is the same shape again, so `VaultSource` should absorb it without changing.
 - `android/` and `ios/` are generated and hold a copy of the built web bundle, so both are
   excluded from lint and formatting.
 

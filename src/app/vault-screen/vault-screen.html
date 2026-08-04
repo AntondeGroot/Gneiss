@@ -4,6 +4,9 @@
 </header>
 
 <div class="controls">
+  <!-- Typing a path only means something where the app can read one. On Android
+       the picker owns the folder, and a path box would be a dead end. -->
+  @if (canReadByPath) {
   <label class="field">
     <span>Folder</span>
     <input
@@ -16,8 +19,15 @@
   </label>
   <button type="button" class="primary" (click)="onLoad()" [disabled]="busy()">Read vault</button>
   <button type="button" (click)="onSeed()" [disabled]="busy()">Seed sample notes</button>
-  @if (canPickFolder) {
-  <button type="button" (click)="onOpenFolder()" [disabled]="busy()">Open folder…</button>
+  } @if (canPickFolder) {
+  <button
+    type="button"
+    [class.primary]="!canReadByPath"
+    (click)="onOpenFolder()"
+    [disabled]="busy()"
+  >
+    Choose vault folder…
+  </button>
   }
 </div>
 
