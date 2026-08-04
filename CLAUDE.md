@@ -499,9 +499,18 @@ diagram often appears on several cards.
   **Nothing is rescheduled.** A card scheduled in 2024 genuinely is overdue, and moving
   its date would be Gneiss lying about the user's own data — and would mean writing to
   every note on first run. Instead a *session* is portioned: `reviewsPerSession` for cards
-  in rotation, `newPerSession` for unseen ones, counted separately so a backlog cannot eat
-  the sitting's new material. The Today screen says how much is beyond the portion rather
-  than hiding it.
+  in rotation, `newPerSession` for unseen ones, so a backlog cannot eat the sitting's new
+  material. The Today screen says how much is beyond the portion rather than hiding it.
+
+  **The two are one budget, not two ceilings (DECIDED).** Whichever pool is short gives its
+  room to the other, so a session is a consistent size instead of collapsing on the days one
+  side has run dry: **15 + 5** is twenty either way — twenty reviews when nothing is new,
+  twenty new when nothing is due. Neither side is padded beyond what exists, so a small deck
+  simply yields a small session.
+
+  The defaults are deliberately modest. A card that takes real thinking to answer — an exam
+  question about code, say — is not the same work as one answered in a second, and a pace set
+  for the second kind gets abandoned.
 
   **CORRECTED:** this previously said "the backlog drains a day at a time", which is not
   what the code does and was never what it did. `selectDue` caps *the queue in view at

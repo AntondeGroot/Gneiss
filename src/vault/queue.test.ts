@@ -28,20 +28,22 @@ function newCard(id: string, tier: Tier, topicTags: string[] = []): TestCard {
 }
 
 describe("selectDue", () => {
-  it("caps a years-old backlog instead of surfacing all of it at once", () => {
+  it("portions a years-old backlog instead of surfacing all of it at once", () => {
     // The shape of a real vault on first import: everything scheduled in 2024.
     const backlog = Array.from({ length: 200 }, (_, index) =>
       card(`c${index}`, "standard", "2024-06-01"),
     );
 
     const selection = selectDue(backlog, TODAY, {
-      newPerSession: 8,
-      reviewsPerSession: 30,
+      newPerSession: 5,
+      reviewsPerSession: 15,
       ...NO_CRAM,
     });
 
-    expect(selection.queue).toHaveLength(30);
-    expect(selection.heldBackReviews).toBe(170);
+    // Twenty: with nothing new to introduce, reviews take the whole budget
+    // rather than the session shrinking to fifteen.
+    expect(selection.queue).toHaveLength(20);
+    expect(selection.heldBackReviews).toBe(180);
   });
 
   it("takes the most overdue cards first, so the cap keeps what matters", () => {
@@ -77,22 +79,48 @@ describe("selectDue", () => {
     ]);
   });
 
-  it("counts new cards against their own cap, not the review one", () => {
+  it("never lets a review backlog eat the session's new material", () => {
     const cards = [
-      ...Array.from({ length: 5 }, (_, i) => card(`seen${i}`, "standard", "2025-01-01")),
+      ...Array.from({ length: 100 }, (_, i) => card(`seen${i}`, "standard", "2025-01-01")),
       ...Array.from({ length: 20 }, (_, i) => newCard(`new${i}`, "standard")),
     ];
 
     const selection = selectDue(cards, TODAY, {
-      newPerSession: 3,
-      reviewsPerSession: 10,
+      newPerSession: 5,
+      reviewsPerSession: 15,
       ...NO_CRAM,
     });
 
-    // A backlog of reviews must not eat the day's allowance of new material.
-    expect(selection.queue).toHaveLength(8);
-    expect(selection.heldBackNew).toBe(17);
-    expect(selection.heldBackReviews).toBe(0);
+    // Both pools are full, so each takes its own share and neither borrows.
+    expect(selection.queue.filter((c) => c.id.startsWith("new"))).toHaveLength(5);
+    expect(selection.queue.filter((c) => c.id.startsWith("seen"))).toHaveLength(15);
+  });
+
+  it("gives the review share to new cards when nothing is due", () => {
+    const cards = Array.from({ length: 40 }, (_, i) => newCard(`new${i}`, "standard"));
+
+    const selection = selectDue(cards, TODAY, {
+      newPerSession: 5,
+      reviewsPerSession: 15,
+      ...NO_CRAM,
+    });
+
+    // Twenty new rather than five: a session should not shrink because one pool
+    // happens to be empty.
+    expect(selection.queue).toHaveLength(20);
+    expect(selection.heldBackNew).toBe(20);
+  });
+
+  it("shrinks to what exists rather than padding the session", () => {
+    const cards = [card("seen", "standard", "2025-01-01"), newCard("new", "standard")];
+
+    const selection = selectDue(cards, TODAY, {
+      newPerSession: 5,
+      reviewsPerSession: 15,
+      ...NO_CRAM,
+    });
+
+    expect(selection.queue).toHaveLength(2);
   });
 
   it("leaves out cards that are not due yet", () => {
@@ -144,17 +172,16 @@ describe("selectDue under a cram", () => {
 
     const selection = selectDue(cards, TODAY, cramming("2026-08-20"));
 
-    // Crammed cards lead, four of them at the cram's pace, then two on newPerSession.
-    expect(selection.queue.map((c) => c.id)).toEqual([
+    // Crammed cards lead, four of them at the cram's own pace. The rest share
+    // the ordinary budget, which nothing else is using here.
+    expect(selection.queue.slice(0, 4).map((c) => c.id)).toEqual([
       "exam0",
       "exam1",
       "exam2",
       "exam3",
-      "other0",
-      "other1",
     ]);
     expect(selection.heldCrammed).toBe(2);
-    expect(selection.heldBackNew).toBe(3);
+    expect(selection.heldBackNew).toBe(0);
   });
 
   it("goes back to the ordinary cap once the exam has passed", () => {
@@ -162,9 +189,10 @@ describe("selectDue under a cram", () => {
 
     const selection = selectDue(cards, TODAY, cramming("2026-07-20"));
 
-    // The date is the off-switch: the topic loses its own pace and rejoins newPerSession.
-    expect(selection.queue).toHaveLength(2);
+    // The date is the off-switch: the topic loses its own pace and rejoins the
+    // ordinary budget, which here has room for all of them.
+    expect(selection.queue).toHaveLength(6);
     expect(selection.heldCrammed).toBe(0);
-    expect(selection.heldBackNew).toBe(4);
+    expect(selection.heldBackNew).toBe(0);
   });
 });

@@ -52,7 +52,7 @@ Notes below the frontmatter are ignored.
     expect(parseConfig(written)).toEqual({
       spread: 0.5,
       newPerSession: 8,
-      reviewsPerSession: 30,
+      reviewsPerSession: 15,
       streak: 0,
       lastReviewedOn: "",
       lastSessionOn: "",
