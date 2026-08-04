@@ -359,6 +359,34 @@ builds its registry — after is too late and the call fails at runtime.
 **OPEN:** iOS needs its own source. The document picker gives security-scoped bookmarks, which
 is the same shape again, so `VaultSource` should absorb it without changing.
 
+### A cached slice starts the session (DECIDED)
+
+Streaming made a large vault *look* like it was working, but the first card still waited on
+the first read. `DeckCacheService` keeps roughly four sessions' worth of the most urgent cards
+on the device, so opening the app starts a review **immediately** and the vault read catches
+up behind it.
+
+- **The vault stays the source of truth.** This is a head start, not a copy. Grades go straight
+  into the notes as always; the cache is never consulted for what a card's schedule *is*.
+- **Restoring happens in `App`, not the Vault screen**, because the app can open on any tab and
+  the point is that Today already has a session ready.
+- **Cached cards are not streamed over.** With something already on screen, a second set
+  arriving in batches would grow and reorder the queue under the reader, so a refresh stages
+  its notes and swaps them in once. With nothing to show, streaming is still the point.
+- **A grade given mid-read is re-applied afterwards.** The read may have started before that
+  card was written, so the fresh copy can carry the old schedule and the card would come
+  straight back. There is a test that fails without this.
+- **What comes back off the device is validated, not trusted** — a cache from an older build
+  could otherwise reach the scheduler as cards missing the fields it needs. One bad card drops
+  the whole cache: a partly-loaded deck is harder to explain than a slow start.
+- **Keyed by vault name**, so another vault's cards are never served. The name is stored beside
+  the URI rather than derived from it, since how a tree URI maps to a name is the document
+  provider's business.
+
+**OPEN:** the cache is only reached for on Android, where the vault reopens without a prompt.
+The browser needs a user gesture to regain its folder handle, so cards would appear that could
+not yet be written back.
+
 ### Reading a vault streams (DECIDED)
 
 `readNotes(onBatch?)` hands notes over **as they are found**, rather than resolving once with
