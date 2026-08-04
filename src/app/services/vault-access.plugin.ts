@@ -29,12 +29,17 @@ export interface VaultAccessPlugin {
   /** Whether a remembered folder is still readable, without prompting. */
   reopen(options: { uri: string }): Promise<PickedVault>;
   /**
-   * Every markdown note under the vault, walked and read natively.
+   * Walks the vault, emitting `vaultNotes` events as it reads, and resolving
+   * with the total once the walk is done.
    *
-   * One call rather than a listing plus a read per file: each hop across the
-   * bridge costs, and a real vault holds hundreds of notes.
+   * Streamed rather than returned whole: a large vault takes long enough on a
+   * phone that a screen showing nothing reads as a hang.
    */
-  readNotes(options: { uri: string }): Promise<{ notes: VaultNote[] }>;
+  readNotes(options: { uri: string }): Promise<{ total: number }>;
+  addListener(
+    event: "vaultNotes",
+    handler: (payload: { notes: VaultNote[] }) => void,
+  ): Promise<{ remove(): Promise<void> }>;
   readFile(options: { uri: string; path: string }): Promise<{ contents: string; found: boolean }>;
   writeFile(options: { uri: string; path: string; contents: string }): Promise<void>;
 }

@@ -303,6 +303,14 @@ Reminders are **on-device** (Capacitor Local Notifications) — no push server.
 be built before syncing. `npm run cap:sync` does both; `cap:android` / `cap:ios` sync and
 then open the native IDE.
 
+**`npm run android:install` builds and installs onto a connected phone** — sync, Gradle, adb,
+in that order. Each step has a quiet failure the script exists to prevent: skipping `cap:sync`
+packages the *previous* web bundle, so a fix appears not to work; Gradle picks the newest JDK
+and fails on class file version, which reads as a project problem rather than a toolchain one;
+and adb is not on the PATH, while an attached phone can still be `unauthorized`. It checks for
+a usable device *before* building, so a missing phone costs a second rather than a full Gradle
+run, and takes `--skip-build` to reinstall the existing APK.
+
 - **Android needs JDK 21**, not the newest installed JDK. Gradle 8.14.3 (what the Capacitor
   template ships) cannot read class file major version 69+, so a default `JAVA_HOME` of
   JDK 25/26 fails at settings evaluation with *"Unsupported class file major version"*.
@@ -350,6 +358,28 @@ builds its registry — after is too late and the call fails at runtime.
 
 **OPEN:** iOS needs its own source. The document picker gives security-scoped bookmarks, which
 is the same shape again, so `VaultSource` should absorb it without changing.
+
+### Reading a vault streams (DECIDED)
+
+`readNotes(onBatch?)` hands notes over **as they are found**, rather than resolving once with
+the lot. On a phone a real vault takes long enough that a screen showing nothing reads as a
+hang — the app looked stuck while it was working perfectly.
+
+The contract: every note reaches `onBatch` exactly once, the batches together are the whole
+vault, and the resolved array is the same set for callers that would rather wait. `DeckService`
+appends each batch, so **cards become reviewable while the rest is still loading**, and exposes
+`reading` so the Vault screen can count up instead of sitting still.
+
+All three sources stream, since all three walk a tree:
+
+- **Android** emits a `vaultNotes` event per batch from the native walk. Batched at 25, not one
+  event per note: each bridge hop costs, and a few hundred single-note events would spend more
+  time crossing than reading.
+- **Browser** emits as its directory walk descends.
+- **Device** reads in batches instead of one `Promise.all` over every path.
+
+Note the Android listener is attached *after* the open-vault check and removed in a `finally` —
+a listener left behind by a failed walk would double every note on the next read.
 - `android/` and `ios/` are generated and hold a copy of the built web bundle, so both are
   excluded from lint and formatting.
 

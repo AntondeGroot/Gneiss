@@ -68,6 +68,9 @@ export class DeckService {
   /** Set when a write to the vault failed, so the UI can say so rather than lie. */
   readonly writeError = signal<string | null>(null);
 
+  /** True while a vault is still being walked, so the screen can show progress. */
+  readonly reading = signal(false);
+
   readonly all = this.cards.asReadonly();
   readonly topicTags = this.topics.asReadonly();
   /**
@@ -114,7 +117,14 @@ export class DeckService {
     standingStreak(this.config().streak, this.config().lastReviewedOn, today()),
   );
 
-  /** Opens a vault from any source, then reads its config and notes. */
+  /**
+   * Opens a vault from any source, then reads its config and notes.
+   *
+   * Notes are added as they arrive rather than after the last file is read, so
+   * cards become reviewable while a large vault is still loading. `reading` says
+   * whether the walk is still going, which is what lets the screen show progress
+   * instead of an empty list that looks like a hang.
+   */
   async open(source: VaultSource, location: string): Promise<void> {
     await source.open(location);
     this.source = source;
@@ -122,7 +132,21 @@ export class DeckService {
     this.canWrite.set(source.canWrite());
 
     this.config.set(await source.readConfig());
-    this.setNotes(await source.readNotes());
+    this.cards.set([]);
+    this.topics.set([]);
+    this.reading.set(true);
+    try {
+      await source.readNotes((batch) => this.addNotes(batch));
+    } finally {
+      this.reading.set(false);
+    }
+  }
+
+  /** Adds a batch of notes to the deck already loaded. */
+  addNotes(notes: readonly ParsedNote[]): void {
+    const tiers = this.config().tiers;
+    this.topics.update((topics) => [...new Set([...topics, ...distinctTopicTags(notes)])]);
+    this.cards.update((cards) => [...cards, ...notes.flatMap((note) => toCards(note, tiers))]);
   }
 
   /**

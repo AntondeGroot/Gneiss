@@ -3,7 +3,7 @@ import { Injectable, inject } from "@angular/core";
 import type { GneissConfig, ParsedNote, ReviewState } from "../../vault";
 import { ConfigService } from "./config.service";
 import { VaultService } from "./vault.service";
-import type { VaultSource } from "./vault-source";
+import type { NoteBatch, VaultSource } from "./vault-source";
 
 /**
  * The vault as a folder on the device, read through Capacitor's Filesystem.
@@ -35,8 +35,8 @@ export class CapacitorVaultSource implements VaultSource {
     return Promise.resolve();
   }
 
-  readNotes(): Promise<ParsedNote[]> {
-    return this.vault.readNotes(this.path);
+  readNotes(onBatch?: NoteBatch): Promise<ParsedNote[]> {
+    return this.vault.readNotes(this.path, onBatch);
   }
 
   writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void> {

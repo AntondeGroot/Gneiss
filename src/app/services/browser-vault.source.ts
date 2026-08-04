@@ -2,11 +2,13 @@ import { Injectable } from "@angular/core";
 
 import { DEFAULT_CONFIG, formatConfig, parseConfig, parseNote, withReviewState } from "../../vault";
 import type { GneissConfig, ParsedNote, ReviewState } from "../../vault";
-import type { VaultSource } from "./vault-source";
+import type { NoteBatch, VaultSource } from "./vault-source";
 
 const MARKDOWN = ".md";
 const CONFIG_DIR = ".gneiss";
 const CONFIG_FILE = "config.md";
+/** Notes per batch — enough that the first cards appear at once. */
+const BATCH_SIZE = 25;
 
 /**
  * The vault as a folder the user picks in a browser, via the File System Access
@@ -39,8 +41,9 @@ export class BrowserVaultSource implements VaultSource {
     this.writable = (await this.root.queryPermission({ mode: "readwrite" })) === "granted";
   }
 
-  async readNotes(): Promise<ParsedNote[]> {
-    return this.readFolder(this.requireRoot(), "");
+  /** Streams notes as the walk descends, so a large vault fills in as it reads. */
+  async readNotes(onBatch?: NoteBatch): Promise<ParsedNote[]> {
+    return this.readFolder(this.requireRoot(), "", onBatch);
   }
 
   writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void> {
@@ -77,14 +80,29 @@ export class BrowserVaultSource implements VaultSource {
     await write(file, formatConfig(config));
   }
 
-  private async readFolder(directory: DirectoryHandle, prefix: string): Promise<ParsedNote[]> {
+  private async readFolder(
+    directory: DirectoryHandle,
+    prefix: string,
+    onBatch?: NoteBatch,
+  ): Promise<ParsedNote[]> {
     const notes: ParsedNote[] = [];
+    let pending: ParsedNote[] = [];
 
     for await (const [name, handle] of directory.entries()) {
       // Skips dotfolders, so `.obsidian` and `.gneiss` never become notes.
       if (name.startsWith(".")) continue;
-      notes.push(...(await this.readEntry(handle, joinPath(prefix, name), name)));
+
+      const found = await this.readEntry(handle, joinPath(prefix, name), name, onBatch);
+      notes.push(...found);
+      // Subfolders have already reported their own; only files land here.
+      if (handle.kind !== "directory") pending.push(...found);
+      if (pending.length >= BATCH_SIZE) {
+        onBatch?.(pending);
+        pending = [];
+      }
     }
+
+    if (pending.length > 0) onBatch?.(pending);
     return notes;
   }
 
@@ -92,8 +110,9 @@ export class BrowserVaultSource implements VaultSource {
     handle: DirectoryHandle | FileHandle,
     path: string,
     name: string,
+    onBatch?: NoteBatch,
   ): Promise<ParsedNote[]> {
-    if (handle.kind === "directory") return this.readFolder(handle, path);
+    if (handle.kind === "directory") return this.readFolder(handle, path, onBatch);
     if (!name.toLowerCase().endsWith(MARKDOWN)) return [];
 
     return [parseNote(await (await handle.getFile()).text(), path)];
