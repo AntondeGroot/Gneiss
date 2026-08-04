@@ -86,7 +86,7 @@ function backlog(name: string, cards: number): ParsedNote {
 describe("DeckService sessions", () => {
   it("offers the next portion once the current one has been graded", async () => {
     const deck = TestBed.inject(DeckService);
-    await deck.saveConfig({ ...DEFAULT_CONFIG, reviewsPerSession: 2 });
+    await deck.saveConfig({ ...DEFAULT_CONFIG, reviewsPerSession: 2, newPerSession: 0 });
     deck.setNotes([backlog("git.md", 5)]);
 
     const first = [...deck.due()];
@@ -103,7 +103,7 @@ describe("DeckService sessions", () => {
 
   it("runs out only when nothing is left to review", async () => {
     const deck = TestBed.inject(DeckService);
-    await deck.saveConfig({ ...DEFAULT_CONFIG, reviewsPerSession: 2 });
+    await deck.saveConfig({ ...DEFAULT_CONFIG, reviewsPerSession: 2, newPerSession: 0 });
     deck.setNotes([backlog("git.md", 5)]);
 
     // Session after session, the backlog drains rather than being rationed.

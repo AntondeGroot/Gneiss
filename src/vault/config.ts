@@ -22,9 +22,16 @@ const CRAM = "cram";
 export interface GneissConfig {
   /** Core emphasis, 0..1. */
   readonly spread: number;
-  /** Brand-new cards in one session, so a big vault cannot flood the first sitting. */
+  /**
+   * The two halves of a session's budget: how much unseen material to take on,
+   * and how much already in rotation.
+   *
+   * Shared rather than separate ceilings — whichever pool is short gives its
+   * room to the other, so a session stays a consistent size. Deliberately modest
+   * by default: a card that takes real thinking to answer is not the same work
+   * as one that takes a second, and a pace set for the second kind is abandoned.
+   */
   readonly newPerSession: number;
-  /** Cards already in rotation in one session — what portions out an imported backlog. */
   readonly reviewsPerSession: number;
   /** Consecutive review days, and the day the last review happened. */
   readonly streak: number;
@@ -67,8 +74,8 @@ export interface GneissConfig {
 
 export const DEFAULT_CONFIG: GneissConfig = {
   spread: 0.8,
-  newPerSession: 8,
-  reviewsPerSession: 30,
+  newPerSession: 5,
+  reviewsPerSession: 15,
   streak: 0,
   lastReviewedOn: NEVER,
   lastSessionOn: NEVER,
