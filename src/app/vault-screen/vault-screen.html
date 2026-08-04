@@ -40,7 +40,7 @@
 }
 
 <p class="status">
-  {{ status() }} @if (dueCount() > 0) {
+  {{ progress() }} @if (dueCount() > 0) {
   <a class="review-link" routerLink="/review">Review {{ dueCount() }} due →</a>
   }
 </p>

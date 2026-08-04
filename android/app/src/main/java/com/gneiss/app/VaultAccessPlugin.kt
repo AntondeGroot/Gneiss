@@ -86,11 +86,16 @@ class VaultAccessPlugin : Plugin() {
     }
 
     /**
-     * Every markdown note under the vault, read in one pass.
+     * Every markdown note under the vault, delivered in batches as the walk finds
+     * them rather than in one payload at the end.
      *
-     * Deliberately one call rather than a listing followed by a read per file:
-     * each hop across the bridge costs, and a real vault holds hundreds of notes.
-     * The walk uses a cursor over `DocumentsContract` instead of `DocumentFile`,
+     * A real vault on a phone takes long enough that a screen showing nothing
+     * reads as a hang, so notes go out over the `vaultNotes` event while the walk
+     * continues and the call resolves with the total once it is done.
+     *
+     * Batched, not one event per note: each hop across the bridge costs, and a
+     * few hundred single-note events would spend more time crossing than reading.
+     * The walk uses a cursor over `DocumentsContract` rather than `DocumentFile`,
      * which issues a query per entry and turns a large vault into a long wait.
      */
     @PluginMethod
@@ -101,14 +106,35 @@ class VaultAccessPlugin : Plugin() {
             return
         }
 
-        val notes = JSArray()
+        val batch = Batch()
         try {
-            walk(tree, DocumentsContract.getTreeDocumentId(tree), "", notes)
+            walk(tree, DocumentsContract.getTreeDocumentId(tree), "", batch)
+            batch.flush()
         } catch (error: SecurityException) {
             call.reject("Access to that folder was withdrawn — pick it again", error)
             return
         }
-        call.resolve(JSObject().put("notes", notes))
+        call.resolve(JSObject().put("total", batch.total))
+    }
+
+    /** Collects notes and sends them on in groups, so the screen fills as it reads. */
+    private inner class Batch {
+        var total = 0
+            private set
+
+        private var pending = JSArray()
+
+        fun add(note: JSObject) {
+            pending.put(note)
+            total++
+            if (pending.length() >= BATCH_SIZE) flush()
+        }
+
+        fun flush() {
+            if (pending.length() == 0) return
+            notifyListeners("vaultNotes", JSObject().put("notes", pending))
+            pending = JSArray()
+        }
     }
 
     /** One file by its path within the vault. Missing files resolve empty. */
@@ -147,7 +173,7 @@ class VaultAccessPlugin : Plugin() {
 
     // ——— The tree ———
 
-    private fun walk(tree: Uri, documentId: String, prefix: String, into: JSArray) {
+    private fun walk(tree: Uri, documentId: String, prefix: String, into: Batch) {
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId)
         val columns = arrayOf(
             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -169,7 +195,7 @@ class VaultAccessPlugin : Plugin() {
                 if (isDirectory) {
                     walk(tree, childId, path, into)
                 } else if (name.endsWith(MARKDOWN, ignoreCase = true)) {
-                    into.put(JSObject().put("path", path).put("contents", readText(tree, childId)))
+                    into.add(JSObject().put("path", path).put("contents", readText(tree, childId)))
                 }
             }
         }
@@ -243,5 +269,11 @@ class VaultAccessPlugin : Plugin() {
     private companion object {
         const val MARKDOWN = ".md"
         const val MARKDOWN_MIME = "text/markdown"
+
+        /**
+         * Notes per event. Small enough that the first cards appear almost at
+         * once, large enough that the bridge is not the bottleneck.
+         */
+        const val BATCH_SIZE = 25
     }
 }

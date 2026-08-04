@@ -3,8 +3,11 @@ import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 
 import { parseNote, withReviewState } from "../../vault";
 import type { ParsedNote, ReviewState } from "../../vault";
+import type { NoteBatch } from "./vault-source";
 
 const MARKDOWN_EXTENSION = ".md";
+/** Notes per batch — enough that the first cards appear at once. */
+const BATCH_SIZE = 25;
 
 /**
  * Where the Obsidian vault lives on the device. Internal: Capacitor's `Directory`
@@ -40,10 +43,21 @@ export class VaultService {
    *
    * @param path Vault folder relative to the app's documents directory.
    */
-  async readNotes(path: string): Promise<ParsedNote[]> {
+  async readNotes(path: string, onBatch?: NoteBatch): Promise<ParsedNote[]> {
     const location: VaultLocation = { path, directory: this.directory };
     const paths = await this.collectMarkdownPaths(location, "");
-    return Promise.all(paths.map((notePath) => this.readNote(location, notePath)));
+    const notes: ParsedNote[] = [];
+
+    // Read a batch at a time rather than the whole vault at once, so the screen
+    // fills as it goes instead of sitting empty until the last file lands.
+    for (let from = 0; from < paths.length; from += BATCH_SIZE) {
+      const batch = await Promise.all(
+        paths.slice(from, from + BATCH_SIZE).map((notePath) => this.readNote(location, notePath)),
+      );
+      notes.push(...batch);
+      onBatch?.(batch);
+    }
+    return notes;
   }
 
   /** Records a card's review state in its note. */

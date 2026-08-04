@@ -51,6 +51,18 @@ export class VaultScreen implements OnInit {
 
   protected readonly notes = computed(() => groupByNote(this.deck.all()));
   protected readonly dueCount = computed(() => this.deck.due().length);
+  protected readonly reading = this.deck.reading;
+
+  /**
+   * What the screen says about progress. While a vault is still being walked it
+   * counts up, because a still figure on a slow read is what makes the app look
+   * stuck — the point of loading in batches is that there is something to show.
+   */
+  protected readonly progress = computed(() =>
+    this.reading()
+      ? `Reading… ${describeResult(this.notes().length, this.deck.all().length)}`
+      : this.status(),
+  );
 
   protected onLoad(): void {
     void this.load();

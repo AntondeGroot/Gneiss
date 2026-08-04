@@ -4,7 +4,7 @@ import { Capacitor } from "@capacitor/core";
 import { DEFAULT_CONFIG, formatConfig, parseConfig, parseNote, withReviewState } from "../../vault";
 import type { GneissConfig, ParsedNote, ReviewState } from "../../vault";
 import { VaultAccess } from "./vault-access.plugin";
-import type { VaultSource } from "./vault-source";
+import type { NoteBatch, VaultSource } from "./vault-source";
 
 const CONFIG_PATH = ".gneiss/config.md";
 /** Where the picked folder is remembered, so the vault is chosen once, not daily. */
@@ -62,9 +62,30 @@ export class AndroidVaultSource implements VaultSource {
     globalThis.localStorage?.setItem(REMEMBERED, picked.uri);
   }
 
-  async readNotes(): Promise<ParsedNote[]> {
-    const { notes } = await VaultAccess.readNotes({ uri: this.require() });
-    return notes.map((note) => parseNote(note.contents, note.path));
+  /**
+   * Reads the vault, handing each batch on as the native walk emits it.
+   *
+   * The listener is removed in a `finally`, so a walk that fails partway does
+   * not leave a subscription behind that would double up the next read.
+   */
+  async readNotes(onBatch?: NoteBatch): Promise<ParsedNote[]> {
+    // Checked before subscribing: no vault means no walk, and a listener left
+    // attached to a call that never happens would double the next read.
+    const uri = this.require();
+    const all: ParsedNote[] = [];
+
+    const subscription = await VaultAccess.addListener("vaultNotes", ({ notes }) => {
+      const parsed = notes.map((note) => parseNote(note.contents, note.path));
+      all.push(...parsed);
+      onBatch?.(parsed);
+    });
+
+    try {
+      await VaultAccess.readNotes({ uri });
+    } finally {
+      await subscription.remove();
+    }
+    return all;
   }
 
   writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void> {

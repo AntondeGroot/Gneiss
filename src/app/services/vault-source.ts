@@ -1,5 +1,8 @@
 import type { GneissConfig, ParsedNote, ReviewState } from "../../vault";
 
+/** Receives each batch of notes as a vault is read. */
+export type NoteBatch = (notes: readonly ParsedNote[]) => void;
+
 /**
  * Everything Gneiss needs from a vault, independent of where it lives.
  *
@@ -27,7 +30,18 @@ export interface VaultSource {
    */
   open(location: string): Promise<void>;
 
-  readNotes(): Promise<ParsedNote[]>;
+  /**
+   * Reads the vault, handing over notes as they are found.
+   *
+   * Streaming rather than one payload at the end, because a real vault on a
+   * phone takes long enough that a screen showing nothing reads as a hang. Cards
+   * become reviewable as they arrive.
+   *
+   * The contract: every note is delivered to `onBatch` exactly once, and the
+   * batches together are the whole vault. The resolved array is the same set,
+   * for callers that would rather wait than accumulate.
+   */
+  readNotes(onBatch?: NoteBatch): Promise<ParsedNote[]>;
 
   /** Records one card's review state. No-op on a read-only source. */
   writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void>;
