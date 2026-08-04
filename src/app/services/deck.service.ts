@@ -12,6 +12,7 @@ import {
   schedule,
   obsidianNoteUri,
   selectDue,
+  splitEmbeds,
   standingStreak,
   withEditedCard,
   withoutCard,
@@ -80,6 +81,9 @@ export class DeckService {
    * does not undo them on screen.
    */
   private readonly gradedWhileReading = new Map<string, ReviewState>();
+
+  /** Images already fetched this session, keyed by what the note wrote. */
+  private readonly attachments = new Map<string, string>();
 
   readonly all = this.cards.asReadonly();
   readonly topicTags = this.topics.asReadonly();
@@ -152,6 +156,7 @@ export class DeckService {
     this.sourceLabel.set(source.label);
     this.canWrite.set(source.canWrite());
     this.config.set(await source.readConfig());
+    this.attachments.clear();
     this.syncReminders();
 
     // With cards already on screen from the cache, streaming a second set in
@@ -274,6 +279,42 @@ export class DeckService {
     this.cards.update((cards) => cards.filter((existing) => existing.id !== card.id));
 
     await this.persist(() => this.source?.editNote(card.note, (md) => withoutCard(md, card.front)));
+  }
+
+  /**
+   * An embedded image as something an `img` tag can load.
+   *
+   * Cached for the session: the same diagram often sits on several cards, and on
+   * Android the bytes come back base64 across the bridge, which is the one part
+   * of showing an image that is worth not repeating.
+   */
+  async attachment(target: string): Promise<string> {
+    const known = this.attachments.get(target);
+    if (known !== undefined) return known;
+
+    const url = (await this.source?.readAttachment(target)) ?? "";
+    // Only successes are kept. A miss can mean the vault has not finished
+    // listing itself, and remembering that would make the card show a raw link
+    // for as long as the app stays open.
+    if (url !== "") this.attachments.set(target, url);
+    return url;
+  }
+
+  /**
+   * Fetches a card's images ahead of being asked for them.
+   *
+   * An image costs a round trip and a base64 decode, which is a visible pause if
+   * it starts when the card appears. Warming the answer's images while the
+   * question is still on screen — and the next card's while this one is being
+   * answered — spends that time where nobody is waiting.
+   */
+  prefetch(...cards: readonly (DeckCard | undefined)[]): void {
+    for (const card of cards) {
+      if (!card) continue;
+      for (const segment of splitEmbeds(`${card.front}\n${card.back}`)) {
+        if (segment.kind === "embed") void this.attachment(segment.target);
+      }
+    }
   }
 
   /** Where a note lives in the vault, and the link that opens it in Obsidian. */

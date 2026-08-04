@@ -6,6 +6,7 @@ import { RouterLink } from "@angular/router";
 import type { Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import type { DeckCard } from "../services/deck.service";
+import { CardBody } from "../card-body/card-body";
 import { AndroidVaultSource } from "../services/android-vault.source";
 import { BrowserVaultSource } from "../services/browser-vault.source";
 import { CapacitorVaultSource } from "../services/capacitor-vault.source";
@@ -19,7 +20,7 @@ export interface NoteGroup {
 
 @Component({
   selector: "gn-vault-screen",
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, CardBody],
   templateUrl: "./vault-screen.html",
   styleUrl: "./vault-screen.scss",
 })

@@ -1,18 +1,37 @@
 import { DEFAULT_CONFIG } from "../../vault";
 
-const { pick, reopen, readNotes, readFile, writeFile, addListener, emit } = vi.hoisted(() => {
-  const handlers: ((payload: { notes: { path: string; contents: string }[] }) => void)[] = [];
+const {
+  pick,
+  reopen,
+  readNotes,
+  readFile,
+  writeFile,
+  readAttachment,
+  addListener,
+  emit,
+  emitAttachments,
+} = vi.hoisted(() => {
+  type NoteHandler = (payload: { notes: { path: string; contents: string }[] }) => void;
+  type IndexHandler = (payload: { attachments: Record<string, string> }) => void;
+
+  const handlers: NoteHandler[] = [];
+  const indexHandlers: IndexHandler[] = [];
+
   return {
     pick: vi.fn(),
     reopen: vi.fn(),
     readNotes: vi.fn().mockResolvedValue({ total: 0 }),
     readFile: vi.fn(),
     writeFile: vi.fn(),
-    addListener: vi.fn((_event: string, handler: (typeof handlers)[number]) => {
-      handlers.push(handler);
+    readAttachment: vi.fn(),
+    addListener: vi.fn((event: string, handler: NoteHandler | IndexHandler) => {
+      if (event === "vaultAttachments") indexHandlers.push(handler as IndexHandler);
+      else handlers.push(handler as NoteHandler);
+
       return Promise.resolve({
         remove: () => {
           handlers.splice(0);
+          indexHandlers.splice(0);
           return Promise.resolve();
         },
       });
@@ -21,11 +40,23 @@ const { pick, reopen, readNotes, readFile, writeFile, addListener, emit } = vi.h
     emit: (notes: { path: string; contents: string }[]) => {
       for (const handler of handlers) handler({ notes });
     },
+    /** The index the walk sends as soon as it has listed the vault. */
+    emitAttachments: (attachments: Record<string, string>) => {
+      for (const handler of indexHandlers) handler({ attachments });
+    },
   };
 });
 
 vi.mock("@capacitor/core", () => ({
-  registerPlugin: () => ({ pick, reopen, readNotes, readFile, writeFile, addListener }),
+  registerPlugin: () => ({
+    pick,
+    reopen,
+    readNotes,
+    readFile,
+    writeFile,
+    readAttachment,
+    addListener,
+  }),
   Capacitor: { getPlatform: () => "android" },
 }));
 
@@ -44,18 +75,20 @@ async function opened() {
 /** Stubbed rather than assumed: the test runner has no DOM storage of its own. */
 const store = new Map<string, string>();
 
-describe("AndroidVaultSource", () => {
-  beforeEach(() => {
-    vi.resetAllMocks();
-    store.clear();
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        store.set(key, value);
-      },
-    });
+// File scope, so every block below starts from clean mocks and empty storage —
+// scoped to one describe, the others inherit whichever calls came before.
+beforeEach(() => {
+  vi.resetAllMocks();
+  store.clear();
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
   });
+});
 
+describe("AndroidVaultSource", () => {
   it("reopens a remembered folder instead of prompting again", async () => {
     const source = new AndroidVaultSource();
     reopen.mockResolvedValue({ uri: VAULT, name: "Obsidian", available: true });
@@ -118,9 +151,10 @@ describe("AndroidVaultSource", () => {
 
     await expect(source.readNotes()).rejects.toThrow(/grant withdrawn/);
 
-    // A listener left behind would double every note on the next read.
+    // A listener left behind would double every note on the next read. Two go on
+    // per read: one for the notes, one for the attachment index.
     await source.readNotes();
-    expect(addListener).toHaveBeenCalledTimes(2);
+    expect(addListener).toHaveBeenCalledTimes(4);
   });
 
   it("falls back to defaults when the vault holds no config yet", async () => {
@@ -149,5 +183,40 @@ describe("AndroidVaultSource", () => {
     const source = new AndroidVaultSource();
 
     await expect(source.readNotes()).rejects.toThrow(/no vault folder is open/);
+  });
+});
+
+describe("AndroidVaultSource attachments", () => {
+  it("can find an image before the notes have finished reading", async () => {
+    const source = await opened();
+    readNotes.mockImplementation(() => {
+      // The index goes out once the vault is listed, long before it is read.
+      emitAttachments({ "shot.png": "ProgrammingSync/shot.png" });
+      return new Promise((resolve) => setTimeout(() => resolve({ total: 0 }), 20));
+    });
+    readFile.mockResolvedValue({ contents: "", found: false });
+    readAttachment.mockResolvedValue({ dataUrl: "data:image/png;base64,AA", found: true });
+
+    const reading = source.readNotes();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const url = await source.readAttachment("shot.png");
+    await reading;
+
+    // Resolved through the index, so the path includes the folder it lives in —
+    // looking for a bare name at the vault root is what used to miss.
+    expect(readAttachment).toHaveBeenCalledWith({
+      uri: VAULT,
+      path: "ProgrammingSync/shot.png",
+    });
+    expect(url).toBe("data:image/png;base64,AA");
+  });
+
+  it("hands back an external address without asking the vault", async () => {
+    const source = await opened();
+
+    expect(await source.readAttachment("https://example.com/x.png")).toBe(
+      "https://example.com/x.png",
+    );
+    expect(readAttachment).not.toHaveBeenCalled();
   });
 });

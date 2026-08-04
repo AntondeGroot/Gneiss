@@ -461,35 +461,32 @@ document-picker / permission model, plus sync-conflict handling). Accepted knowi
 - The vault is five hardcoded markdown strings in `SEED`.
 - Streak is a plain counter with no date logic.
 
-## Images on cards (OPEN, not built)
+## Images on cards (DECIDED, built)
 
-Anticipated, and the current design accommodates it — recorded so the constraints aren't
-rediscovered later.
+Obsidian embeds an image as `![[diagram.png]]` — what pasting one produces — or
+`![alt](assets/diagram.png)`. Both were always plain text inside a card's answer, and
+`parseNote` passed them through the way it passes through fenced code, so a card has always
+*carried* its images. Only showing them was missing.
 
-Obsidian embeds images as `![[diagram.png]]` (wikilink) or `![alt](assets/diagram.png)`
-(standard markdown). Both are plain text inside a card's answer, and `parseNote` already
-passes them through untouched, the same way it passes through fenced code. So a card
-*carries* an image reference today; only rendering is missing.
+`splitEmbeds()` cuts a card into prose and embeds, and `gn-card-body` renders the result on
+both Review and Vault. Two things had to be settled:
 
-`VaultService` deliberately does **not** read non-markdown files during the walk, and that
-stays right once images are supported: an image should load when the card referencing it is
-shown, not by pulling every attachment in the vault through the filesystem bridge at
-startup. Eager reading would be the bug, not the fix.
+**Finding the file.** `![[diagram.png]]` says what to show without saying where it lives, so it
+needs a name → path index. As anticipated, that index is **built during the directory walk that
+already exists** — every entry is listed there anyway, and finding an image afterwards would
+mean a second pass over the whole vault, once per card. The walk now returns non-markdown
+entries alongside the notes. Names only: the bytes are read when a card asks for them.
 
-Two things are needed to actually display one:
+**Loading the bytes.** The earlier plan was `Capacitor.convertFileSrc(uri)`, which hands the
+webview a native path so nothing enters JS memory. **That no longer applies** — since the vault
+is reached through the Storage Access Framework, an attachment is a `content://` document URI,
+which `convertFileSrc` cannot turn into anything loadable. The plugin reads the file and returns
+a **base64 data URL** instead. The cost is real (bytes cross the bridge and sit in JS), and it
+is contained by reading on demand, one card at a time, and caching per session — the same
+diagram often appears on several cards.
 
-- **Rewrite embeds into loadable URLs** at render time, via `Capacitor.convertFileSrc(uri)`.
-  It hands the webview a native file path directly — no base64, and the bytes never enter
-  JS memory.
-- **Resolve the attachment path.** `![[diagram.png]]` names a file without saying where it
-  is; Obsidian resolves it by searching the whole vault. That needs a map of
-  attachment filename → path.
-
-**The one decision with a cost attached:** that map is cheapest to build during the
-directory walk that already exists, since every listing is read there anyway. Collecting it
-later means either a second full traversal or reworking the walk. Deferred deliberately —
-the walk is small and well covered, so adding a second return value to `readNotes` is a
-contained change when it's actually needed.
+**OPEN:** a very large screenshot is a large base64 string. If that bites, the fix is a custom
+`WebViewAssetLoader` route that streams the file to the webview instead.
 
 ## Next steps discussed
 

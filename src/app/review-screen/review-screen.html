@@ -20,7 +20,7 @@
     <span class="left">{{ remaining() }} left</span>
   </header>
 
-  <p class="front">{{ card.front }}</p>
+  <gn-card-body class="front" [text]="card.front" />
 
   @if (editing()) {
   <gn-card-editor
@@ -34,7 +34,7 @@
     (dismissed)="closeEditor()"
   />
   } @else if (revealed()) {
-  <pre class="back">{{ card.back }}</pre>
+  <gn-card-body class="back" [text]="card.back" />
   <div class="grades">
     <!-- Named `choice`, not `grade`: a loop variable called `grade` shadows the
          component's grade() method, and the call silently binds to the string. -->

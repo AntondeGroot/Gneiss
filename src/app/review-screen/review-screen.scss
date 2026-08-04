@@ -140,9 +140,13 @@ button {
 }
 
 .front {
+  display: block;
   margin: 1.6rem 0;
-  font-size: 1.15rem;
-  line-height: 1.45;
+  // A question is prose, not code — but it goes through the same renderer so it
+  // can carry a diagram too.
+  --card-font: inherit;
+  --card-size: 1.15rem;
+  --card-line: 1.45;
 }
 
 .back {

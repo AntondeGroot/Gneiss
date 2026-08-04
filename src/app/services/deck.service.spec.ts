@@ -106,6 +106,7 @@ function fakeSource(notes: Record<string, string>) {
       return Promise.resolve();
     },
     vaultName: () => "MyVault",
+    readAttachment: () => Promise.resolve(""),
     readConfig: () => Promise.resolve(DEFAULT_CONFIG),
     writeConfig: () => Promise.resolve(),
   };

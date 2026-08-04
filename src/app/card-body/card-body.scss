@@ -1,0 +1,42 @@
+@use "styles" as *;
+
+:host {
+  display: block;
+}
+
+.prose {
+  margin: 0 0 0.6rem;
+  color: $text;
+  // Set by whoever is showing the card: an answer reads as code, a question as
+  // prose, and both go through here so both can hold images.
+  font-family: var(--card-font, "JetBrains Mono", ui-monospace, monospace);
+  font-size: var(--card-size, 0.9rem);
+  line-height: var(--card-line, 1.6);
+  // Answers hold code, so spacing is content — but it still has to wrap on a
+  // phone rather than scroll the card sideways.
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.embed {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 0 0.6rem;
+  border: 1px solid $line;
+  border-radius: 0.5rem;
+  // Screenshots are usually pasted on a light background; a plate keeps them
+  // from bleeding into the dark card around them.
+  background: $text;
+}
+
+.absent {
+  margin: 0 0 0.6rem;
+  color: $faint;
+  font-size: 0.78rem;
+  font-style: italic;
+}

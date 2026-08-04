@@ -63,6 +63,16 @@ export interface VaultSource {
    */
   vaultName(): string;
 
+  /**
+   * An embedded image, as something an `img` tag can load. Empty when the file
+   * cannot be found.
+   *
+   * `target` is what the note wrote — usually a bare file name, since
+   * `![[diagram.png]]` says what to show without saying where it lives, so a
+   * source has to resolve it against what the vault actually holds.
+   */
+  readAttachment(target: string): Promise<string>;
+
   readConfig(): Promise<GneissConfig>;
   writeConfig(config: GneissConfig): Promise<void>;
 }
