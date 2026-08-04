@@ -156,6 +156,40 @@ circle {
   stroke: $faint;
 }
 
+/**
+ * New cards: the same tier colour, hatched.
+ *
+ * Two facts on one ring — how much matters, and how much is unfamiliar — so
+ * they take separate channels. Colour stays the tier axis and texture carries
+ * newness, which also means the distinction survives being seen by someone who
+ * cannot separate amber from teal.
+ */
+.segment-core-new {
+  stroke: url("#hatch-core");
+}
+.segment-standard-new {
+  stroke: url("#hatch-standard");
+}
+.segment-optional-new {
+  stroke: url("#hatch-optional");
+}
+
+.hatch {
+  // Half the 5px repeat, so line and gap are even and the arc reads as striped
+  // rather than as a slightly dimmer solid.
+  stroke-width: 1.5;
+
+  &.hatch-core {
+    stroke: $amber;
+  }
+  &.hatch-standard {
+    stroke: $teal;
+  }
+  &.hatch-optional {
+    stroke: $faint;
+  }
+}
+
 .centre {
   position: absolute;
   inset: 0;
@@ -179,8 +213,10 @@ circle {
 
 .legend {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 1rem;
+  // Splitting each tier in two can make six entries, so they need room to wrap.
+  gap: 0.35rem 0.9rem;
   list-style: none;
   margin: 1.4rem 0 2rem;
   padding: 0;
@@ -198,6 +234,12 @@ circle {
     height: 0.45rem;
     border-radius: 50%;
     background: currentcolor;
+
+    // The ring's hatching, at legend size: a striped swatch reads as the same
+    // thing without needing a second explanation.
+    &.new {
+      background: repeating-linear-gradient(60deg, currentcolor 0 1.5px, transparent 1.5px 3px);
+    }
   }
 
   .tier-core {
