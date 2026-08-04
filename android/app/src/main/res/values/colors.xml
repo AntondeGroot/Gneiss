@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The app's ground, matching $base in the web app, the launcher icon's
+      background and the theme-color meta. The system splash is the first thing
+      shown on a cold start, so anything else here is a flash of the wrong colour
+      before Gneiss has even drawn.
+    -->
+    <color name="splash_background">#07050c</color>
+</resources>

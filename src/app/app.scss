@@ -1,37 +1,13 @@
 @use "styles" as *;
 
-// $base is sampled from the logo's own background, so the artwork blends into
-// the screen rather than sitting on it as a visible square.
-.splash {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  display: grid;
-  place-items: center;
-  background: $base;
-  animation: splash-out 1.3s ease forwards;
-
-  img {
-    width: min(62vw, 17rem);
-    height: auto;
-  }
-}
-
-@keyframes splash-out {
-  0%,
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .splash {
-    animation: none;
-  }
-}
+/**
+ * The launch screen is Android's own, configured in `values/styles.xml` — the
+ * app's ground, the rock, and the wordmark along the bottom.
+ *
+ * There used to be a second splash here in HTML, which meant seeing the mark
+ * twice: the system's while the app started, then ours for a fixed 1.3s after
+ * it was already loaded. The second one was pure waiting.
+ */
 
 // Leaves room for the fixed tab bar so the last row of content is reachable.
 .with-tab-bar {
