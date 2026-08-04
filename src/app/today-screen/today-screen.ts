@@ -13,10 +13,15 @@ const TIER_ORDER: readonly Tier[] = ["core", "standard", "optional"];
 
 export interface RingSegment {
   readonly tier: Tier;
+  /** Never reviewed before. Drawn hatched, so tier stays the colour axis. */
+  readonly fresh: boolean;
   readonly count: number;
   /** `stroke-dasharray` and `stroke-dashoffset` placing this arc on the ring. */
   readonly dash: string;
   readonly offset: number;
+  /** Class carrying the paint: a tier colour, or that colour hatched. */
+  readonly paint: string;
+  readonly label: string;
 }
 
 @Component({
@@ -31,6 +36,8 @@ export class TodayScreen {
 
   protected readonly radius = RADIUS;
   protected readonly circumference = CIRCUMFERENCE;
+  /** One hatch pattern per tier, defined once in the ring's `<defs>`. */
+  protected readonly tiers = TIER_ORDER;
 
   protected readonly due = this.deck.due;
   protected readonly streak = this.deck.streak;
@@ -58,9 +65,17 @@ function lastSegment(tag: string): string {
 }
 
 /**
- * One arc per tier, sized by share of the due queue and laid end to end.
- * Segments are emitted in a fixed tier order so the ring does not reorder itself
- * as counts change.
+ * One arc per tier and state, sized by share of the due queue and laid end to
+ * end.
+ *
+ * Two things are said at once, so they use two channels: colour carries the
+ * tier, hatching carries whether the card is new. Giving new cards their own
+ * colours would need six hues and make the tier — the thing the whole app is
+ * about — harder to read, not easier.
+ *
+ * Reviews come before new within a tier, the order a session serves them in.
+ * Segments are emitted in a fixed order so the ring does not reorder itself as
+ * counts change.
  */
 function toSegments(due: readonly DeckCard[]): RingSegment[] {
   const total = due.length;
@@ -70,17 +85,27 @@ function toSegments(due: readonly DeckCard[]): RingSegment[] {
   const segments: RingSegment[] = [];
 
   for (const tier of TIER_ORDER) {
-    const count = due.filter((card) => card.tier === tier).length;
-    if (count === 0) continue;
+    for (const fresh of [false, true]) {
+      const count = due.filter((card) => card.tier === tier && isFresh(card) === fresh).length;
+      if (count === 0) continue;
 
-    const length = (count / total) * CIRCUMFERENCE;
-    segments.push({
-      tier,
-      count,
-      dash: `${length} ${CIRCUMFERENCE - length}`,
-      offset: -consumed,
-    });
-    consumed += length;
+      const length = (count / total) * CIRCUMFERENCE;
+      segments.push({
+        tier,
+        fresh,
+        count,
+        dash: `${length} ${CIRCUMFERENCE - length}`,
+        offset: -consumed,
+        paint: fresh ? `segment-${tier}-new` : `segment-${tier}`,
+        label: fresh ? `new ${tier}` : tier,
+      });
+      consumed += length;
+    }
   }
   return segments;
+}
+
+/** Never reviewed: the same test the queue uses to count new cards. */
+function isFresh(card: DeckCard): boolean {
+  return card.review.interval === 0;
 }

@@ -55,10 +55,26 @@
     role="img"
     [attr.aria-label]="due().length + ' cards due'"
   >
+    <!-- New cards are the tier's own colour, hatched. Rotated with the ring so
+         the lines read as across the arc rather than along it. -->
+    <defs>
+      @for (tier of tiers; track tier) {
+      <pattern
+        [attr.id]="'hatch-' + tier"
+        patternUnits="userSpaceOnUse"
+        width="3"
+        height="3"
+        patternTransform="rotate(60)"
+      >
+        <line [class]="'hatch hatch-' + tier" x1="0" y1="0" x2="0" y2="5" />
+      </pattern>
+      }
+    </defs>
+
     <circle class="track" cx="64" cy="64" [attr.r]="radius" />
-    @for (segment of segments(); track segment.tier) {
+    @for (segment of segments(); track segment.paint) {
     <circle
-      [class]="'segment segment-' + segment.tier"
+      [class]="'segment ' + segment.paint"
       cx="64"
       cy="64"
       [attr.r]="radius"
@@ -74,9 +90,10 @@
 </section>
 
 <ul class="legend">
-  @for (segment of segments(); track segment.tier) {
+  @for (segment of segments(); track segment.paint) {
   <li [class]="'tier-' + segment.tier">
-    <span class="dot" aria-hidden="true"></span>{{ segment.count }} {{ segment.tier }}
+    <span class="dot" [class.new]="segment.fresh" aria-hidden="true"></span>{{ segment.count }} {{
+    segment.label }}
   </li>
   }
 </ul>
