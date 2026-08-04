@@ -1,6 +1,6 @@
 import { Component, computed, inject, input, resource } from "@angular/core";
 
-import { splitEmbeds } from "../../vault";
+import { splitCard } from "../../vault";
 import { DeckService } from "../services/deck.service";
 
 /**
@@ -23,7 +23,7 @@ export class CardBody {
 
   private readonly deck = inject(DeckService);
 
-  protected readonly segments = computed(() => splitEmbeds(this.text()));
+  protected readonly segments = computed(() => splitCard(this.text()));
 
   /** Every image on this card, resolved together and re-fetched when it changes. */
   protected readonly images = resource({

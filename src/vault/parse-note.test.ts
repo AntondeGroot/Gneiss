@@ -127,3 +127,64 @@ Redirects stderr into stdout.
     });
   });
 });
+
+describe("fences that are not on their own line", () => {
+  it("keeps a whole block whose fence is glued to the sentence before it", () => {
+    // A blank line inside the block used to end the card, cutting the answer in
+    // half — the fence was not recognised, so the parser was never "inside" it.
+    const md = `How do you run it?
+?
+Run this:\`\`\`sh
+set -euo pipefail
+
+grep -r 'x' .
+\`\`\`
+
+#flashcards/shell
+`;
+
+    const [card] = parseNote(md, "shell.md").cards;
+
+    expect(card?.back).toContain("set -euo pipefail");
+    expect(card?.back).toContain("grep -r 'x' .");
+  });
+
+  it("stays outside code when a line opens and closes a span", () => {
+    const md = `What unstages a file?
+?
+The \`\`\`--staged\`\`\` flag.
+
+Not part of the answer.
+
+#flashcards/git
+`;
+
+    const [card] = parseNote(md, "git.md").cards;
+
+    // Both fences are on one line, so the card ends at the blank line as usual.
+    expect(card?.back).toBe("The ```--staged``` flag.");
+  });
+});
+
+describe("a question spanning several lines", () => {
+  it("keeps its line breaks, so a code block in the question stays code", () => {
+    const md = `what does the following do?
+\`\`\`java
+interface Flyable {
+    void fly();
+}
+\`\`\`
+?
+It declares a functional interface.
+
+#flashcards/lang
+`;
+
+    const [card] = parseNote(md, "java.md").cards;
+
+    // Joined with spaces, the block collapsed onto one line and stopped being
+    // recognisable as code at all.
+    expect(card?.front).toContain("\n```java\n");
+    expect(card?.front).toContain("interface Flyable {\n");
+  });
+});

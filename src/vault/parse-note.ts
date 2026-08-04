@@ -122,8 +122,13 @@ class CardScanner {
   private consume(line: string): void {
     const trimmed = line.trim();
 
-    if (trimmed.startsWith(FENCE)) {
-      this.insideFence = !this.insideFence;
+    // Counted, not matched at the start: a fence glued to the end of a sentence
+    // still opens a block, and a line holding both an opening and a closing one
+    // leaves the card outside code where it started. Getting this wrong ends the
+    // card at the next blank line and truncates its answer.
+    const fences = countFences(line);
+    if (fences > 0) {
+      if (fences % 2 === 1) this.insideFence = !this.insideFence;
       this.take(line);
       return;
     }
@@ -170,7 +175,11 @@ class CardScanner {
   }
 
   private startBlockAnswer(): void {
-    this.pendingFront = cleanFront(this.buffer.join(" ")) || null;
+    // Joined with newlines, as the answer already is. A space seemed harmless
+    // while questions were a single sentence, but it flattens a question that
+    // holds a code block into one line — and code without its line breaks is
+    // not code. The author's own structure is what gets shown.
+    this.pendingFront = cleanFront(this.buffer.join("\n")) || null;
     // The question's first line, held while the answer accumulates below it.
     this.pendingFrontLine = this.bufferStartLine;
     this.buffer = [];
@@ -201,6 +210,14 @@ class CardScanner {
     this.cards.push({ front, back, ...(review ? { review } : {}) });
     this.locations.push(location);
   }
+}
+
+function countFences(line: string): number {
+  let count = 0;
+  for (let at = line.indexOf(FENCE); at !== -1; at = line.indexOf(FENCE, at + FENCE.length)) {
+    count++;
+  }
+  return count;
 }
 
 function cleanFront(text: string): string {

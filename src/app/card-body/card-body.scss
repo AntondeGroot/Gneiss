@@ -5,17 +5,66 @@
 }
 
 .prose {
-  margin: 0 0 0.6rem;
+  margin: 0 0 0.7rem;
   color: $text;
-  // Set by whoever is showing the card: an answer reads as code, a question as
-  // prose, and both go through here so both can hold images.
-  font-family: var(--card-font, "JetBrains Mono", ui-monospace, monospace);
-  font-size: var(--card-size, 0.9rem);
-  line-height: var(--card-line, 1.6);
-  // Answers hold code, so spacing is content — but it still has to wrap on a
-  // phone rather than scroll the card sideways.
+  // Prose now that code has its own element — set by whoever is showing the
+  // card, so a question can be larger than an answer.
+  font-family: var(--card-font, inherit);
+  font-size: var(--card-size, 0.95rem);
+  line-height: var(--card-line, 1.55);
+  // Line breaks a note author put in are content, but the text still has to wrap
+  // on a phone rather than scroll the card sideways.
   white-space: pre-wrap;
   word-break: break-word;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/**
+ * A `backticked` span: a flag or a method name inside a sentence.
+ *
+ * Tinted and monospaced but kept at the sentence's own size, so it sits in the
+ * line rather than interrupting it — the opposite of a fenced block, which is
+ * meant to stop the reader.
+ */
+.inline {
+  padding: 0.08em 0.32em;
+  border-radius: 0.3em;
+  background: $base;
+  color: $amber;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+  // Long identifiers must not push the card sideways.
+  word-break: break-word;
+}
+
+/**
+ * A fenced block, looking like one.
+ *
+ * Smaller and monospaced so it reads as code rather than as more of the answer,
+ * on its own inset plate. Code does not wrap — indentation and line breaks carry
+ * meaning — so it scrolls sideways inside its own box, which is the one place
+ * horizontal scrolling is right.
+ */
+.code {
+  margin: 0 0 0.7rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid $line;
+  border-radius: 0.5rem;
+  background: $base;
+  color: $text;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  code {
+    font: inherit;
+    white-space: pre;
+  }
 
   &:last-child {
     margin-bottom: 0;
