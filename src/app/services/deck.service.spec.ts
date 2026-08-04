@@ -1,3 +1,5 @@
+import { TestBed } from "@angular/core/testing";
+
 import { DEFAULT_CONFIG, parseNote } from "../../vault";
 import type { ParsedNote, Tier } from "../../vault";
 
@@ -14,7 +16,7 @@ function note(name: string, topicTags: string[], tierOverride?: Tier): ParsedNot
 
 describe("DeckService", () => {
   it("re-tiers the loaded deck when the tag mapping is saved", async () => {
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
     deck.setNotes([note("git.md", ["#flashcards/git"])]);
     expect(deck.all()[0]?.tier).toBe("standard");
 
@@ -26,7 +28,7 @@ describe("DeckService", () => {
   });
 
   it("keeps a per-note tier tag outranking the mapping across a re-tier", async () => {
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
     deck.setNotes([note("git.md", ["#flashcards/git"], "optional")]);
 
     await deck.saveConfig({ ...DEFAULT_CONFIG, tiers: { "#flashcards/git": "core" } });
@@ -35,7 +37,7 @@ describe("DeckService", () => {
   });
 
   it("offers a topic row for a tagged note that holds no cards yet", () => {
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
 
     deck.setNotes([{ note: "empty.md", cards: [], topicTags: ["#flashcards/git"] }]);
 
@@ -60,7 +62,7 @@ function backlog(name: string, cards: number): ParsedNote {
 
 describe("DeckService sessions", () => {
   it("offers the next portion once the current one has been graded", async () => {
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
     await deck.saveConfig({ ...DEFAULT_CONFIG, reviewsPerSession: 2 });
     deck.setNotes([backlog("git.md", 5)]);
 
@@ -77,7 +79,7 @@ describe("DeckService sessions", () => {
   });
 
   it("runs out only when nothing is left to review", async () => {
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
     await deck.saveConfig({ ...DEFAULT_CONFIG, reviewsPerSession: 2 });
     deck.setNotes([backlog("git.md", 5)]);
 
@@ -115,7 +117,7 @@ const NOTE_MD =
 describe("DeckService card editing", () => {
   it("writes a correction into the note and keeps the card's review state", async () => {
     const notes = { "shell.md": NOTE_MD };
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
     await deck.open(fakeSource(notes), "");
     deck.setNotes([parseNote(NOTE_MD, "shell.md")]);
     const card = deck.all()[0]!;
@@ -129,7 +131,7 @@ describe("DeckService card editing", () => {
 
   it("re-keys the edited card so the next grade finds it in the note", async () => {
     const notes = { "shell.md": NOTE_MD };
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
     await deck.open(fakeSource(notes), "");
     deck.setNotes([parseNote(NOTE_MD, "shell.md")]);
 
@@ -143,7 +145,7 @@ describe("DeckService card editing", () => {
 
   it("removes a deleted card from the note and from the deck", async () => {
     const notes = { "shell.md": NOTE_MD };
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
     await deck.open(fakeSource(notes), "");
     deck.setNotes([parseNote(NOTE_MD, "shell.md")]);
 
@@ -155,7 +157,7 @@ describe("DeckService card editing", () => {
   });
 
   it("builds an Obsidian link for the note being reviewed", async () => {
-    const deck = new DeckService();
+    const deck = TestBed.inject(DeckService);
     await deck.open(fakeSource({}), "");
     deck.setNotes([parseNote(NOTE_MD, "Programming/Old Job/shell.md")]);
 
@@ -163,5 +165,45 @@ describe("DeckService card editing", () => {
       folder: "Programming/Old Job",
       uri: "obsidian://open?vault=MyVault&file=Programming%2FOld%20Job%2Fshell",
     });
+  });
+});
+
+describe("DeckService cached start", () => {
+  beforeEach(() => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    });
+  });
+
+  it("keeps a grade given while the vault was still being read", async () => {
+    const deck = TestBed.inject(DeckService);
+    const note = parseNote(NOTE_MD, "shell.md");
+
+    // A read that hands over its notes, then lets a grade land before finishing —
+    // the shape of grading from the cached deck while the refresh is in flight.
+    const grading: Promise<void>[] = [];
+    const streaming = {
+      ...fakeSource({ "shell.md": NOTE_MD }),
+      readNotes: (onBatch?: (notes: (typeof note)[]) => void) => {
+        onBatch?.([note]);
+        grading.push(deck.grade(deck.all()[0]!, "easy"));
+        return Promise.resolve([note]);
+      },
+    };
+
+    await deck.open(streaming, "");
+    await Promise.all(grading);
+
+    // The vault already has the grade; a fresh copy of the note read before it
+    // was written must not put the card back at the front of the queue.
+    expect(deck.all()[0]?.review.interval).toBeGreaterThan(0);
+    expect(deck.all()[0]?.review.due).not.toBe("2026-09-01");
   });
 });

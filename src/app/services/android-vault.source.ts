@@ -9,6 +9,13 @@ import type { NoteBatch, VaultSource } from "./vault-source";
 const CONFIG_PATH = ".gneiss/config.md";
 /** Where the picked folder is remembered, so the vault is chosen once, not daily. */
 const REMEMBERED = "gneiss.android.vault";
+/**
+ * The folder's name, kept beside its URI so the cached deck can be found before
+ * the vault is opened. Stored rather than derived: how a tree URI maps to a name
+ * is the document provider's business, and guessing it here would be a second,
+ * quietly diverging copy of that rule.
+ */
+const REMEMBERED_NAME = "gneiss.android.vaultName";
 
 /**
  * The vault as a folder the user picks on Android, through the Storage Access
@@ -40,6 +47,11 @@ export class AndroidVaultSource implements VaultSource {
     return globalThis.localStorage?.getItem(REMEMBERED) ?? "";
   }
 
+  /** That folder's name, which is the key the cached deck is stored under. */
+  rememberedName(): string {
+    return globalThis.localStorage?.getItem(REMEMBERED_NAME) ?? "";
+  }
+
   /**
    * Opens a vault: a remembered URI is reopened silently, anything else prompts.
    *
@@ -60,6 +72,7 @@ export class AndroidVaultSource implements VaultSource {
     this.uri = picked.uri;
     this.name = picked.name;
     globalThis.localStorage?.setItem(REMEMBERED, picked.uri);
+    globalThis.localStorage?.setItem(REMEMBERED_NAME, picked.name);
   }
 
   /**

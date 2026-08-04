@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from "@angular/core";
+import { Injectable, computed, inject, signal } from "@angular/core";
 
 import {
   DEFAULT_CONFIG,
@@ -25,6 +25,7 @@ import type {
   Tier,
   TierMapping,
 } from "../../vault";
+import { DeckCacheService } from "./deck-cache.service";
 import type { VaultSource } from "./vault-source";
 
 /** A parsed card plus everything scheduling needs to act on it. */
@@ -50,6 +51,7 @@ export interface DeckCard {
  */
 @Injectable({ providedIn: "root" })
 export class DeckService {
+  private readonly cache = inject(DeckCacheService);
   private source: VaultSource | null = null;
   private readonly cards = signal<readonly DeckCard[]>([]);
   /**
@@ -70,6 +72,12 @@ export class DeckService {
 
   /** True while a vault is still being walked, so the screen can show progress. */
   readonly reading = signal(false);
+
+  /**
+   * Grades given while a read was in flight, so the fresh copy of those notes
+   * does not undo them on screen.
+   */
+  private readonly gradedWhileReading = new Map<string, ReviewState>();
 
   readonly all = this.cards.asReadonly();
   readonly topicTags = this.topics.asReadonly();
@@ -130,16 +138,68 @@ export class DeckService {
     this.source = source;
     this.sourceLabel.set(source.label);
     this.canWrite.set(source.canWrite());
-
     this.config.set(await source.readConfig());
-    this.cards.set([]);
-    this.topics.set([]);
+
+    // With cards already on screen from the cache, streaming a second set in
+    // beneath the user would be worse than a brief wait: the queue would grow
+    // and reorder while they review it. Fresh notes are staged and swapped in
+    // once. With nothing to show, streaming is the whole point.
+    const showing = this.cards().length > 0;
+    if (!showing) {
+      this.cards.set([]);
+      this.topics.set([]);
+    }
+
+    const staged: ParsedNote[] = [];
     this.reading.set(true);
+    this.gradedWhileReading.clear();
     try {
-      await source.readNotes((batch) => this.addNotes(batch));
+      await source.readNotes((batch) => {
+        staged.push(...batch);
+        if (!showing) this.addNotes(batch);
+      });
+      this.setNotes(staged);
+      this.restoreGradesMadeWhileReading();
+      this.cache.save(source.vaultName(), this.config(), this.cards(), this.topics());
     } finally {
       this.reading.set(false);
     }
+  }
+
+  /**
+   * Loads the cached slice of a vault, so a session can start before the vault
+   * has been read. Returns whether anything was there.
+   *
+   * The cards are a head start, not the truth: `open` replaces them wholesale
+   * once the real read finishes.
+   */
+  restore(vault: string): boolean {
+    const cached = this.cache.load(vault);
+    if (!cached) return false;
+
+    this.config.set(cached.config);
+    this.topics.set(cached.topics);
+    this.cards.set(cached.cards);
+    return true;
+  }
+
+  /**
+   * Re-applies grades given while the vault was being read.
+   *
+   * The read may have started before those cards were written, so the fresh copy
+   * can carry the old schedule and the card would come straight back. The vault
+   * already has the grade; this stops the screen disagreeing with it.
+   */
+  private restoreGradesMadeWhileReading(): void {
+    if (this.gradedWhileReading.size === 0) return;
+
+    this.cards.update((cards) =>
+      cards.map((card) => {
+        const review = this.gradedWhileReading.get(card.id);
+        return review ? { ...card, review } : card;
+      }),
+    );
+    this.gradedWhileReading.clear();
   }
 
   /** Adds a batch of notes to the deck already loaded. */
@@ -223,6 +283,8 @@ export class DeckService {
   async grade(card: DeckCard, grade: Grade): Promise<void> {
     const review = this.preview(card, grade);
     this.replace(card, { ...card, review });
+    if (this.reading()) this.gradedWhileReading.set(card.id, review);
+    this.cache.save(this.source?.vaultName() ?? "", this.config(), this.cards(), this.topics());
 
     await this.persist(async () => {
       await this.source?.writeReviewState(card.note, card.front, review);
