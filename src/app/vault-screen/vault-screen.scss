@@ -78,6 +78,132 @@ button {
   }
 }
 
+/**
+ * Finding one note in a vault of hundreds.
+ *
+ * Search applies on the button rather than as you type, so a long list is not
+ * refiltered on every keystroke; the tier chips apply at once, because that is
+ * one tap over data already in hand.
+ */
+.find {
+  margin: 0.9rem 0 1.1rem;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    background: $panel2;
+    border: 1px solid $line;
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.65rem;
+    color: $text;
+    font: inherit;
+    font-size: 0.88rem;
+  }
+
+  .clear {
+    border: none;
+    background: none;
+    color: $faint;
+    font-size: 0.9rem;
+    padding: 0.3rem;
+    cursor: pointer;
+  }
+
+  .primary {
+    flex: none;
+    border: none;
+    border-radius: 0.55rem;
+    background: $amber;
+    color: $ink;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.55rem 0.9rem;
+    cursor: pointer;
+  }
+}
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+
+  /**
+   * Each chip carries its tier's colour whether or not it is chosen, so the
+   * filter reads as the same vocabulary as the badges on the rows below and the
+   * ring on Today — you can tell what a chip selects before selecting it.
+   *
+   * Choosing one is then a change of weight and ground rather than of hue: the
+   * colour was already the label, so making it *more* coloured would say the
+   * same thing twice.
+   */
+  .tier-choice {
+    border: 1px solid $line;
+    border-radius: 0.45rem;
+    background: $panel2;
+    color: currentcolor;
+    font: inherit;
+    font-size: 0.74rem;
+    text-transform: capitalize;
+    padding: 0.35rem 0.2rem;
+    cursor: pointer;
+
+    &.on {
+      border-color: currentcolor;
+      font-weight: 600;
+    }
+  }
+
+  .tier-all {
+    color: $dim;
+
+    &.on {
+      color: $text;
+      background: rgb(237 230 220 / 12%);
+    }
+  }
+
+  .tier-core {
+    color: $amber;
+
+    &.on {
+      background: rgb(229 160 69 / 15%);
+    }
+  }
+
+  .tier-standard {
+    color: $teal;
+
+    &.on {
+      background: rgb(127 168 160 / 15%);
+    }
+  }
+
+  // Muted by design — but the chip still has to be readable, so it takes the
+  // secondary text colour rather than the faint one the ring uses.
+  .tier-optional {
+    color: $dim;
+
+    &.on {
+      background: rgb(154 144 135 / 15%);
+    }
+  }
+}
+
+.beyond {
+  margin: 0.8rem 0 0;
+  color: $faint;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .status,
 .empty {
   margin: 1.1rem 0;
