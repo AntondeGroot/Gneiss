@@ -30,6 +30,13 @@ const REMEMBERED_NAME = "gneiss.android.vaultName";
 export class AndroidVaultSource implements VaultSource {
   private uri = "";
   private name = "";
+  /**
+   * Attachment file name to path, collected by the walk that reads the notes.
+   *
+   * Built there because the walk already lists every entry — finding an image
+   * later would mean a second pass over the whole vault, once per card.
+   */
+  private attachments: Record<string, string> = {};
 
   readonly label = "Vault folder";
 
@@ -87,16 +94,22 @@ export class AndroidVaultSource implements VaultSource {
     const uri = this.require();
     const all: ParsedNote[] = [];
 
-    const subscription = await VaultAccess.addListener("vaultNotes", ({ notes }) => {
-      const parsed = notes.map((note) => parseNote(note.contents, note.path));
+    const notes = await VaultAccess.addListener("vaultNotes", ({ notes: batch }) => {
+      const parsed = batch.map((note) => parseNote(note.contents, note.path));
       all.push(...parsed);
       onBatch?.(parsed);
     });
+    // Arrives once the vault has been listed, long before it has been read.
+    const index = await VaultAccess.addListener("vaultAttachments", ({ attachments }) => {
+      this.attachments = attachments;
+    });
 
     try {
-      await VaultAccess.readNotes({ uri });
+      const { attachments } = await VaultAccess.readNotes({ uri });
+      this.attachments = attachments;
     } finally {
-      await subscription.remove();
+      await notes.remove();
+      await index.remove();
     }
     return all;
   }
@@ -113,6 +126,21 @@ export class AndroidVaultSource implements VaultSource {
 
   vaultName(): string {
     return this.name;
+  }
+
+  /**
+   * An embedded image as a data URL.
+   *
+   * A bare `![[diagram.png]]` is looked up in the index the walk built; anything
+   * with a path is tried as written first, which is what the markdown form
+   * gives. An external address is handed back untouched for the browser to fetch.
+   */
+  async readAttachment(target: string): Promise<string> {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return target;
+
+    const path = this.attachments[target] ?? this.attachments[basename(target)] ?? target;
+    const { dataUrl } = await VaultAccess.readAttachment({ uri: this.require(), path });
+    return dataUrl;
   }
 
   /** Falls back to defaults when the file is absent, as on first launch. */
@@ -136,4 +164,9 @@ export class AndroidVaultSource implements VaultSource {
     if (!this.uri) throw new Error("no vault folder is open");
     return this.uri;
   }
+}
+
+/** The file name out of a path, which is how the index is keyed. */
+function basename(target: string): string {
+  return target.split("/").pop() ?? target;
 }

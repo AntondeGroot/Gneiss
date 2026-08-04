@@ -60,7 +60,7 @@
     @for (card of group.cards; track card.id) {
     <li>
       <p class="front">{{ card.front }}</p>
-      <pre class="back">{{ card.back }}</pre>
+      <gn-card-body class="back" [text]="card.back" />
       <p class="review">
         due {{ card.review.due }} · interval {{ card.review.interval }}d · ease {{ card.review.ease
         }}

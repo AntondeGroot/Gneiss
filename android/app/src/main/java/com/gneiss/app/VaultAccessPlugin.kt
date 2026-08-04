@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.util.Base64
+import java.util.concurrent.Executors
 import androidx.activity.result.ActivityResult
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
@@ -106,35 +108,90 @@ class VaultAccessPlugin : Plugin() {
             return
         }
 
-        val batch = Batch()
+        val found = mutableListOf<Note>()
+        val attachments = JSObject()
         try {
-            walk(tree, DocumentsContract.getTreeDocumentId(tree), "", batch)
-            batch.flush()
+            list(tree, DocumentsContract.getTreeDocumentId(tree), "", found, attachments)
+            // Sent before a single note is read. Listing is cursor queries and takes
+            // about a second; reading the notes takes far longer, and a card shown
+            // in between would otherwise look for its image in an index that does
+            // not exist yet and fall back to showing the raw link.
+            notifyListeners("vaultAttachments", JSObject().put("attachments", attachments))
+            readAll(tree, found)
         } catch (error: SecurityException) {
             call.reject("Access to that folder was withdrawn — pick it again", error)
             return
         }
-        call.resolve(JSObject().put("total", batch.total))
+        call.resolve(JSObject().put("total", found.size).put("attachments", attachments))
     }
 
-    /** Collects notes and sends them on in groups, so the screen fills as it reads. */
-    private inner class Batch {
-        var total = 0
-            private set
+    private data class Note(val documentId: String, val path: String)
 
-        private var pending = JSArray()
+    /**
+     * Reads the notes a batch at a time, several at once, sending each batch on
+     * as it completes.
+     *
+     * Opening a document through the Storage Access Framework costs far more
+     * than the bytes justify — measured at roughly 29ms a file, which is half a
+     * minute for a vault of 938 notes read one after another. The work is
+     * waiting, not computing, so reading a batch in parallel turns almost all of
+     * that into overlap. Batches still go out in order, so the screen fills the
+     * same way.
+     */
+    private fun readAll(tree: Uri, notes: List<Note>) {
+        if (notes.isEmpty()) return
 
-        fun add(note: JSObject) {
-            pending.put(note)
-            total++
-            if (pending.length() >= BATCH_SIZE) flush()
+        val readers = Executors.newFixedThreadPool(READERS)
+        try {
+            for (batch in notes.chunked(BATCH_SIZE)) {
+                val pending = batch.map { note ->
+                    readers.submit<JSObject> {
+                        JSObject().put("path", note.path).put("contents", readText(tree, note.documentId))
+                    }
+                }
+
+                val read = JSArray()
+                for (task in pending) read.put(task.get())
+                notifyListeners("vaultNotes", JSObject().put("notes", read))
+            }
+        } finally {
+            readers.shutdown()
+        }
+    }
+
+    /**
+     * One attachment, as a data URL the webview can put in an `img` tag.
+     *
+     * Base64 rather than a file path: the vault is reached through a content URI,
+     * which `Capacitor.convertFileSrc` cannot turn into something loadable. Read
+     * on demand, one card at a time, so a vault full of screenshots is never
+     * pulled through the bridge at once.
+     */
+    @PluginMethod
+    fun readAttachment(call: PluginCall) {
+        val tree = call.getString("uri")?.let(Uri::parse)
+        val path = call.getString("path")
+        if (tree == null || path == null) {
+            call.reject("A vault uri and a path are required")
+            return
         }
 
-        fun flush() {
-            if (pending.length() == 0) return
-            notifyListeners("vaultNotes", JSObject().put("notes", pending))
-            pending = JSArray()
+        val documentId = resolve(tree, path)
+        if (documentId == null) {
+            call.resolve(JSObject().put("dataUrl", "").put("found", false))
+            return
         }
+
+        val file = DocumentsContract.buildDocumentUriUsingTree(tree, documentId)
+        val bytes = context.contentResolver.openInputStream(file)?.use { it.readBytes() }
+        if (bytes == null) {
+            call.resolve(JSObject().put("dataUrl", "").put("found", false))
+            return
+        }
+
+        val mime = sniff(bytes) ?: context.contentResolver.getType(file) ?: FALLBACK_MIME
+        val encoded = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        call.resolve(JSObject().put("dataUrl", "data:$mime;base64,$encoded").put("found", true))
     }
 
     /** One file by its path within the vault. Missing files resolve empty. */
@@ -173,7 +230,19 @@ class VaultAccessPlugin : Plugin() {
 
     // ——— The tree ———
 
-    private fun walk(tree: Uri, documentId: String, prefix: String, into: Batch) {
+    /**
+     * Names every note and attachment, without reading any of them.
+     *
+     * Listing is one cursor query per folder and cheap; reading is the expensive
+     * part, so it is left to `readAll` where it can be done several at a time.
+     */
+    private fun list(
+        tree: Uri,
+        documentId: String,
+        prefix: String,
+        notes: MutableList<Note>,
+        attachments: JSObject
+    ) {
         val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, documentId)
         val columns = arrayOf(
             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -193,9 +262,15 @@ class VaultAccessPlugin : Plugin() {
 
                 val path = if (prefix.isEmpty()) name else "$prefix/$name"
                 if (isDirectory) {
-                    walk(tree, childId, path, into)
+                    list(tree, childId, path, notes, attachments)
                 } else if (name.endsWith(MARKDOWN, ignoreCase = true)) {
-                    into.add(JSObject().put("path", path).put("contents", readText(tree, childId)))
+                    notes.add(Note(childId, path))
+                } else {
+                    // Everything that is not a note is a possible attachment, indexed
+                    // by name because `![[diagram.png]]` says what to show without
+                    // saying where it lives. Names only — the bytes are read when a
+                    // card actually asks for them, not now.
+                    attachments.put(name, path)
                 }
             }
         }
@@ -260,6 +335,38 @@ class VaultAccessPlugin : Plugin() {
         return DocumentsContract.getDocumentId(created)
     }
 
+    /**
+     * The image type from the file's own first bytes.
+     *
+     * Trusted over the name because names lie: an image pasted as `.pgn` is one
+     * keystroke from `.png` and still a picture, and the provider would report
+     * it as an unknown type the webview then refuses to draw. Every format here
+     * is identified by a fixed signature, so this is a comparison, not a guess.
+     */
+    private fun sniff(bytes: ByteArray): String? {
+        fun startsWith(vararg signature: Int): Boolean =
+            bytes.size >= signature.size &&
+                signature.withIndex().all { (at, byte) -> bytes[at] == byte.toByte() }
+
+        return when {
+            startsWith(0x89, 0x50, 0x4E, 0x47) -> "image/png"
+            startsWith(0xFF, 0xD8, 0xFF) -> "image/jpeg"
+            startsWith(0x47, 0x49, 0x46) -> "image/gif"
+            startsWith(0x42, 0x4D) -> "image/bmp"
+            // RIFF....WEBP — the tag sits after the four-byte length.
+            startsWith(0x52, 0x49, 0x46, 0x46) && bytes.size > 11 &&
+                String(bytes, 8, 4, Charsets.US_ASCII) == "WEBP" -> "image/webp"
+            looksLikeSvg(bytes) -> "image/svg+xml"
+            else -> null
+        }
+    }
+
+    /** SVG is text, so it is recognised by what it opens with rather than a signature. */
+    private fun looksLikeSvg(bytes: ByteArray): Boolean {
+        val head = String(bytes, 0, minOf(bytes.size, 200), Charsets.US_ASCII).trimStart()
+        return head.startsWith("<svg") || head.startsWith("<?xml")
+    }
+
     private fun describe(uri: Uri): JSObject =
         JSObject()
             .put("uri", uri.toString())
@@ -269,11 +376,18 @@ class VaultAccessPlugin : Plugin() {
     private companion object {
         const val MARKDOWN = ".md"
         const val MARKDOWN_MIME = "text/markdown"
+        const val FALLBACK_MIME = "application/octet-stream"
 
         /**
          * Notes per event. Small enough that the first cards appear almost at
          * once, large enough that the bridge is not the bottleneck.
          */
         const val BATCH_SIZE = 25
+
+        /**
+         * Files read at once. The work is waiting on the document provider
+         * rather than on the CPU, so this is well above the core count.
+         */
+        const val READERS = 8
     }
 }

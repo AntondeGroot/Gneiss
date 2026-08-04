@@ -47,6 +47,17 @@ export class CapacitorVaultSource implements VaultSource {
     return this.vault.editNote(this.path, notePath, transform);
   }
 
+  /**
+   * Not supported here.
+   *
+   * This source reads a fixed device path and exists for the seeded sample
+   * vault, which has no attachments. The picker-based sources are what a real
+   * vault is opened through, and they resolve embeds.
+   */
+  readAttachment(): Promise<string> {
+    return Promise.resolve("");
+  }
+
   /** The vault folder's own name — what Obsidian lists it under. */
   vaultName(): string {
     return this.path.split("/").filter(Boolean).pop() ?? "";

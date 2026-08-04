@@ -1,6 +1,7 @@
-import { Component, computed, inject, signal } from "@angular/core";
+import { Component, computed, effect, inject, signal } from "@angular/core";
 import { RouterLink } from "@angular/router";
 
+import { CardBody } from "../card-body/card-body";
 import { CardEditor } from "../card-editor/card-editor";
 
 import type { CardText, Grade } from "../../vault";
@@ -11,7 +12,7 @@ const GRADES: readonly Grade[] = ["difficult", "medium", "easy"];
 
 @Component({
   selector: "gn-review-screen",
-  imports: [RouterLink, CardEditor],
+  imports: [RouterLink, CardBody, CardEditor],
   templateUrl: "./review-screen.html",
   styleUrl: "./review-screen.scss",
 })
@@ -38,6 +39,15 @@ export class ReviewScreen {
   protected readonly current = computed(() => this.queue()[this.position()] ?? null);
   protected readonly remaining = computed(() => this.queue().length - this.position());
   protected readonly finished = computed(() => this.started() && this.current() === null);
+
+  constructor() {
+    // Warms this card's answer while the question is up, and the next card's
+    // while this one is being answered — so an image is rarely waited on.
+    effect(() => {
+      const at = this.position();
+      this.deck.prefetch(this.queue()[at], this.queue()[at + 1]);
+    });
+  }
 
   /**
    * Begins a session on whatever is due now. Also how a *second* session starts:

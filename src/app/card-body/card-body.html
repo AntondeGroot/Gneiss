@@ -1,0 +1,14 @@
+@for (segment of segments(); track $index) { @if (segment.kind === "text") {
+<pre class="prose">{{ segment.text }}</pre>
+} @else if (urlFor(segment.target)) {
+<img class="embed" [src]="urlFor(segment.target)" [alt]="segment.alt" />
+} @else if (resolved()) { @if (segment.embedded) {
+<!-- The note asked for this one, so a missing file is worth naming: it is
+     usually something that moved, and knowing which makes it fixable. -->
+<p class="absent">Image not found — {{ segment.target }}</p>
+} @else {
+<!-- Only ever a link. `[[MVC]]` is a note reference, not a picture. -->
+<pre class="prose">{{ segment.raw }}</pre>
+} } @else {
+<p class="absent">Loading {{ segment.target }}…</p>
+} }

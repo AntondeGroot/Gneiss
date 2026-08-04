@@ -24,6 +24,8 @@ const BATCH_SIZE = 25;
 export class BrowserVaultSource implements VaultSource {
   private root: DirectoryHandle | null = null;
   private writable = false;
+  /** Attachment file name to handle, collected by the walk that reads the notes. */
+  private attachments = new Map<string, FileHandle>();
 
   readonly label = "Picked folder";
 
@@ -43,7 +45,17 @@ export class BrowserVaultSource implements VaultSource {
 
   /** Streams notes as the walk descends, so a large vault fills in as it reads. */
   async readNotes(onBatch?: NoteBatch): Promise<ParsedNote[]> {
+    this.attachments.clear();
     return this.readFolder(this.requireRoot(), "", onBatch);
+  }
+
+  /** An embedded image as a data URL, read from the handle the walk kept. */
+  async readAttachment(target: string): Promise<string> {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return target;
+
+    const handle = this.attachments.get(target.split("/").pop() ?? target);
+    if (!handle) return "";
+    return toDataUrl(await handle.getFile());
   }
 
   writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void> {
@@ -113,7 +125,12 @@ export class BrowserVaultSource implements VaultSource {
     onBatch?: NoteBatch,
   ): Promise<ParsedNote[]> {
     if (handle.kind === "directory") return this.readFolder(handle, path, onBatch);
-    if (!name.toLowerCase().endsWith(MARKDOWN)) return [];
+    if (!name.toLowerCase().endsWith(MARKDOWN)) {
+      // Everything that is not a note is a possible attachment. The handle is
+      // kept, not the bytes: an image is read when a card asks to show it.
+      this.attachments.set(name, handle);
+      return [];
+    }
 
     return [parseNote(await (await handle.getFile()).text(), path)];
   }
@@ -148,6 +165,20 @@ function joinPath(prefix: string, name: string): string {
 
 /* The File System Access API is not in TypeScript's DOM lib yet, so the surface
    used here is declared rather than pulling in an ambient package. */
+
+/** Read as a data URL so it can go straight into an `img` tag. */
+async function toDataUrl(file: Blob): Promise<string> {
+  const reader = new FileReader();
+  return new Promise((resolve) => {
+    reader.onload = () => {
+      resolve(typeof reader.result === "string" ? reader.result : "");
+    };
+    reader.onerror = () => {
+      resolve("");
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 interface FileHandle {
   readonly kind: "file";

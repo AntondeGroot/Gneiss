@@ -35,10 +35,26 @@ export interface VaultAccessPlugin {
    * Streamed rather than returned whole: a large vault takes long enough on a
    * phone that a screen showing nothing reads as a hang.
    */
-  readNotes(options: { uri: string }): Promise<{ total: number }>;
+  readNotes(options: {
+    uri: string;
+  }): Promise<{ total: number; attachments: Record<string, string> }>;
+  /** One attachment as a data URL, read only when a card asks for it. */
+  readAttachment(options: {
+    uri: string;
+    path: string;
+  }): Promise<{ dataUrl: string; found: boolean }>;
   addListener(
     event: "vaultNotes",
     handler: (payload: { notes: VaultNote[] }) => void,
+  ): Promise<{ remove(): Promise<void> }>;
+  /**
+   * The attachment index, sent as soon as the vault has been listed — well
+   * before the notes have been read, so a card shown early can still find its
+   * image.
+   */
+  addListener(
+    event: "vaultAttachments",
+    handler: (payload: { attachments: Record<string, string> }) => void,
   ): Promise<{ remove(): Promise<void> }>;
   readFile(options: { uri: string; path: string }): Promise<{ contents: string; found: boolean }>;
   writeFile(options: { uri: string; path: string; contents: string }): Promise<void>;
