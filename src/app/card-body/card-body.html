@@ -1,5 +1,11 @@
 @for (segment of segments(); track $index) { @if (segment.kind === "text") {
-<pre class="prose">{{ segment.text }}</pre>
+<p class="prose">
+  @for (part of segment.parts; track $index) {@if (part.kind === "code") {<code class="inline"
+    >{{ part.text }}</code
+  >} @else {{{ part.text }}}}
+</p>
+} @else if (segment.kind === "code") {
+<pre class="code"><code>{{ segment.code }}</code></pre>
 } @else if (urlFor(segment.target)) {
 <img class="embed" [src]="urlFor(segment.target)" [alt]="segment.alt" />
 } @else if (resolved()) { @if (segment.embedded) {
@@ -8,7 +14,7 @@
 <p class="absent">Image not found — {{ segment.target }}</p>
 } @else {
 <!-- Only ever a link. `[[MVC]]` is a note reference, not a picture. -->
-<pre class="prose">{{ segment.raw }}</pre>
+<p class="prose">{{ segment.raw }}</p>
 } } @else {
 <p class="absent">Loading {{ segment.target }}…</p>
 } }

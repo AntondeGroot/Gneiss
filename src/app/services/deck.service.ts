@@ -12,7 +12,7 @@ import {
   schedule,
   obsidianNoteUri,
   selectDue,
-  splitEmbeds,
+  splitCard,
   standingStreak,
   withEditedCard,
   withoutCard,
@@ -337,7 +337,7 @@ export class DeckService {
   prefetch(...cards: readonly (DeckCard | undefined)[]): void {
     for (const card of cards) {
       if (!card) continue;
-      for (const segment of splitEmbeds(`${card.front}\n${card.back}`)) {
+      for (const segment of splitCard(`${card.front}\n${card.back}`)) {
         if (segment.kind === "embed") void this.attachment(segment.target);
       }
     }

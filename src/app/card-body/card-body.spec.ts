@@ -88,3 +88,65 @@ describe("CardBody with links that are not files", () => {
     expect(html.querySelector("img")).not.toBeNull();
   });
 });
+
+describe("CardBody with code", () => {
+  it("renders a fenced block as code, without the fences", async () => {
+    const { html } = await render("Run this:\n```sh\ngrep -r 'x' .\n```\nThen check.");
+
+    const code = html.querySelector("pre.code code");
+    expect(code?.textContent).toBe("grep -r 'x' .");
+    // The fences are markup, not content.
+    expect(html.textContent).not.toContain("```");
+    // Prose either side stays prose.
+    expect(html.querySelectorAll("p.prose")).toHaveLength(2);
+  });
+
+  it("keeps indentation inside the block", async () => {
+    const { html } = await render("```java\nclass A {\n    void go() {}\n}\n```");
+
+    expect(html.querySelector("pre.code code")?.textContent).toBe("class A {\n    void go() {}\n}");
+  });
+
+  it("does not load an image that is only an example inside code", async () => {
+    const { deck, html } = await render("```md\n![[diagram.png]]\n```");
+
+    expect(deck.asked).toEqual([]);
+    expect(html.querySelector("img")).toBeNull();
+  });
+});
+
+describe("CardBody with inline code", () => {
+  it("renders a backticked span as inline code inside the sentence", async () => {
+    const { html } = await render("The `--staged` flag unstages a file.");
+
+    expect(html.querySelector("code.inline")?.textContent).toBe("--staged");
+    // Prose is pre-wrap, so template indentation would show up as real spaces
+    // in the middle of the sentence. The text must read exactly as written.
+    expect(html.querySelector("p.prose")?.textContent).toBe("The --staged flag unstages a file.");
+    expect(html.textContent).not.toContain("`");
+  });
+
+  it("keeps a lone backtick as the punctuation it is", async () => {
+    const { html } = await render("A ` on its own is not code.");
+
+    expect(html.querySelector("code.inline")).toBeNull();
+    expect(html.querySelector("p.prose")?.textContent).toBe("A ` on its own is not code.");
+  });
+
+  it("handles several spans in one sentence", async () => {
+    const { html } = await render("Use `grep` or `rg` to search.");
+
+    expect([...html.querySelectorAll("code.inline")].map((c) => c.textContent)).toEqual([
+      "grep",
+      "rg",
+    ]);
+    expect(html.querySelector("p.prose")?.textContent).toBe("Use grep or rg to search.");
+  });
+
+  it("does not confuse an inline span with a fenced block", async () => {
+    const { html } = await render("Try `ls`:\n```sh\nls -la\n```");
+
+    expect(html.querySelector("code.inline")?.textContent).toBe("ls");
+    expect(html.querySelector("pre.code code")?.textContent).toBe("ls -la");
+  });
+});
