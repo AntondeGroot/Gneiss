@@ -244,3 +244,63 @@ describe("DeckService session completion", () => {
     expect(deck.config().lastSessionOn).not.toBe("");
   });
 });
+
+describe("DeckService opening twice", () => {
+  const TWO = "Q1? :: A1\n\nQ2? :: A2\n\n#flashcards/git\n";
+
+  /**
+   * Lists before it reads, like the real one.
+   *
+   * The delay before the first batch is the whole point: on a device the walk
+   * spends about a second listing the vault, so a second caller arriving in that
+   * window still sees an empty deck and starts streaming into it as well.
+   */
+  function slowSource(note: ParsedNote) {
+    return {
+      ...fakeSource({}),
+      readNotes: (onBatch?: (notes: ParsedNote[]) => void) =>
+        new Promise<ParsedNote[]>((resolve) => {
+          setTimeout(() => onBatch?.([note]), 10);
+          setTimeout(() => resolve([note]), 60);
+        }),
+    };
+  }
+
+  it("does not serve a card twice while two screens open the same vault", async () => {
+    const deck = TestBed.inject(DeckService);
+    const note = parseNote(TWO, "git.md");
+    const source = slowSource(note);
+
+    // App reopens at launch and the Vault screen used to reopen on arrival.
+    const first = deck.open(source, "vault");
+    const second = deck.open(source, "vault");
+    // After the batch has landed, before either read has finished.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    // Checked *during* the read, which is when reviewing happens — the final
+    // state was always right, because the last read replaces the deck wholesale.
+    expect(deck.all().map((card) => card.id)).toEqual(["git.md::Q1?", "git.md::Q2?"]);
+    await Promise.all([first, second]);
+  });
+
+  it("keeps one card per id even if a note arrives twice", async () => {
+    const deck = TestBed.inject(DeckService);
+    const note = parseNote(TWO, "git.md");
+    await deck.open(fakeSource({}), "");
+
+    deck.addNotes([note]);
+    deck.addNotes([note]);
+
+    expect(deck.all()).toHaveLength(2);
+  });
+
+  it("still keeps two notes that happen to ask the same question", async () => {
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource({}), "");
+
+    deck.addNotes([parseNote(TWO, "git.md"), parseNote(TWO, "copy/git.md")]);
+
+    // Different files are different cards, however alike they read.
+    expect(deck.all()).toHaveLength(4);
+  });
+});
