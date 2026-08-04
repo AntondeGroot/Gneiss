@@ -343,6 +343,11 @@ export class DeckService {
     }
   }
 
+  /** The open vault's own name, which is how state kept on the device is keyed. */
+  vaultName(): string {
+    return this.source?.vaultName() ?? "";
+  }
+
   /** Where a note lives in the vault, and the link that opens it in Obsidian. */
   noteLink(card: DeckCard): { folder: string; uri: string } {
     return {

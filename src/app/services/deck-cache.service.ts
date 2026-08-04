@@ -6,14 +6,13 @@ import type { DeckCard } from "./deck.service";
 
 const KEY = "gneiss.deck";
 /**
- * Roughly four sessions' worth of the most urgent cards.
+ * How many sessions the cache should be able to serve.
  *
  * Enough to review for days without the vault, small enough that rewriting it
  * after each grade is not itself a pause — the whole deck would be hundreds of
- * kilobytes of JSON on every card. The vault is deliberately not copied here:
- * the point is a head start while the real read catches up.
+ * kilobytes of JSON on every card.
  */
-const KEPT = 150;
+const SESSIONS = 4;
 
 interface CachedDeck {
   /** Which vault this came from, so another vault's cards are never served. */
@@ -47,7 +46,7 @@ export class DeckCacheService {
     const deck: CachedDeck = {
       vault,
       config: formatConfig(config),
-      cards: [...cards].sort(byDueDate).slice(0, KEPT),
+      cards: keepEnoughFor(cards, config),
       topics: [...topics],
     };
     write(JSON.stringify(deck));
@@ -97,7 +96,14 @@ function readDeck(
   };
 }
 
-function isDeckCard(value: unknown): value is DeckCard {
+/**
+ * Whether this is a card the scheduler can act on.
+ *
+ * Shared with the saved session: both read back state written to the device,
+ * which is input rather than data — a payload from an older build could
+ * otherwise arrive missing the fields scheduling needs.
+ */
+export function isDeckCard(value: unknown): value is DeckCard {
   if (typeof value !== "object" || value === null) return false;
 
   const card = value as Partial<Record<keyof DeckCard, unknown>>;
@@ -117,6 +123,30 @@ function isDeckCard(value: unknown): value is DeckCard {
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
+}
+
+/**
+ * A few sessions' worth of each kind of card.
+ *
+ * The two pools are filled separately, exactly as `selectDue` serves them.
+ * Taking the most urgent cards overall looked equivalent and was not: an
+ * imported vault's reviews are years overdue while new cards are dated today, so
+ * sorting by date put every review first and no new card was ever cached. A
+ * session run from the cache had nothing new in it at all.
+ */
+function keepEnoughFor(cards: readonly DeckCard[], config: GneissConfig): DeckCard[] {
+  const reviews = cards.filter(isSeen).sort(byDueDate);
+  const fresh = cards.filter((card) => !isSeen(card)).sort(byDueDate);
+
+  return [
+    ...reviews.slice(0, config.reviewsPerSession * SESSIONS),
+    ...fresh.slice(0, config.newPerSession * SESSIONS),
+  ];
+}
+
+/** Seen before — the same test the queue uses to tell the pools apart. */
+function isSeen(card: DeckCard): boolean {
+  return card.review.interval > 0;
 }
 
 /** Most overdue first — the order a session would serve them in anyway. */

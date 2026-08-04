@@ -190,6 +190,26 @@ circle {
   }
 }
 
+/* The open session, inside the tier ring and in the accent so it reads as
+   "yours in progress" rather than as another slice of the deck. */
+.session-track {
+  stroke: $line;
+  stroke-width: 4;
+}
+
+.session {
+  stroke: $amber;
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.3s ease;
+}
+
+.left {
+  margin: 0 0 0.8rem;
+  color: $amber;
+  font-size: 0.85rem;
+}
+
 .centre {
   position: absolute;
   inset: 0;

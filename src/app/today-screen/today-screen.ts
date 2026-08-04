@@ -3,6 +3,7 @@ import { Router, RouterLink } from "@angular/router";
 
 import type { Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
+import { ReviewSessionService } from "../services/review-session.service";
 import type { DeckCard } from "../services/deck.service";
 
 /** Ring geometry. The radius drives the circumference every segment is cut from. */
@@ -10,6 +11,10 @@ const RADIUS = 56;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const TIER_ORDER: readonly Tier[] = ["core", "standard", "optional"];
+
+/** Inside the tier ring, with room to read as a separate arc. */
+const INNER_RADIUS = 44;
+const INNER_CIRCUMFERENCE = 2 * Math.PI * INNER_RADIUS;
 
 export interface RingSegment {
   readonly tier: Tier;
@@ -32,9 +37,11 @@ export interface RingSegment {
 })
 export class TodayScreen {
   private readonly deck = inject(DeckService);
+  private readonly session = inject(ReviewSessionService);
   private readonly router = inject(Router);
 
   protected readonly radius = RADIUS;
+  protected readonly innerRadius = INNER_RADIUS;
   protected readonly circumference = CIRCUMFERENCE;
   /** One hatch pattern per tier, defined once in the ring's `<defs>`. */
   protected readonly tiers = TIER_ORDER;
@@ -55,7 +62,29 @@ export class TodayScreen {
 
   protected readonly segments = computed(() => toSegments(this.due()));
 
+  /** A session left part-way through, which this screen offers to continue. */
+  protected readonly unfinished = this.session.unfinished;
+  protected readonly left = this.session.remaining;
+
+  /**
+   * The inner arc: how much of the open session is done.
+   *
+   * Drawn inside the tier ring rather than replacing it, so the two questions
+   * stay separate — the outer ring is what the day holds, the inner one is how
+   * far into it you are.
+   */
+  protected readonly sessionArc = computed(() => {
+    const total = this.session.total();
+    if (total === 0) return "0 " + String(INNER_CIRCUMFERENCE);
+
+    const done = (this.session.progress() / 100) * INNER_CIRCUMFERENCE;
+    return `${done} ${INNER_CIRCUMFERENCE - done}`;
+  });
+
   protected start(): void {
+    // Picks up an open session, or begins one. The Review screen does not start
+    // over on arrival, so "continue" means what it says.
+    this.session.resume();
     void this.router.navigate(["/review"]);
   }
 }
