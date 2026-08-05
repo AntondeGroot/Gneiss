@@ -77,6 +77,15 @@ export class DeckService {
   readonly reading = signal(false);
 
   /**
+   * Whether a full set of notes has been taken in.
+   *
+   * Not the same as "has cards": a vault whose notes all lost their tag is
+   * legitimately empty, and anything comparing against the deck has to be able
+   * to tell that from not having read yet.
+   */
+  readonly loaded = signal(false);
+
+  /**
    * Grades given while a read was in flight, so the fresh copy of those notes
    * does not undo them on screen.
    */
@@ -248,9 +257,10 @@ export class DeckService {
    */
   addNotes(notes: readonly ParsedNote[]): void {
     const tiers = this.config().tiers;
-    this.topics.update((topics) => [...new Set([...topics, ...distinctTopicTags(notes)])]);
+    const tagged = onlyTagged(notes);
+    this.topics.update((topics) => [...new Set([...topics, ...distinctTopicTags(tagged)])]);
     this.cards.update((cards) =>
-      withoutRepeats([...cards, ...notes.flatMap((note) => toCards(note, tiers))]),
+      withoutRepeats([...cards, ...tagged.flatMap((note) => toCards(note, tiers))]),
     );
   }
 
@@ -260,8 +270,10 @@ export class DeckService {
    * against a folder Gneiss did not read through VaultService.
    */
   setNotes(notes: readonly ParsedNote[]): void {
-    this.topics.set(distinctTopicTags(notes));
-    this.cards.set(withoutRepeats(notes.flatMap((note) => toCards(note, this.config().tiers))));
+    const tagged = onlyTagged(notes);
+    this.loaded.set(true);
+    this.topics.set(distinctTopicTags(tagged));
+    this.cards.set(withoutRepeats(tagged.flatMap((note) => toCards(note, this.config().tiers))));
   }
 
   /**
@@ -456,6 +468,18 @@ function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
     ...(note.tierOverride ? { tierOverride: note.tierOverride } : {}),
     review: card.review ?? newReviewState(today()),
   }));
+}
+
+/**
+ * Only notes the user tagged join the deck.
+ *
+ * Gneiss never opts a note in: a `::` or a bare `?` can appear in any note, and
+ * treating that as a flashcard would adopt half a vault. The `#flashcards` tag
+ * is the consent, which also means **removing it takes the cards out again** —
+ * without this, untagging a topic changed nothing at all.
+ */
+function onlyTagged(notes: readonly ParsedNote[]): readonly ParsedNote[] {
+  return notes.filter((note) => note.topicTags.length > 0);
 }
 
 /**
