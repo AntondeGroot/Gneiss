@@ -77,9 +77,15 @@ a fourth tier and **rejected**: a tier's job is to produce one interval multipli
 exam tier's would be 1.0 — identical to `standard`. Exam-ness is a deadline, which cram
 mode already models, not a distinct long-term pace.
 
-**Gneiss never opts a note into the deck.** Tiering only applies to notes the user has
-already tagged `#flashcards*`; `withTier()` leaves any other note byte-for-byte untouched
-rather than writing a tag into a note the app doesn't own. A note holding cards but no
+**Gneiss never opts a note into the deck.** Only notes tagged `#flashcards*` produce cards,
+and `withTier()` leaves any other note byte-for-byte untouched rather than writing a tag into
+a note the app doesn't own.
+
+**CORRECTED:** this was stated as a principle but never enforced. `isFlashcardNote` existed and
+was only called by `withTier`, so *every* markdown file holding a `::` or a bare `?` became
+cards — and removing a `#flashcards` tag in Obsidian changed nothing, because the tag was never
+what put the cards there. `DeckService` now filters to tagged notes, which makes the tag mean
+what it says in both directions: adding it opts a note in, removing it takes the cards out. A note holding cards but no
 `#flashcards` tag is surfaced in the Vault screen as a gap for the user to resolve, not
 silently adopted.
 

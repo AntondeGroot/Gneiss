@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from "@angular/core";
+import { Injectable, computed, effect, inject, signal } from "@angular/core";
 
 import type { CardText, Grade } from "../../vault";
 import { isDeckCard } from "./deck-cache.service";
@@ -43,6 +43,35 @@ export class ReviewSessionService {
 
   constructor() {
     this.restore();
+
+    // A session outlives the read that follows it, so cards can vanish beneath
+    // it — a note untagged in Obsidian, or deleted outright. Dropping them when
+    // the vault has finished is what stops a session asking about material the
+    // vault no longer holds.
+    effect(() => {
+      // `loaded`, not "has cards": a vault whose notes all lost their tag is
+      // legitimately empty, and that is exactly the case worth pruning for.
+      if (this.deck.reading() || !this.deck.loaded()) return;
+      this.dropMissing();
+    });
+  }
+
+  /**
+   * Removes cards the deck no longer has, keeping the place in what is left.
+   *
+   * The position counts cards, not identities, so anything removed from behind
+   * the reader has to shift it back by the same amount — otherwise pruning skips
+   * as many cards as it drops.
+   */
+  private dropMissing(): void {
+    const present = new Set(this.deck.all().map((card) => card.id));
+    const queue = this.queue();
+    if (queue.every((card) => present.has(card.id))) return;
+
+    const survivingBefore = queue.slice(0, this.at()).filter((card) => present.has(card.id)).length;
+    this.queue.set(queue.filter((card) => present.has(card.id)));
+    this.at.set(survivingBefore);
+    this.persist();
   }
 
   /** Cards graded in this session, and across every session today. */

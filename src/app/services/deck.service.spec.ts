@@ -314,3 +314,31 @@ describe("DeckService opening twice", () => {
     expect(deck.all()).toHaveLength(4);
   });
 });
+
+describe("DeckService and the flashcards tag", () => {
+  it("ignores a note that carries cards but no tag", async () => {
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource({}), "");
+
+    deck.setNotes([
+      parseNote("What is a STAR answer? :: Situation, Task, Action, Result\n", "job-seeking.md"),
+      parseNote("What does grep do? :: search\n\n#flashcards/shell\n", "grep.md"),
+    ]);
+
+    // A `::` can appear in any note; the tag is what opts one in.
+    expect(deck.all().map((card) => card.note)).toEqual(["grep.md"]);
+  });
+
+  it("drops the cards when a note loses its tag", async () => {
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource({}), "");
+    const tagged = "Do I want this job? :: no\n\n#flashcards/jobs\n";
+    deck.setNotes([parseNote(tagged, "jobs.md")]);
+    expect(deck.all()).toHaveLength(1);
+
+    // The same note, re-read after the tag was removed in Obsidian.
+    deck.setNotes([parseNote("Do I want this job? :: no\n", "jobs.md")]);
+
+    expect(deck.all()).toHaveLength(0);
+  });
+});

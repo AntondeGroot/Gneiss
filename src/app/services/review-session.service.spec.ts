@@ -154,3 +154,57 @@ describe("ReviewSessionService across a restart", () => {
     expect(store.has("gneiss.session")).toBe(false);
   });
 });
+
+describe("ReviewSessionService when the vault changes underneath", () => {
+  const TAGGED = ["Q1? :: A1", "", "Q2? :: A2", "", "Q3? :: A3", "", "#flashcards/jobs", ""].join(
+    "\n",
+  );
+
+  it("stops asking about cards whose note lost its tag", async () => {
+    const { deck, session } = await loaded();
+    deck.setNotes([parseNote(TAGGED, "jobs.md")]);
+    session.start();
+    expect(session.remaining()).toBe(3);
+
+    // The vault, re-read after the tag was removed in Obsidian.
+    deck.setNotes([parseNote("Q1? :: A1\n\nQ2? :: A2\n\nQ3? :: A3\n", "jobs.md")]);
+    TestBed.tick();
+
+    expect(session.remaining()).toBe(0);
+  });
+
+  it("keeps its place when cards ahead of it disappear", async () => {
+    const { deck, session } = await loaded();
+    const jobs = parseNote(TAGGED, "jobs.md");
+    const shell = parseNote("Q4? :: A4\n\nQ5? :: A5\n\n#flashcards/shell\n", "shell.md");
+    deck.setNotes([jobs, shell]);
+    session.start();
+    session.grade("medium");
+    const here = session.current()?.id;
+
+    // Untagged after this card, so nothing behind the reader moves.
+    deck.setNotes([jobs]);
+    TestBed.tick();
+
+    expect(session.current()?.id).toBe(here);
+  });
+
+  it("shifts back when cards behind it disappear", async () => {
+    const { deck, session } = await loaded();
+    const jobs = parseNote(TAGGED, "jobs.md");
+    const shell = parseNote("Q4? :: A4\n\nQ5? :: A5\n\n#flashcards/shell\n", "shell.md");
+    deck.setNotes([jobs, shell]);
+    session.start();
+    session.grade("medium");
+    session.grade("medium");
+
+    deck.setNotes([shell]);
+    TestBed.tick();
+
+    // The position counts cards, not identities, so dropping two from behind
+    // the reader has to move it back by two — otherwise pruning skips as many
+    // cards as it removes.
+    expect(session.current()?.id).toBe("shell.md::Q4?");
+    expect(session.remaining()).toBe(2);
+  });
+});
