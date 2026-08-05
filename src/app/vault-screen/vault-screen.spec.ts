@@ -117,3 +117,29 @@ describe("VaultScreen with a large vault", () => {
     expect(html.textContent).toContain("more match");
   });
 });
+
+describe("VaultScreen setting a tier", () => {
+  it("offers the three tiers on an expanded note", async () => {
+    const { fixture, html } = await shown();
+
+    html.querySelector<HTMLButtonElement>(".note-head")?.click();
+    fixture.detectChanges();
+
+    expect(
+      [...html.querySelectorAll(".set-tier button")].map((b) => b.textContent?.trim()),
+    ).toEqual(["core", "standard", "optional"]);
+  });
+
+  it("marks the tier the note already has", async () => {
+    const { fixture, html } = await shown();
+
+    // grep.md carries `#core`, so that is the one already in force.
+    [...html.querySelectorAll<HTMLButtonElement>(".note-head")]
+      .find((b) => b.textContent?.includes("grep"))
+      ?.click();
+    fixture.detectChanges();
+
+    const on = html.querySelector(".set-tier button.on");
+    expect(on?.textContent?.trim()).toBe("core");
+  });
+});

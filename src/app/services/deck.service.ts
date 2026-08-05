@@ -15,6 +15,7 @@ import {
   splitCard,
   standingStreak,
   withEditedCard,
+  withTier,
   withoutCard,
 } from "../../vault";
 import type {
@@ -360,6 +361,26 @@ export class DeckService {
     return this.source?.vaultName() ?? "";
   }
 
+  /**
+   * Sets a note's tier, by rewriting the tag in the note itself.
+   *
+   * `standard` is the *absence* of a tag, so choosing it removes the override
+   * rather than writing one — after which the tag→tier mapping decides again,
+   * and the note may well come back as something other than standard. The
+   * resolved tier is recomputed here for exactly that reason.
+   */
+  async setTier(note: string, tier: Tier): Promise<void> {
+    const override = tier === "standard" ? undefined : tier;
+    this.cards.update((cards) =>
+      cards.map((card) =>
+        card.note === note ? withOverride(card, override, this.config()) : card,
+      ),
+    );
+
+    await this.persist(() => this.source?.editNote(note, (md) => withTier(md, tier)));
+    this.cache.save(this.vaultName(), this.config(), this.cards(), this.topics());
+  }
+
   /** Where a note lives in the vault, and the link that opens it in Obsidian. */
   noteLink(card: DeckCard): { folder: string; uri: string } {
     return {
@@ -468,6 +489,31 @@ function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
     ...(note.tierOverride ? { tierOverride: note.tierOverride } : {}),
     review: card.review ?? newReviewState(today()),
   }));
+}
+
+/**
+ * The card with its per-note tier tag set or cleared, and its tier resolved
+ * again from that.
+ *
+ * Built by hand rather than by assigning `undefined`: the deck is compiled with
+ * `exactOptionalPropertyTypes`, so an absent override and one set to `undefined`
+ * are different things.
+ */
+function withOverride(card: DeckCard, override: Tier | undefined, config: GneissConfig): DeckCard {
+  const tierable = { topicTags: card.topicTags, ...(override ? { tierOverride: override } : {}) };
+
+  // Every field named rather than spread: spreading would carry the old override
+  // through, and dropping a key by destructuring leaves a variable nothing uses.
+  return {
+    id: card.id,
+    note: card.note,
+    front: card.front,
+    back: card.back,
+    topicTags: card.topicTags,
+    review: card.review,
+    ...(override ? { tierOverride: override } : {}),
+    tier: resolveTier(tierable, config.tiers),
+  };
 }
 
 /**
