@@ -16,6 +16,7 @@ const SHOWN = 60;
 
 export type TierFilter = Tier | "all";
 const TIER_CHOICES: readonly TierFilter[] = ["all", "core", "standard", "optional"];
+const TIERS: readonly Tier[] = ["core", "standard", "optional"];
 
 export interface NoteGroup {
   readonly note: string;
@@ -117,6 +118,13 @@ export class VaultScreen {
 
   protected showTier(tier: TierFilter): void {
     this.tier.set(tier);
+  }
+
+  /** The three a note can be set to, as opposed to the filter's four. */
+  protected readonly tiers = TIERS;
+
+  protected setTier(note: string, tier: Tier): void {
+    void this.deck.setTier(note, tier);
   }
 
   protected onLoad(): void {

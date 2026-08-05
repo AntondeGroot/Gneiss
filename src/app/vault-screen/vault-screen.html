@@ -90,6 +90,24 @@
   </button>
 
   @if (expanded() === group.note) {
+  <div class="set-tier" role="group" [attr.aria-label]="'Tier for ' + group.note">
+    @for (choice of tiers; track choice) {
+    <button
+      type="button"
+      [class]="'tier-choice tier-' + choice"
+      [class.on]="group.tier === choice"
+      [attr.aria-pressed]="group.tier === choice"
+      [disabled]="!canWrite()"
+      (click)="setTier(group.note, choice)"
+    >
+      {{ choice }}
+    </button>
+    }
+  </div>
+  @if (!canWrite()) {
+  <p class="hint">This vault is open read-only, so the tag cannot be changed.</p>
+  }
+
   <ul class="cards">
     @for (card of group.cards; track card.id) {
     <li>

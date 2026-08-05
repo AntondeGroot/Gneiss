@@ -129,39 +129,42 @@ button {
   }
 }
 
-.tiers {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.3rem;
-  margin-top: 0.5rem;
+/**
+ * The tier chips, wherever they appear.
+ *
+ * Each carries its tier's colour whether or not it is chosen, so a chip says
+ * what it selects before it is selected, and reads as the same vocabulary as the
+ * badges on the rows and the ring on Today.
+ *
+ * Choosing one is then a change of weight and ground rather than of hue: the
+ * colour was already the label, so making it *more* coloured would say the same
+ * thing twice.
+ *
+ * Written for both rows at once — filtering by a tier and setting a note to one
+ * are the same idea, and styling them apart is how they drift.
+ */
+.tier-choice {
+  border: 1px solid $line;
+  border-radius: 0.45rem;
+  background: $panel2;
+  color: currentcolor;
+  font: inherit;
+  font-size: 0.74rem;
+  text-transform: capitalize;
+  padding: 0.35rem 0.2rem;
+  cursor: pointer;
 
-  /**
-   * Each chip carries its tier's colour whether or not it is chosen, so the
-   * filter reads as the same vocabulary as the badges on the rows below and the
-   * ring on Today — you can tell what a chip selects before selecting it.
-   *
-   * Choosing one is then a change of weight and ground rather than of hue: the
-   * colour was already the label, so making it *more* coloured would say the
-   * same thing twice.
-   */
-  .tier-choice {
-    border: 1px solid $line;
-    border-radius: 0.45rem;
-    background: $panel2;
-    color: currentcolor;
-    font: inherit;
-    font-size: 0.74rem;
-    text-transform: capitalize;
-    padding: 0.35rem 0.2rem;
-    cursor: pointer;
-
-    &.on {
-      border-color: currentcolor;
-      font-weight: 600;
-    }
+  &.on {
+    border-color: currentcolor;
+    font-weight: 600;
   }
 
-  .tier-all {
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  &.tier-all {
     color: $dim;
 
     &.on {
@@ -170,7 +173,7 @@ button {
     }
   }
 
-  .tier-core {
+  &.tier-core {
     color: $amber;
 
     &.on {
@@ -178,7 +181,7 @@ button {
     }
   }
 
-  .tier-standard {
+  &.tier-standard {
     color: $teal;
 
     &.on {
@@ -188,13 +191,41 @@ button {
 
   // Muted by design — but the chip still has to be readable, so it takes the
   // secondary text colour rather than the faint one the ring uses.
-  .tier-optional {
+  &.tier-optional {
     color: $dim;
 
     &.on {
       background: rgb(154 144 135 / 15%);
     }
   }
+}
+
+/** The filter row: one chip per tier, plus "all". */
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+}
+
+/**
+ * Setting one note's tier, which rewrites the tag in the note itself.
+ *
+ * The same chips as the filter above, deliberately: choosing "core" here and
+ * filtering by "core" there are the same vocabulary, and reusing the shape says
+ * so without a legend.
+ */
+.set-tier {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem;
+  padding: 0.7rem 0.9rem 0;
+}
+
+.hint {
+  margin: 0.5rem 0.9rem 0;
+  color: $faint;
+  font-size: 0.75rem;
 }
 
 .beyond {

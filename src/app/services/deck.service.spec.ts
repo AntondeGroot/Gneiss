@@ -342,3 +342,47 @@ describe("DeckService and the flashcards tag", () => {
     expect(deck.all()).toHaveLength(0);
   });
 });
+
+describe("DeckService setting a note's tier", () => {
+  const NOTE = "What does grep do? :: search\n\n#flashcards/shell\n";
+
+  it("writes the tag into the note", async () => {
+    const notes = { "grep.md": NOTE };
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource(notes), "");
+    deck.setNotes([parseNote(NOTE, "grep.md")]);
+
+    await deck.setTier("grep.md", "core");
+
+    expect(notes["grep.md"]).toContain("#core");
+    expect(deck.all()[0]?.tier).toBe("core");
+  });
+
+  it("removes the tag for standard, because standard is its absence", async () => {
+    const tagged = "What does grep do? :: search\n\n#flashcards/shell\n#core\n";
+    const notes = { "grep.md": tagged };
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource(notes), "");
+    deck.setNotes([parseNote(tagged, "grep.md")]);
+
+    await deck.setTier("grep.md", "standard");
+
+    expect(notes["grep.md"]).not.toContain("#core");
+    expect(notes["grep.md"]).toContain("#flashcards/shell");
+  });
+
+  it("lets the mapping decide again once the override is removed", async () => {
+    const tagged = "What does grep do? :: search\n\n#flashcards/shell\n#optional\n";
+    const deck = TestBed.inject(DeckService);
+    await deck.open(fakeSource({ "grep.md": tagged }), "");
+    await deck.saveConfig({ ...DEFAULT_CONFIG, tiers: { "#flashcards/shell": "core" } });
+    deck.setNotes([parseNote(tagged, "grep.md")]);
+    expect(deck.all()[0]?.tier).toBe("optional");
+
+    await deck.setTier("grep.md", "standard");
+
+    // Choosing "standard" clears the override; the mapping then says core, and
+    // showing "standard" would be a lie about what the card will do.
+    expect(deck.all()[0]?.tier).toBe("core");
+  });
+});
