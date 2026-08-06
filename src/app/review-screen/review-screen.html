@@ -81,10 +81,15 @@
        straight away rather than made to wait for tomorrow. -->
   @if (dueCount() > 0) {
   <p class="more">{{ dueCount() }} more ready now — today's pace is a target, not a limit.</p>
-  <button type="button" class="primary" (click)="start()">Another session</button>
   } @else {
   <p class="sub">Nothing else is due today.</p>
   }
-  <a class="link" routerLink="/vault">Back to Vault</a>
+
+  <div class="choices">
+    @if (dueCount() > 0) {
+    <button type="button" class="primary" (click)="start()">Another session</button>
+    }
+    <button type="button" class="secondary" (click)="leave()">Back to Today</button>
+  </div>
 </section>
 }

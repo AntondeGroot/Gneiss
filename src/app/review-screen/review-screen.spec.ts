@@ -1,5 +1,5 @@
 import { TestBed } from "@angular/core/testing";
-import { provideRouter } from "@angular/router";
+import { Router, provideRouter } from "@angular/router";
 
 import { DEFAULT_CONFIG, parseNote } from "../../vault";
 import { DeckService } from "../services/deck.service";
@@ -100,5 +100,36 @@ describe("ReviewScreen resuming", () => {
     // Straight into the card, with the progress it already had.
     expect(back.querySelector("section.card")).not.toBeNull();
     expect(back.querySelector<HTMLElement>(".progress .fill")?.style.width).toBe("33%");
+  });
+});
+
+describe("ReviewScreen when the session is done", () => {
+  /** Grades every card, which is what puts the finished panel up. */
+  async function finished() {
+    const started_ = await started();
+    for (let card = 0; card < 3; card++) {
+      started_.html.querySelector<HTMLButtonElement>("button.primary")?.click();
+      started_.fixture.detectChanges();
+      [...started_.html.querySelectorAll<HTMLButtonElement>("button.grade")][1]?.click();
+      started_.fixture.detectChanges();
+    }
+    return started_;
+  }
+
+  it("offers leaving as a button, not as a link to read past", async () => {
+    const { html } = await finished();
+
+    expect(html.querySelector("button.secondary")?.textContent?.trim()).toBe("Back to Today");
+    expect(html.querySelector("section.intro a")).toBeNull();
+  });
+
+  it("goes to Today, which is where the day's state is", async () => {
+    const { fixture, html } = await finished();
+    const navigate = vi.spyOn(TestBed.inject(Router), "navigate").mockResolvedValue(true);
+
+    html.querySelector<HTMLButtonElement>("button.secondary")?.click();
+    fixture.detectChanges();
+
+    expect(navigate).toHaveBeenCalledWith(["/today"]);
   });
 });

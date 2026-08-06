@@ -57,6 +57,33 @@ h1 {
   font-size: 0.88rem;
 }
 
+/**
+ * Carrying on, and stopping.
+ *
+ * Both buttons, where the second used to be a link: they are the same kind of
+ * choice — what happens next — and giving one of them a link's shape made it
+ * read as a footnote about the page rather than an answer to it.
+ *
+ * Weight and colour say which is the offer, so the quiet one is still plainly
+ * pressable. Matched widths, because two centred buttons of different sizes
+ * read as an accident.
+ */
+.choices {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+
+  button {
+    min-width: 13rem;
+  }
+}
+
+.secondary {
+  padding: 0.7rem 1.4rem;
+  color: $dim;
+}
+
 button {
   border: 1px solid $line;
   border-radius: 0.7rem;
