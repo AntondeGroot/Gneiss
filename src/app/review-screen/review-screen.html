@@ -29,7 +29,16 @@
     <span class="note">{{ card.note }}</span>
     <span class="tier" [class]="'tier-' + card.tier">{{ card.tier }}</span>
     <!-- Small and out of the way: nothing should compete with the recall. -->
-    <button type="button" class="edit" aria-label="Edit this card" (click)="openEditor()">✎</button>
+    <button
+      type="button"
+      class="edit"
+      [class.on]="editing()"
+      [attr.aria-label]="editing() ? 'Close the editor' : 'Edit this card'"
+      [attr.aria-expanded]="editing()"
+      (click)="toggleEditor()"
+    >
+      ✎
+    </button>
     <span class="left">{{ remaining() }} left</span>
     <!-- The tab bar is hidden while reviewing, so this is the way out. Nothing
          is lost by leaving: every grade is already in the vault. -->

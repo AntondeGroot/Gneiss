@@ -1,4 +1,5 @@
-import { Component, input, linkedSignal, output, signal } from "@angular/core";
+import { Component, effect, input, linkedSignal, output, signal, viewChild } from "@angular/core";
+import type { ElementRef } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 
 import type { CardText } from "../../vault";
@@ -15,6 +16,9 @@ import type { CardText } from "../../vault";
   imports: [FormsModule],
   templateUrl: "./card-editor.html",
   styleUrl: "./card-editor.scss",
+  // Escape is what a dialog answers to, and it takes the safe way out: back to
+  // the editor with the draft intact, never the one that throws work away.
+  host: { "(document:keydown.escape)": "keepEditing()" },
 })
 export class CardEditor {
   readonly front = input.required<string>();
@@ -38,6 +42,19 @@ export class CardEditor {
   /** Deleting is a two-step: the trash button arms it, a second press confirms. */
   protected readonly confirmingDelete = signal(false);
 
+  /** Whether closing is waiting on an answer about unsaved edits. */
+  protected readonly confirmingClose = signal(false);
+
+  private readonly dialog = viewChild<ElementRef<HTMLElement>>("dialog");
+
+  constructor() {
+    // A dialog nobody's focus is in cannot be dismissed from a keyboard, and
+    // reads to a screen reader as the editor still being where you are.
+    effect(() => {
+      if (this.confirmingClose()) this.dialog()?.nativeElement.focus();
+    });
+  }
+
   protected readonly unchanged = () =>
     this.draftFront().trim() === this.front() && this.draftBack().trim() === this.back();
 
@@ -49,6 +66,9 @@ export class CardEditor {
   }
 
   protected armDelete(): void {
+    // One question at a time — two open panels leave it unclear which set of
+    // buttons answers which.
+    this.confirmingClose.set(false);
     this.confirmingDelete.set(true);
   }
 
@@ -56,8 +76,36 @@ export class CardEditor {
     this.remove.emit();
   }
 
+  /**
+   * Closes, or asks first when there is something to lose.
+   *
+   * Public because the button that opened the editor also closes it, and the
+   * question of whether that is safe belongs here — this is where the draft
+   * lives. An untouched editor closes straight away: prompting then would be
+   * asking about changes nobody made.
+   */
+  requestClose(): void {
+    if (this.unchanged()) {
+      this.dismissed.emit();
+      return;
+    }
+    this.confirmingDelete.set(false);
+    this.confirmingClose.set(true);
+  }
+
+  /** Puts the question away, leaving the editor open on the draft. */
+  protected keepEditing(): void {
+    this.confirmingClose.set(false);
+  }
+
+  /** Leaves the card as the note has it, losing what was typed. */
+  protected discard(): void {
+    this.confirmingClose.set(false);
+    this.dismissed.emit();
+  }
+
   protected onCancel(): void {
     this.confirmingDelete.set(false);
-    this.dismissed.emit();
+    this.requestClose();
   }
 }

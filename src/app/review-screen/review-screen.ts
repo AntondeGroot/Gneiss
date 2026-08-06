@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from "@angular/core";
+import { Component, computed, effect, inject, signal, viewChild } from "@angular/core";
 import { Router, RouterLink } from "@angular/router";
 
 import { CardBody } from "../card-body/card-body";
@@ -39,6 +39,9 @@ export class ReviewScreen {
   /** Whether the correction box is open over the current card. */
   protected readonly editing = signal(false);
 
+  /** The open editor, so the ✎ can ask it whether closing is safe. */
+  private readonly editor = viewChild(CardEditor);
+
   /** Where the note lives, and the link that hands over to Obsidian. */
   protected readonly link = computed(() => {
     const card = this.current();
@@ -78,8 +81,16 @@ export class ReviewScreen {
     this.revealed.set(true);
   }
 
-  protected openEditor(): void {
-    this.editing.set(true);
+  /**
+   * The ✎ both opens and closes, so pressing it twice undoes the first press.
+   *
+   * Closing goes through the editor rather than round it: it holds the draft, so
+   * it is the only part that knows whether anything would be lost — and if so it
+   * puts the question up instead of shutting.
+   */
+  protected toggleEditor(): void {
+    if (this.editing()) this.editor()?.requestClose();
+    else this.editing.set(true);
   }
 
   protected closeEditor(): void {

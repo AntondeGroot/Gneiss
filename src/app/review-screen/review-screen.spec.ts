@@ -133,3 +133,109 @@ describe("ReviewScreen when the session is done", () => {
     expect(navigate).toHaveBeenCalledWith(["/today"]);
   });
 });
+
+describe("ReviewScreen editing", () => {
+  /** Reveals the answer, which is when the ✎ appears. */
+  async function shown() {
+    const opened = await started();
+    opened.html.querySelector<HTMLButtonElement>("button.primary")?.click();
+    opened.fixture.detectChanges();
+    return opened;
+  }
+
+  function press(html: HTMLElement, selector: string): void {
+    html.querySelector<HTMLButtonElement>(selector)?.click();
+  }
+
+  /** A button inside the question, not the identically-named one behind it. */
+  function inDialog(html: HTMLElement, label: string): HTMLButtonElement | undefined {
+    return [...html.querySelectorAll<HTMLButtonElement>(".ask button")].find(
+      (button) => button.textContent?.trim() === label,
+    );
+  }
+
+  function type(html: HTMLElement, text: string): void {
+    const box = html.querySelector<HTMLTextAreaElement>("textarea[name='front']");
+    if (!box) throw new Error("no question box");
+    box.value = text;
+    box.dispatchEvent(new Event("input"));
+  }
+
+  it("closes on a second press, having opened on the first", async () => {
+    const { fixture, html } = await shown();
+
+    press(html, "button.edit");
+    fixture.detectChanges();
+    expect(html.querySelector("gn-card-editor")).not.toBeNull();
+
+    press(html, "button.edit");
+    fixture.detectChanges();
+    expect(html.querySelector("gn-card-editor")).toBeNull();
+  });
+
+  it("asks before dropping edits, rather than closing on them", async () => {
+    const { fixture, html } = await shown();
+    press(html, "button.edit");
+    fixture.detectChanges();
+
+    type(html, "A better question?");
+    fixture.detectChanges();
+    press(html, "button.edit");
+    fixture.detectChanges();
+
+    // Still open, now with the question up.
+    expect(html.querySelector("gn-card-editor")).not.toBeNull();
+    expect(html.textContent).toContain("Keep your changes");
+  });
+
+  it("saves from the prompt, so the way out is not only losing the edit", async () => {
+    const { fixture, html } = await shown();
+    press(html, "button.edit");
+    fixture.detectChanges();
+    type(html, "A better question?");
+    fixture.detectChanges();
+    press(html, "button.edit");
+    fixture.detectChanges();
+
+    inDialog(html, "Save")?.click();
+    fixture.detectChanges();
+
+    expect(html.querySelector("gn-card-editor")).toBeNull();
+    expect(html.textContent).toContain("A better question?");
+  });
+
+  it("goes back to the draft on keep editing, losing nothing", async () => {
+    const { fixture, html } = await shown();
+    press(html, "button.edit");
+    fixture.detectChanges();
+    type(html, "A better question?");
+    fixture.detectChanges();
+    press(html, "button.edit");
+    fixture.detectChanges();
+
+    inDialog(html, "Keep editing")?.click();
+    fixture.detectChanges();
+
+    expect(html.querySelector(".ask")).toBeNull();
+    expect(html.querySelector("gn-card-editor")).not.toBeNull();
+    expect(html.querySelector<HTMLTextAreaElement>("textarea[name='front']")?.value).toBe(
+      "A better question?",
+    );
+  });
+
+  it("closes on discard, leaving the card as the note has it", async () => {
+    const { fixture, html } = await shown();
+    press(html, "button.edit");
+    fixture.detectChanges();
+    type(html, "A better question?");
+    fixture.detectChanges();
+    press(html, "button.edit");
+    fixture.detectChanges();
+
+    inDialog(html, "Discard")?.click();
+    fixture.detectChanges();
+
+    expect(html.querySelector("gn-card-editor")).toBeNull();
+    expect(html.textContent).toContain("Q1?");
+  });
+});
