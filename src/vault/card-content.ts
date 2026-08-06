@@ -16,6 +16,10 @@
 const FENCE = "```";
 /** Opens and closes an inline code span. */
 const TICK = "`";
+/** Opens and closes bold. */
+const BOLD = "**";
+/** `- [ ]` or `- [x]` — a checklist line. */
+const TASK = /^\s*-\s*\[([ xX])]\s?(.*)$/;
 
 /**
  * A wikilink, or the markdown form.
@@ -32,10 +36,17 @@ const TICK = "`";
  */
 const EMBED = /\[\[([^\]\n]{1,300})]]|!\[([^\]\n]{0,300})]\(([^)\n]{1,300})\)/g;
 
-/** A run of prose, or a `backticked` span inside it. */
+/** A run of prose, or a marked-up span inside it. */
 export type InlinePart =
   | { readonly kind: "words"; readonly text: string }
-  | { readonly kind: "code"; readonly text: string };
+  | { readonly kind: "code"; readonly text: string }
+  | { readonly kind: "bold"; readonly text: string };
+
+/** One `- [ ]` line, with its own inline marks. */
+export interface TaskItem {
+  readonly done: boolean;
+  readonly parts: readonly InlinePart[];
+}
 
 export type CardSegment =
   | {
@@ -50,6 +61,7 @@ export type CardSegment =
       /** Whatever followed the opening fence, e.g. `sh`. Empty when unlabelled. */
       readonly language: string;
     }
+  | { readonly kind: "tasks"; readonly items: readonly TaskItem[] }
   | {
       readonly kind: "embed";
       readonly target: string;
@@ -120,7 +132,40 @@ function splitEmbeds(text: string): CardSegment[] {
 
 function addText(segments: CardSegment[], text: string): void {
   const trimmed = withoutEdgeBlankLines(text);
-  if (trimmed !== "") segments.push({ kind: "text", text: trimmed, parts: splitInline(trimmed) });
+  if (trimmed === "") return;
+
+  // Prose renders as one pre-wrapped block, so a checklist inside it would keep
+  // its literal `- [ ]`. Splitting the run at those lines is what lets the list
+  // become a list while the sentences around it stay exactly as written.
+  let prose: string[] = [];
+  let items: TaskItem[] = [];
+
+  const flushProse = (): void => {
+    const text = prose.join("\n");
+    prose = [];
+    // A blank run is the gap between a paragraph and a list, and each segment
+    // already carries its own spacing — keeping it would double that gap.
+    if (text.trim() !== "") segments.push({ kind: "text", text, parts: splitInline(text) });
+  };
+  const flushTasks = (): void => {
+    if (items.length > 0) segments.push({ kind: "tasks", items });
+    items = [];
+  };
+
+  for (const line of trimmed.split("\n")) {
+    const task = TASK.exec(line);
+    if (task) {
+      flushProse();
+      items.push({ done: task[1] !== " ", parts: splitInline(task[2] ?? "") });
+    } else {
+      flushTasks();
+      prose.push(line);
+    }
+  }
+
+  // Each branch empties the other, so only the run that ended the text is left.
+  flushTasks();
+  flushProse();
 }
 
 /**
@@ -138,17 +183,41 @@ export function splitInline(text: string): InlinePart[] {
   let from = 0;
 
   for (;;) {
-    const open = text.indexOf(TICK, from);
-    const close = open === -1 ? -1 : text.indexOf(TICK, open + 1);
-    if (open === -1 || close === -1) break;
+    const found = nextMark(text, from);
+    if (!found) break;
 
-    if (open > from) parts.push({ kind: "words", text: text.slice(from, open) });
-    parts.push({ kind: "code", text: text.slice(open + 1, close) });
-    from = close + 1;
+    if (found.at > from) parts.push({ kind: "words", text: text.slice(from, found.at) });
+    parts.push({
+      kind: found.mark === TICK ? "code" : "bold",
+      text: text.slice(found.at + found.mark.length, found.close),
+    });
+    from = found.close + found.mark.length;
   }
 
   if (from < text.length) parts.push({ kind: "words", text: text.slice(from) });
   return parts;
+}
+
+/**
+ * The next span that is actually closed, whichever mark opens first.
+ *
+ * Taking the earliest is what keeps a `**` inside a code span literal: the
+ * backtick opens first, so everything up to its partner is swallowed as code
+ * before the asterisks are ever considered.
+ */
+function nextMark(text: string, from: number): { at: number; close: number; mark: string } | null {
+  let best: { at: number; close: number; mark: string } | null = null;
+
+  for (const mark of [TICK, BOLD]) {
+    const at = text.indexOf(mark, from);
+    if (at === -1) continue;
+
+    const close = text.indexOf(mark, at + mark.length);
+    // An opener with no partner is punctuation, not markup.
+    if (close === -1) continue;
+    if (!best || at < best.at) best = { at, close, mark };
+  }
+  return best;
 }
 
 /**

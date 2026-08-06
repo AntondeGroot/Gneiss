@@ -1,9 +1,21 @@
 @for (segment of segments(); track $index) { @if (segment.kind === "text") {
 <p class="prose">
-  @for (part of segment.parts; track $index) {@if (part.kind === "code") {<code class="inline"
-    >{{ part.text }}</code
-  >} @else {{{ part.text }}}}
+  <ng-container
+    [ngTemplateOutlet]="inline"
+    [ngTemplateOutletContext]="{ $implicit: segment.parts }"
+  />
 </p>
+} @else if (segment.kind === "tasks") {
+<ul class="tasks">
+  @for (item of segment.items; track $index) {
+  <li [class.done]="item.done">
+    <ng-container
+      [ngTemplateOutlet]="inline"
+      [ngTemplateOutletContext]="{ $implicit: item.parts }"
+    />
+  </li>
+  }
+</ul>
 } @else if (segment.kind === "code") {
 <pre class="code"><code>{{ segment.code }}</code></pre>
 } @else if (urlFor(segment.target)) {
@@ -18,3 +30,19 @@
 } } @else {
 <p class="absent">Loading {{ segment.target }}…</p>
 } }
+
+<!--
+  One card's inline marks, written once.
+
+  Prose and checklist items carry the same spans, and rendering them apart is how
+  the two drift — a `backtick` styled in one and not the other.
+
+  Kept on a single line on purpose: prose is pre-wrapped, so a newline in here
+  would be a space on the card.
+-->
+<ng-template #inline let-parts
+  >@for (part of parts; track $index) {@if (part.kind === "code") {<code class="inline"
+    >{{ part.text }}</code
+  >} @else if (part.kind === "bold") {<strong>{{ part.text }}</strong>} @else {{{ part.text
+  }}}}</ng-template
+>

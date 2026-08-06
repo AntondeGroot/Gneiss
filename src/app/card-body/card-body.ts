@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from "@angular/common";
 import { Component, computed, inject, input, resource } from "@angular/core";
 
 import { splitCard } from "../../vault";
@@ -15,6 +16,7 @@ import { DeckService } from "../services/deck.service";
  */
 @Component({
   selector: "gn-card-body",
+  imports: [NgTemplateOutlet],
   templateUrl: "./card-body.html",
   styleUrl: "./card-body.scss",
 })
