@@ -41,6 +41,54 @@
 }
 
 /**
+ * A checklist, as a list rather than as the `- [ ]` that was typed.
+ *
+ * A ring, not a checkbox: on a flashcard these are the parts of an answer, and
+ * nothing here is tickable — an empty ring reads as "one of these" where a
+ * checkbox would invite a tap that does nothing. `- [x]` fills it, since a note
+ * that bothered to mark one meant the distinction.
+ */
+.tasks {
+  margin: 0 0 0.7rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+
+  li {
+    position: relative;
+    padding-left: 1.4rem;
+    color: $text;
+    font-family: var(--card-font, inherit);
+    font-size: var(--card-size, 0.95rem);
+    line-height: var(--card-line, 1.55);
+    word-break: break-word;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0.15rem;
+      // Centred on the first line's box, so a wrapped item keeps its ring
+      // beside the line it starts on rather than drifting to the middle.
+      top: calc(var(--card-line, 1.55) * 0.5em);
+      transform: translateY(-50%);
+      width: 0.62em;
+      height: 0.62em;
+      border: 2px solid $amber;
+      border-radius: 50%;
+    }
+
+    &.done::before {
+      background: $amber;
+    }
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/**
  * A fenced block, looking like one.
  *
  * Smaller and monospaced so it reads as code rather than as more of the answer,

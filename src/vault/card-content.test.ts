@@ -9,11 +9,29 @@ function shape(text: string) {
     if (segment.kind === "code") {
       return { kind: segment.kind, code: segment.code, language: segment.language };
     }
+    if (segment.kind === "tasks") {
+      return { kind: segment.kind, items: segment.items.map((item) => plain(item.parts)) };
+    }
     return { kind: segment.kind, target: segment.target, embedded: segment.embedded };
   });
 }
 
+/** A card's text with its marks stripped, for asserting what a line says. */
+function plain(parts: readonly { kind: string; text: string }[]): string {
+  return parts.map((part) => part.text).join("");
+}
+
 describe("splitCard", () => {
+  it("turns a checklist into a list, keeping the sentence above it", () => {
+    const back =
+      "Revert kun je op 2 manieren doen\n- [ ] een merge reverten\n- [x] een commit reverten";
+
+    expect(shape(back)).toEqual([
+      { kind: "text", text: "Revert kun je op 2 manieren doen" },
+      { kind: "tasks", items: ["een merge reverten", "een commit reverten"] },
+    ]);
+  });
+
   it("pulls out a pasted image, keeping the prose either side", () => {
     const back = "The stages run left to right.\n![[Pasted image 20260104.png]]\nThat is all.";
 
@@ -168,6 +186,29 @@ describe("splitInline", () => {
       { kind: "words", text: "The " },
       { kind: "code", text: "--staged" },
       { kind: "words", text: " flag unstages a file." },
+    ]);
+  });
+
+  it("separates a bold span the same way", () => {
+    expect(splitInline("Use **git switch** now.")).toEqual([
+      { kind: "words", text: "Use " },
+      { kind: "bold", text: "git switch" },
+      { kind: "words", text: " now." },
+    ]);
+  });
+
+  it("leaves asterisks that never close as written", () => {
+    // Emphasis someone started and abandoned is still just a sentence.
+    expect(splitInline("2 ** 8 is 256")).toEqual([{ kind: "words", text: "2 ** 8 is 256" }]);
+  });
+
+  it("keeps asterisks inside a backticked span literal", () => {
+    // The backtick opens first, so the code span swallows them — a glob is not
+    // an unclosed bold.
+    expect(splitInline("Run `ls **/*.ts` here")).toEqual([
+      { kind: "words", text: "Run " },
+      { kind: "code", text: "ls **/*.ts" },
+      { kind: "words", text: " here" },
     ]);
   });
 

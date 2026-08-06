@@ -150,3 +150,34 @@ describe("CardBody with inline code", () => {
     expect(html.querySelector("pre.code code")?.textContent).toBe("ls -la");
   });
 });
+
+describe("CardBody marks", () => {
+  it("shows a bold span in bold, with the sentence reading as written", async () => {
+    // Prose is pre-wrap and the marks now render through a shared template, so
+    // a stray newline in it would land as a real space mid-sentence.
+    const { html } = await render("Use **git switch** now.");
+
+    expect(html.querySelector("strong")?.textContent).toBe("git switch");
+    expect(html.querySelector("p.prose")?.textContent).toBe("Use git switch now.");
+    expect(html.textContent).not.toContain("*");
+  });
+
+  it("shows a checklist as a list, and marks off the ones the note ticked", async () => {
+    const { html } = await render("Two ways:\n- [ ] revert a merge\n- [x] revert a commit");
+
+    const items = [...html.querySelectorAll("ul.tasks li")];
+    expect(items.map((li) => li.textContent)).toEqual(["revert a merge", "revert a commit"]);
+    expect(items.map((li) => li.classList.contains("done"))).toEqual([false, true]);
+    // The typed form is gone; the ring stands in for it.
+    expect(html.textContent).not.toContain("[ ]");
+  });
+
+  it("carries inline marks into a checklist item too", async () => {
+    // The one thing the shared template exists to guarantee.
+    const { html } = await render("- [ ] run `git status` **first**");
+
+    expect(html.querySelector("ul.tasks code.inline")?.textContent).toBe("git status");
+    expect(html.querySelector("ul.tasks strong")?.textContent).toBe("first");
+    expect(html.querySelector("ul.tasks li")?.textContent).toBe("run git status first");
+  });
+});
