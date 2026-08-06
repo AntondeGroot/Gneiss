@@ -75,7 +75,7 @@ export interface GneissConfig {
 export const DEFAULT_CONFIG: GneissConfig = {
   spread: 0.8,
   newPerSession: 5,
-  reviewsPerSession: 15,
+  reviewsPerSession: 10,
   streak: 0,
   lastReviewedOn: NEVER,
   lastSessionOn: NEVER,

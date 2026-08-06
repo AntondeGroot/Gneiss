@@ -510,8 +510,8 @@ diagram often appears on several cards.
 
   **The two are one budget, not two ceilings (DECIDED).** Whichever pool is short gives its
   room to the other, so a session is a consistent size instead of collapsing on the days one
-  side has run dry: **15 + 5** is twenty either way — twenty reviews when nothing is new,
-  twenty new when nothing is due. Neither side is padded beyond what exists, so a small deck
+  side has run dry: **10 + 5** is fifteen either way — fifteen reviews when nothing is new,
+  fifteen new when nothing is due. Neither side is padded beyond what exists, so a small deck
   simply yields a small session.
 
   The defaults are deliberately modest. A card that takes real thinking to answer — an exam
