@@ -119,3 +119,64 @@
     text-decoration: none;
   }
 }
+
+/**
+ * The unsaved-changes question, over the editor rather than under it.
+ *
+ * Fixed to the viewport so it is the same object wherever the editor has been
+ * scrolled to, and dimming what is behind it so the choice is plainly the only
+ * live thing on the screen.
+ */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgb(7 5 12 / 72%);
+}
+
+.ask {
+  width: 100%;
+  max-width: 21rem;
+  border: 1px solid $line;
+  border-radius: 0.9rem;
+  background: $panel;
+  padding: 1.1rem 1.15rem 0.95rem;
+  box-shadow: 0 1.2rem 2.5rem rgb(0 0 0 / 45%);
+
+  h2 {
+    margin: 0 0 0.4rem;
+    font-family: Fraunces, Georgia, serif;
+    font-weight: 500;
+    font-size: 1.15rem;
+    color: $text;
+  }
+
+  p {
+    margin: 0;
+    color: $dim;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .actions {
+    margin-top: 1rem;
+  }
+
+  // Least destructive, so it carries the least weight — but still a button,
+  // because it is one of the three answers.
+  .quiet {
+    margin-right: auto;
+    border-color: transparent;
+    color: $faint;
+  }
+}
+
+.hint {
+  margin: 0.5rem 0 0;
+  color: $faint;
+  font-size: 0.78rem;
+}

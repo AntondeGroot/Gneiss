@@ -61,3 +61,38 @@
     }
   </footer>
 </section>
+
+<!-- Only reached with edits pending, so there is genuinely something to lose.
+
+     Over the editor rather than inside it: sitting in the flow it was one more
+     row of buttons below two others, which reads as more controls rather than
+     as a question that has to be answered first.
+
+     No dismiss-on-tap-outside: it is unreachable from a keyboard, and the way
+     back is already spelled out on a button. Escape does the same thing. -->
+@if (confirmingClose()) {
+<div class="scrim">
+  <div
+    #dialog
+    class="ask"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="ask-title"
+    tabindex="-1"
+  >
+    <h2 id="ask-title">Keep your changes?</h2>
+    <p>This card has edits that have not been saved to the note.</p>
+    @if (incomplete()) {
+    <p class="hint">A card needs both a question and an answer before it can be saved.</p>
+    }
+
+    <div class="actions">
+      <button type="button" class="quiet" (click)="keepEditing()">Keep editing</button>
+      <button type="button" (click)="discard()">Discard</button>
+      <button type="button" class="primary" (click)="onSave()" [disabled]="incomplete()">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+}
