@@ -18,8 +18,22 @@
   font-size: 0.78rem;
 }
 
+/**
+ * Grey until today is in the count, gold once it is.
+ *
+ * Before reviewing, the number is yesterday's total still standing — a live
+ * streak, but not one today has contributed to. Colouring it gold then would
+ * congratulate the user for a day they have not done.
+ *
+ * The label says the same thing for anyone not reading colour: the state is not
+ * left to the hue alone.
+ */
 .streak {
-  color: $amber;
+  color: $dim;
+
+  &.earned {
+    color: $amber;
+  }
 }
 
 .flame {

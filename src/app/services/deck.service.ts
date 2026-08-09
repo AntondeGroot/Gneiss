@@ -156,6 +156,15 @@ export class DeckService {
   );
 
   /**
+   * Whether today is already counted in that number.
+   *
+   * The same date `nextStreak` keys off, deliberately: until it matches, the
+   * streak on screen is yesterday's total carried forward, and saying so is the
+   * difference between a figure that is earned and one that is still standing.
+   */
+  readonly streakEarnedToday = computed(() => this.config().lastReviewedOn === today());
+
+  /**
    * Opens a vault from any source, then reads its config and notes.
    *
    * Notes are added as they arrive rather than after the last file is read, so

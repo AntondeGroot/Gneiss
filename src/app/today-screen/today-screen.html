@@ -1,5 +1,15 @@
 <header class="bar">
-  <span class="streak">
+  <span
+    class="streak"
+    [class.earned]="streakEarned()"
+    [attr.aria-label]="
+      streak() > 0
+        ? streakEarned()
+          ? streak() + ' day streak, today counted'
+          : streak() + ' day streak, today not counted yet'
+        : null
+    "
+  >
     @if (streak() > 0) {
     <span class="flame" aria-hidden="true">▲</span> {{ streak() }} day streak }
   </span>
