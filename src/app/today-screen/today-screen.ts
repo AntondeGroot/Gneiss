@@ -48,6 +48,7 @@ export class TodayScreen {
 
   protected readonly due = this.deck.due;
   protected readonly streak = this.deck.streak;
+  protected readonly streakEarned = this.deck.streakEarnedToday;
   protected readonly heldBackNew = this.deck.heldBackNew;
   protected readonly heldBackReviews = this.deck.heldBackReviews;
   protected readonly heldCrammed = this.deck.heldCrammed;
