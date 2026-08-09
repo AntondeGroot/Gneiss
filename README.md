@@ -8,6 +8,28 @@ how aggressively its cards resurface.
 > prototype — the design and logic reference, not production code. See [`CLAUDE.md`](./CLAUDE.md)
 > for the full project context and open questions.
 
+## ⚠️ Turn off the Obsidian **Spaced Repetition** plugin first
+
+**One scheduler per vault.** Gneiss writes review state into your notes in the community
+plugin's own format — `<!--SR:!YYYY-MM-DD,interval,ease-->` after each card. That is what
+makes existing history import cleanly, and it is also why the two cannot both be enabled:
+they write *the same bytes in the same lines of the same files*.
+
+Review the same card on two devices between syncs and each writes a different next-due date.
+No sync client can merge that, so it keeps both — as a **conflicted copy** sitting next to the
+original. Those copies keep their `#flashcards` tag, so from that moment on they are a second
+deck, and every card in them comes round twice. More notes, more writers, more conflicts.
+
+Before using Gneiss on a vault:
+
+1. **Settings → Community plugins → disable _Spaced Repetition_.** Nothing is lost — Gneiss
+   reads and writes the same format, and your existing intervals and eases carry over.
+2. **Review on one device at a time**, and let your vault finish syncing before switching.
+
+Already have conflicted copies? Each holds real review state, so deleting them throws away
+scheduling you earned. Merge each card to its **furthest-out due date** first, then remove the
+copies.
+
 
 # Run it in a browser
 
