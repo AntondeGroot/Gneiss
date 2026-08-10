@@ -509,6 +509,28 @@ document-picker / permission model, plus sync-conflict handling). Accepted knowi
 - Accounts / cross-user features.
 - Server-driven push notifications (vs. on-device local reminders).
 
+## What day it is, is a signal (CORRECTED)
+
+`today()` was `new Date().toISOString().slice(0, 10)` — the **UTC** date, not the local one.
+East of Greenwich that is yesterday's date for the width of the offset: in Amsterdam in summer
+the day rolled over at 02:00, so a review at 00:30 counted towards the day before, and with it
+the streak, the due set and every cram countdown. `localDate()` reads local calendar parts
+instead. The date *arithmetic* in the vault (`addDays`, `daysBetween`) is deliberately left
+anchored at `T00:00:00Z`: those operate on date-only strings, where UTC anchoring is what makes
+the arithmetic timezone-independent.
+
+Fixing the value was only half of it. `today()` was called inside `computed()`s, which recompute
+only when a **signal** they read changes — so nothing noticed a rollover at all, and an app left
+open overnight served the previous day's queue in the morning. `ClockService` owns the day as a
+signal, and `DeckService` reads `this.clock.today()` everywhere. `today()` survives as a plain
+function for the one-shot reads that only ever want the date right now.
+
+The tick is scheduled for the next **local** midnight, built as `day + 1` rather than by adding
+24 hours — the constructor normalises a month end, and lands on real midnight on the two nights
+a year that are not 24 hours long. It also resyncs on `visibilitychange`, because **a sleeping
+phone does not run timers**: the backgrounded-overnight case, which is the common one, is caught
+on the way back into the app rather than by the timer at all.
+
 ## Prototype-only shortcuts
 
 - `due` is an integer day offset, not a real date. Real version needs timestamps.

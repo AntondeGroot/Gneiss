@@ -2,7 +2,8 @@ import { TestBed } from "@angular/core/testing";
 import { provideRouter } from "@angular/router";
 
 import { DEFAULT_CONFIG, addDays } from "../../vault";
-import { DeckService, today } from "../services/deck.service";
+import { DeckService } from "../services/deck.service";
+import { today } from "../services/clock.service";
 import { TodayScreen } from "./today-screen";
 
 /** The screen with a streak of five, last reviewed on the given day. */

@@ -386,3 +386,34 @@ describe("DeckService setting a note's tier", () => {
     expect(deck.all()[0]?.tier).toBe("core");
   });
 });
+
+/** The grace the midnight tick allows itself, so it cannot fire a hair early. */
+const SETTLE_MS = 1000;
+
+/** Nothing to do on the 10th: this card is not wanted until the 11th. */
+const DUE_ON_THE_ELEVENTH =
+  "What does grep do? :: search text <!--SR:!2026-08-11,3,250-->\n\n#flashcards/git\n";
+
+describe("DeckService across midnight", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("re-reads the due set when the day rolls over, without being asked again", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 10, 23, 59, 30));
+    const deck = TestBed.inject(DeckService);
+    await deck.saveConfig(DEFAULT_CONFIG);
+    deck.setNotes([parseNote(DUE_ON_THE_ELEVENTH, "git.md")]);
+
+    expect(deck.due()).toHaveLength(0);
+
+    // Thirty seconds to midnight, and nothing else happens: no grade, no
+    // reload, no navigation. That is the point — `due` is a computed, so while
+    // the date was a plain function call it stayed frozen on the 10th and this
+    // stayed empty however long the app was left open.
+    vi.advanceTimersByTime(30_000 + SETTLE_MS);
+
+    expect(deck.due()).toHaveLength(1);
+  });
+});
