@@ -39,7 +39,6 @@ export interface ParsedNote {
 export type TierMapping = Readonly<Record<string, Tier>>;
 
 export interface CramState {
-  active: boolean;
   /** Topic-tag prefix the cram applies to, e.g. `#flashcards/lang/certexam`. */
   scope: string;
   /** ISO date (YYYY-MM-DD) of the exam. */

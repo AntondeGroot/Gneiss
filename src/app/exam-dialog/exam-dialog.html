@@ -1,0 +1,99 @@
+<!-- No dismiss-on-tap-outside: it is unreachable from a keyboard, and the way
+     back is already spelled out on a button. Escape does the same thing. -->
+<div class="scrim">
+  <div
+    #panel
+    class="panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="exam-title"
+    tabindex="-1"
+  >
+    <h2 id="exam-title">{{ editing() ? "Edit exam" : "New exam" }}</h2>
+    <p class="hint">
+      A topic and a date. Nothing in that topic will schedule past the exam, and the day after it
+      stops on its own.
+    </p>
+
+    <label class="field">
+      <span>Topic tag</span>
+      <input
+        name="examScope"
+        placeholder="#flashcards/lang/certexam"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        [ngModel]="scope()"
+        (ngModelChange)="scope.set($event)"
+      />
+    </label>
+
+    @if (scopeProblem()) {
+    <p class="problem">{{ scopeProblem() }}</p>
+    } @else if (vaultUnread()) {
+    <p class="note">The vault has not been read yet, so the tag cannot be checked against it.</p>
+    } @else if (covered().length) {
+    <p class="note">
+      Covers {{ covered().length }} {{ covered().length === 1 ? "tag" : "tags" }} in the vault.
+    </p>
+    }
+
+    <!-- The vault's own tags, narrowed to what has been typed. In the panel's
+         own flow rather than floating: a dropdown lands on top of the phone's
+         keyboard, which is exactly where the typing is happening. -->
+    @if (showSuggestions()) {
+    <ul class="suggestions">
+      @for (tag of suggestions(); track tag) {
+      <li>
+        <button type="button" (click)="pick(tag)">{{ tag }}</button>
+      </li>
+      }
+    </ul>
+    @if (unshown()) {
+    <p class="note">{{ unshown() }} more — keep typing to narrow it down.</p>
+    } }
+
+    <label class="field">
+      <span>Exam date</span>
+      <input
+        type="date"
+        name="examDate"
+        [ngModel]="examDate()"
+        (ngModelChange)="examDate.set($event)"
+      />
+    </label>
+
+    @if (dateProblem()) {
+    <p class="problem">{{ dateProblem() }}</p>
+    } @else if (daysLeft()) {
+    <p class="note">{{ daysLeft() }} {{ daysLeft() === 1 ? "day" : "days" }} to go.</p>
+    }
+
+    <label class="field">
+      <span>New cards per session</span>
+      <input
+        type="number"
+        name="examPerSession"
+        [min]="minPerSession"
+        [max]="maxPerSession"
+        [ngModel]="perSession()"
+        (ngModelChange)="perSession.set(Number($event))"
+      />
+    </label>
+
+    @if (paceProblem()) {
+    <p class="problem">{{ paceProblem() }}</p>
+    }
+    <p class="hint small">
+      This exam's own pace, gentle to intensive, in place of the ordinary new-card portion for its
+      topic. It is a target, not a wall — Today says whether it still gets there in time.
+    </p>
+
+    <div class="actions">
+      <button type="button" class="quiet" (click)="dismissed.emit()">Cancel</button>
+      <button type="button" class="primary" (click)="onSave()">
+        {{ editing() ? "Save" : "Add exam" }}
+      </button>
+    </div>
+  </div>
+</div>

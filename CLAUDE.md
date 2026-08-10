@@ -132,7 +132,8 @@ Two properties are why the date is part of the design:
   deadline; it does not change what the material is worth afterwards.
 
 While cram is active, its scope also overrides the new-cards-per-session portion, and the Today
-screen leads with `<topic> · 12 days · 34 due` instead of the normal tier ring.
+screen leads with `<topic> · 12 days · 34 due` instead of the normal tier ring — one such line
+per running exam, soonest first, so an exam week reads as the week it is.
 
 ### Report the pace, never ration the cards (DECIDED)
 
@@ -194,6 +195,54 @@ still compete for the ordinary review ceiling. Only the *new*-card ceiling is re
 a target rather than a wall, and the Review screen now offers it — finishing a session re-reads
 what is due and offers **Another session** whenever more is ready. See *Importing existing SR
 state* for why this needed almost no machinery: the cap was never a daily lockout.
+
+### Several exams at once (DECIDED)
+
+An exam week is the ordinary case, not the exotic one, so `crams` is a **list**, not a single
+block. Two exams may fall on the same day, and their scopes may overlap.
+
+Where two apply to the same card, **the earlier deadline governs**. This needs no precedence
+rule of its own — the card has to be ready for the first exam that asks for it, so taking the
+tightest clamp is only what the dates already say. When that exam is sat, the next one takes
+over on its own, the same way a single cram already expires.
+
+Each exam keeps **its own `perSession` portion of new cards**, served side by side rather than
+pooled: pooling would let a distant exam eat the runway of one that is days away, or the
+reverse. A card two exams share is served against the sooner one only, so shared material is
+not dealt twice in a sitting — but it is *counted* in both progress bars, because it genuinely
+is part of both, and the two required paces are therefore not additive.
+
+**Deleting replaces the on/off switch.** With a list, an exam that is off is just an exam that
+is not there, so `CramState.active` is gone. Sitting the exam still ends it without any action;
+deletion is for the one cancelled, moved, or typed in by mistake.
+
+### An exam is made in a dialog, and checked before it counts (DECIDED)
+
+Adding or editing an exam opens a **dialog**, not a row of fields in the list. An exam typed
+straight into a list fails quietly, in ways found out about weeks later by not being ready: a
+scope with a typo clamps nothing, and an entry without a date is dropped on the next read. So
+the three questions are asked together, somewhere they can be checked before anything is written:
+
+- **The scope must be one the vault answers to**, tested with the same `isWithinScope` the
+  clamp uses — so "valid here" and "clamps something there" cannot disagree. Free text rather
+  than a picker, because a parent like `#flashcards/Java` is exactly how one exam covers its
+  subtopics, and no note carries that tag.
+- **The date must be at least a day away.** One today or past parses, saves and clamps nothing,
+  since the day after is the off-switch — so the dialog is the only place that can catch it.
+- **The tag is taken on trust when the vault has not been read.** There is nothing to check it
+  against, and refusing then would block an exam over the app's own state, not a mistake.
+
+The vault's tags are offered under the field, filtered by the segment being typed, so `vi` finds
+`#flashcards/vim` without retyping the prefix every tag shares. **In the panel's own flow, not a
+floating dropdown** — a `datalist` lands on top of the phone's keyboard, over the very field
+being typed into. Empty fields say nothing until Add is pressed, and while matches are on offer
+the scope holds its tongue too: being mid-way through typing a tag is not yet a mistake. Wrong
+content, with nothing to suggest, says so as it is typed. Creating and editing are the **same**
+dialog — the same three fields, and a second near-identical form would only drift.
+
+Settings rows are therefore **summaries that open the dialog**, not forms: scope, date, how far
+off it is, and its pace. A row for a date already passed says so rather than counting down, since
+it applies to nothing and the row is the only place left that could mention it.
 
 **Where cram state lives:** a `.gneiss/config.md` file *inside the vault*, alongside the
 tag→tier mapping and `spread`. It is app config, not note content, so it stays out of the

@@ -17,7 +17,7 @@ import type { CramState, Tier, TierMapping } from "./types.js";
 const DELIMITER = "---";
 const INDENT = "  ";
 const TIERS = "tiers";
-const CRAM = "cram";
+const CRAMS = "crams";
 
 export interface GneissConfig {
   /** Core emphasis, 0..1. */
@@ -69,7 +69,8 @@ export interface GneissConfig {
    */
   readonly cramMinPasses: number;
   readonly tiers: TierMapping;
-  readonly cram: CramState | null;
+  /** Every exam being crammed for, in no particular order. Usually empty. */
+  readonly crams: readonly CramState[];
 }
 
 export const DEFAULT_CONFIG: GneissConfig = {
@@ -85,7 +86,7 @@ export const DEFAULT_CONFIG: GneissConfig = {
   backupReminderAt: "20:00",
   cramMinPasses: 3,
   tiers: {},
-  cram: null,
+  crams: [],
 };
 
 /** Below this a card cannot be repeated at all, so the passes figure would mean nothing. */
@@ -116,7 +117,7 @@ export function parseConfig(md: string): GneissConfig {
       readCount(sections.top["cramMinPasses"], DEFAULT_CONFIG.cramMinPasses),
     ),
     tiers: readTiers(sections.nested[TIERS] ?? {}),
-    cram: readCram(sections.nested[CRAM] ?? {}),
+    crams: readCrams(sections.lists[CRAMS] ?? []),
   };
 }
 
@@ -141,12 +142,15 @@ export function formatConfig(config: GneissConfig): string {
     lines.push(`${INDENT}"${tag}": ${tier}`);
   }
 
-  if (config.cram) {
-    lines.push(`${CRAM}:`);
-    lines.push(`${INDENT}active: ${config.cram.active}`);
-    lines.push(`${INDENT}scope: "${config.cram.scope}"`);
-    lines.push(`${INDENT}examDate: ${config.cram.examDate}`);
-    lines.push(`${INDENT}perSession: ${config.cram.perSession}`);
+  // Written as a list even for one exam: a week of them is the ordinary case,
+  // and a shape that changes with the count is a shape nobody can hand-edit.
+  if (config.crams.length > 0) {
+    lines.push(`${CRAMS}:`);
+    for (const cram of config.crams) {
+      lines.push(`${INDENT}- scope: "${cram.scope}"`);
+      lines.push(`${INDENT}  examDate: ${cram.examDate}`);
+      lines.push(`${INDENT}  perSession: ${cram.perSession}`);
+    }
   }
 
   lines.push(DELIMITER, "", ...EXPLANATION, "");
@@ -164,6 +168,8 @@ const EXPLANATION = [
 interface Sections {
   readonly top: Record<string, string>;
   readonly nested: Record<string, Record<string, string>>;
+  /** Sections written as `- ` items, each item its own set of pairs. */
+  readonly lists: Record<string, Record<string, string>[]>;
 }
 
 function frontmatterOf(md: string): string[] {
@@ -174,27 +180,44 @@ function frontmatterOf(md: string): string[] {
   return end === -1 ? lines.slice(1) : lines.slice(1, end);
 }
 
-/** Splits `key: value` lines into top-level entries and one level of nesting. */
+/**
+ * Splits `key: value` lines into top-level entries and one level of nesting.
+ *
+ * A nested section is a map (`tiers:`) until a line opens with `- `, at which
+ * point it is a list (`crams:`) and every following indented pair belongs to the
+ * item currently being built.
+ */
 function readSections(lines: string[]): Sections {
   const top: Record<string, string> = {};
   const nested: Record<string, Record<string, string>> = {};
+  const lists: Record<string, Record<string, string>[]> = {};
   let current = "";
 
   for (const line of lines) {
-    const pair = splitPair(line);
+    const item = line.startsWith(INDENT) && line.trim().startsWith("- ");
+    const pair = splitPair(item ? line.trim().slice(2) : line);
     if (!pair) continue;
 
-    if (line.startsWith(INDENT)) {
-      const section = (nested[current] ??= {});
-      section[pair.key] = pair.value;
+    if (item) {
+      const items = lists[current] ?? [];
+      lists[current] = items;
+      items.push({ [pair.key]: pair.value });
+    } else if (line.startsWith(INDENT)) {
+      const open = lists[current]?.at(-1);
+      if (open) {
+        open[pair.key] = pair.value;
+      } else {
+        const section = nested[current] ?? {};
+        nested[current] = section;
+        section[pair.key] = pair.value;
+      }
     } else if (pair.value === "") {
       current = pair.key;
-      nested[current] ??= {};
     } else {
       top[pair.key] = pair.value;
     }
   }
-  return { top, nested };
+  return { top, nested, lists };
 }
 
 function splitPair(line: string): { key: string; value: string } | null {
@@ -235,15 +258,15 @@ function isTier(value: string): value is Tier {
   return value === "core" || value === "standard" || value === "optional";
 }
 
-function readCram(entries: Record<string, string>): CramState | null {
-  const scope = entries["scope"];
-  const examDate = entries["examDate"];
-  if (!scope || !examDate) return null;
+/** A half-written exam is dropped rather than guessed at — a cram with no date clamps nothing. */
+function readCrams(items: readonly Record<string, string>[]): CramState[] {
+  return items.flatMap((item) => {
+    const scope = item["scope"];
+    const examDate = item["examDate"];
+    if (!scope || !examDate) return [];
 
-  return {
-    active: entries["active"] === "true",
-    scope,
-    examDate,
-    perSession: readCount(entries["perSession"], DEFAULT_CRAM_PER_SESSION),
-  };
+    return [
+      { scope, examDate, perSession: readCount(item["perSession"], DEFAULT_CRAM_PER_SESSION) },
+    ];
+  });
 }

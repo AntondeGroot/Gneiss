@@ -16,7 +16,7 @@
  * whether the pace is fast enough is reported by `cramPlan`, not enforced here.
  */
 
-import { daysBetween, isCrammed } from "./cram.js";
+import { governingCram } from "./cram.js";
 import { isDue } from "./schedule.js";
 import type { CramState, ReviewState, Tier } from "./types.js";
 
@@ -32,8 +32,8 @@ export interface SessionLimits {
   readonly newPerSession: number;
   /** How many cards already in rotation one session takes on — the backlog's portion. */
   readonly reviewsPerSession: number;
-  /** Null when no cram is configured at all — the usual case. */
-  readonly cram: CramState | null;
+  /** Empty when no exam is configured at all — the usual case. */
+  readonly crams: readonly CramState[];
 }
 
 export interface DueSelection<T> {
@@ -60,11 +60,12 @@ export function selectDue<T extends Schedulable>(
   const reviews = dueToday.filter(isSeen).sort(byUrgency);
   const fresh = dueToday.filter((card) => !isSeen(card)).sort(byUrgency);
 
-  const crammed = fresh.filter((card) => isCrammed(card.topicTags, runningCram(limits, today)));
-  const rest = fresh.filter((card) => !isCrammed(card.topicTags, runningCram(limits, today)));
+  const governs = (card: T): CramState | null => governingCram(card.topicTags, limits.crams, today);
+  const crammed = fresh.filter((card) => governs(card));
+  const rest = fresh.filter((card) => !governs(card));
 
   const room = share(reviews.length, rest.length, limits);
-  const cram = cappedAt(crammed, limits.cram?.perSession ?? limits.newPerSession);
+  const cram = crammedPortion(crammed, governs, limits.newPerSession);
 
   return {
     // Crammed cards lead: they are the ones with a deadline attached.
@@ -73,6 +74,36 @@ export function selectDue<T extends Schedulable>(
     heldBackNew: rest.length - room.fresh,
     heldCrammed: cram.heldBackNew,
   };
+}
+
+/**
+ * Each exam's own portion of new cards, side by side.
+ *
+ * A portion per exam rather than one shared between them: the pace is the
+ * intensity chosen for *that* deadline, and pooling them would let a near exam
+ * eat the runway of a distant one — or worse, let a distant one starve the exam
+ * that is days away.
+ *
+ * A card is counted against a single exam, the one governing its schedule, so
+ * material two exams share is not served twice in a sitting.
+ */
+function crammedPortion<T>(
+  crammed: readonly T[],
+  governs: (card: T) => CramState | null,
+  fallbackPace: number,
+): { queue: T[]; heldBackNew: number } {
+  const byExam = new Map<string, T[]>();
+  for (const card of crammed) {
+    const scope = governs(card)?.scope ?? "";
+    byExam.set(scope, [...(byExam.get(scope) ?? []), card]);
+  }
+
+  const queue: T[] = [];
+  for (const [, cards] of byExam) {
+    const pace = governs(cards[0] as T)?.perSession ?? fallbackPace;
+    queue.push(...cards.slice(0, pace));
+  }
+  return { queue, heldBackNew: crammed.length - queue.length };
 }
 
 /**
@@ -104,24 +135,6 @@ function share(
   }
 
   return { reviews: takeReviews, fresh: takeFresh };
-}
-
-/**
- * The cram, if one is running today.
- *
- * Null once the date has passed, so the topic quietly rejoins the ordinary
- * pools — the date is the off-switch, with no reset step.
- */
-function runningCram(limits: SessionLimits, today: string): CramState | null {
-  if (!limits.cram?.active) return null;
-  return daysBetween(today, limits.cram.examDate) > 0 ? limits.cram : null;
-}
-
-function cappedAt<T>(cards: readonly T[], limit: number): { queue: T[]; heldBackNew: number } {
-  return {
-    queue: cards.slice(0, limit),
-    heldBackNew: Math.max(0, cards.length - limit),
-  };
 }
 
 function isSeen(card: Schedulable): boolean {

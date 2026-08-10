@@ -35,8 +35,8 @@ export interface SchedulingOptions {
   /** ISO date the review is happening on. */
   readonly today: string;
   readonly topicTags: string[];
-  /** Null when no cram is configured. */
-  readonly cram: CramState | null;
+  /** Empty when no exam is configured. */
+  readonly crams: readonly CramState[];
 }
 
 /** The state a card carries before it has ever been reviewed. */
@@ -51,7 +51,7 @@ export function schedule(
 ): ReviewState {
   const ease = nextEase(state.ease, grade);
   const grown = grownInterval(state.interval, ease, grade, options);
-  const interval = cramClamp(grown, options.topicTags, options.cram, options.today);
+  const interval = cramClamp(grown, options.topicTags, options.crams, options.today);
 
   return { due: addDays(options.today, interval), interval, ease };
 }

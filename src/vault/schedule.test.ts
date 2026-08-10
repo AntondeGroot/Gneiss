@@ -9,7 +9,7 @@ const STANDARD: SchedulingOptions = {
   spread: 0.8,
   today: "2026-08-01",
   topicTags: ["#flashcards/shell"],
-  cram: null,
+  crams: [],
 };
 
 function at(tier: Tier): SchedulingOptions {
@@ -79,7 +79,7 @@ describe("schedule", () => {
     const card = { due: "2026-08-01", interval: 10, ease: 2.5 };
     const cramming: SchedulingOptions = {
       ...STANDARD,
-      cram: { active: true, scope: "#flashcards/shell", examDate: "2026-08-11", perSession: 10 },
+      crams: [{ scope: "#flashcards/shell", examDate: "2026-08-11", perSession: 10 }],
     };
 
     const next = schedule(card, "medium", cramming);
