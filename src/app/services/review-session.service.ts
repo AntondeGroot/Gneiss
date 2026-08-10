@@ -2,7 +2,8 @@ import { Injectable, computed, effect, inject, signal } from "@angular/core";
 
 import type { CardText, Grade } from "../../vault";
 import { isDeckCard } from "./deck-cache.service";
-import { DeckService, today } from "./deck.service";
+import { DeckService } from "./deck.service";
+import { today } from "./clock.service";
 import type { DeckCard } from "./deck.service";
 
 const KEY = "gneiss.session";

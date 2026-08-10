@@ -27,6 +27,7 @@ import type {
   Tier,
   TierMapping,
 } from "../../vault";
+import { ClockService, today } from "./clock.service";
 import { DeckCacheService } from "./deck-cache.service";
 import { ReminderService } from "./reminder.service";
 import type { VaultSource } from "./vault-source";
@@ -56,6 +57,12 @@ export interface DeckCard {
 export class DeckService {
   private readonly cache = inject(DeckCacheService);
   private readonly reminders = inject(ReminderService);
+  /**
+   * Read as a signal, not as `today()`, everywhere below. That is what makes a
+   * queue, a streak or a countdown notice the day rolling over instead of
+   * staying frozen on the day it was first computed.
+   */
+  private readonly clock = inject(ClockService);
   private source: VaultSource | null = null;
   private readonly cards = signal<readonly DeckCard[]>([]);
   /**
@@ -108,7 +115,7 @@ export class DeckService {
    * walks straight on through it.
    */
   private readonly selection = computed(() =>
-    selectDue(this.cards(), today(), {
+    selectDue(this.cards(), this.clock.today(), {
       newPerSession: this.config().newPerSession,
       reviewsPerSession: this.config().reviewsPerSession,
       crams: this.config().crams,
@@ -128,12 +135,12 @@ export class DeckService {
    * and no manual reset is needed.
    */
   readonly crams = computed(() =>
-    cramPlans(this.cards(), this.config().crams, this.config().cramMinPasses, today()),
+    cramPlans(this.cards(), this.config().crams, this.config().cramMinPasses, this.clock.today()),
   );
 
   /** Due cards with an exam attached — what the countdowns are actually about. */
   readonly cramDue = computed(() =>
-    this.due().filter((card) => isCrammed(card.topicTags, this.config().crams, today())),
+    this.due().filter((card) => isCrammed(card.topicTags, this.config().crams, this.clock.today())),
   );
 
   /**
@@ -144,12 +151,12 @@ export class DeckService {
    * is exactly the day the backup reminder exists for.
    */
   sessionDoneToday(): boolean {
-    return this.config().lastSessionOn === today();
+    return this.config().lastSessionOn === this.clock.today();
   }
 
   /** Zero once a day has been missed — never claims a streak that is already broken. */
   readonly streak = computed(() =>
-    standingStreak(this.config().streak, this.config().lastReviewedOn, today()),
+    standingStreak(this.config().streak, this.config().lastReviewedOn, this.clock.today()),
   );
 
   /**
@@ -159,7 +166,7 @@ export class DeckService {
    * streak on screen is yesterday's total carried forward, and saying so is the
    * difference between a figure that is earned and one that is still standing.
    */
-  readonly streakEarnedToday = computed(() => this.config().lastReviewedOn === today());
+  readonly streakEarnedToday = computed(() => this.config().lastReviewedOn === this.clock.today());
 
   /**
    * Opens a vault from any source, then reads its config and notes.
@@ -441,12 +448,12 @@ export class DeckService {
   /** Advances the streak on the first review of a new day, and persists it. */
   private async recordReviewDay(): Promise<void> {
     const config = this.config();
-    if (config.lastReviewedOn === today()) return;
+    if (config.lastReviewedOn === this.clock.today()) return;
 
     await this.saveConfig({
       ...config,
-      streak: nextStreak(config.streak, config.lastReviewedOn, today()),
-      lastReviewedOn: today(),
+      streak: nextStreak(config.streak, config.lastReviewedOn, this.clock.today()),
+      lastReviewedOn: this.clock.today(),
     });
   }
 
@@ -457,7 +464,7 @@ export class DeckService {
   async completeSession(): Promise<void> {
     if (this.sessionDoneToday()) return;
 
-    await this.saveConfig({ ...this.config(), lastSessionOn: today() });
+    await this.saveConfig({ ...this.config(), lastSessionOn: this.clock.today() });
     this.syncReminders();
   }
 
@@ -476,7 +483,7 @@ export class DeckService {
     return {
       tier: card.tier,
       spread: this.config().spread,
-      today: today(),
+      today: this.clock.today(),
       topicTags: card.topicTags,
       crams: this.config().crams,
     };
@@ -544,8 +551,4 @@ function onlyTagged(notes: readonly ParsedNote[]): readonly ParsedNote[] {
  */
 function withoutRepeats(cards: readonly DeckCard[]): DeckCard[] {
   return [...new Map(cards.map((card) => [card.id, card])).values()];
-}
-
-export function today(): string {
-  return new Date().toISOString().slice(0, 10);
 }

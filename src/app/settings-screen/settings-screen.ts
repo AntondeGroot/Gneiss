@@ -4,7 +4,8 @@ import { FormsModule } from "@angular/forms";
 import { daysBetween, schedule, topicTiers, withTopicTier } from "../../vault";
 import type { CramState, GneissConfig, Tier } from "../../vault";
 import { ExamDialog } from "../exam-dialog/exam-dialog";
-import { DeckService, today } from "../services/deck.service";
+import { DeckService } from "../services/deck.service";
+import { today } from "../services/clock.service";
 import { ReminderService } from "../services/reminder.service";
 
 /** The card the preview is computed against: an established one, graded Medium. */
