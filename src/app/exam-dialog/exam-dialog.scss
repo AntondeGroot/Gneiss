@@ -1,0 +1,161 @@
+@use "styles" as *;
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgb(7 5 12 / 72%);
+}
+
+.panel {
+  width: 100%;
+  max-width: 22rem;
+  // An exam is three fields and its messages; on a short phone in landscape
+  // that is still taller than the viewport, so the panel scrolls rather than
+  // putting the buttons out of reach.
+  max-height: 100%;
+  overflow-y: auto;
+  border: 1px solid $line;
+  border-radius: 0.9rem;
+  background: $panel;
+  padding: 1.1rem 1.15rem 0.95rem;
+  box-shadow: 0 1.2rem 2.5rem rgb(0 0 0 / 45%);
+  color: $text;
+  font-family: "Hanken Grotesk", "Avenir Next", system-ui, sans-serif;
+  text-align: left;
+}
+
+h2 {
+  margin: 0 0 0.3rem;
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.hint {
+  margin: 0 0 0.9rem;
+  color: $dim;
+  font-size: 0.8rem;
+  line-height: 1.5;
+
+  &.small {
+    margin: 0.7rem 0 0;
+    font-size: 0.74rem;
+    color: $faint;
+  }
+}
+
+.field {
+  display: block;
+  margin-top: 0.8rem;
+
+  span {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: $faint;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  input {
+    width: 100%;
+    background: $panel2;
+    border: 1px solid $line;
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.65rem;
+    color: $text;
+    font: inherit;
+    font-size: 0.88rem;
+    color-scheme: dark;
+  }
+}
+
+/**
+ * What is wrong, under the field it is wrong about.
+ *
+ * Red and directly beneath, rather than a summary at the top: a message that
+ * names its field still leaves the reader to find it, and there are three.
+ */
+.problem {
+  margin: 0.35rem 0 0;
+  color: $red;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+/**
+ * The tags on offer, in the panel's flow.
+ *
+ * Deliberately not a floating dropdown: on a phone that lands on top of the
+ * keyboard, over the very field being typed into. Inline it pushes the rest of
+ * the form down and scrolls with the panel, so the list and the keyboard are
+ * never fighting for the same space.
+ */
+.suggestions {
+  max-height: 9rem;
+  overflow-y: auto;
+  margin: 0.4rem 0 0;
+  padding: 0.2rem;
+  list-style: none;
+  border: 1px solid $line;
+  border-radius: 0.55rem;
+  background: $panel2;
+
+  button {
+    display: block;
+    width: 100%;
+    border: none;
+    border-radius: 0.4rem;
+    background: none;
+    padding: 0.4rem 0.45rem;
+    color: $text;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.76rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+}
+
+/** The same slot, saying the answer is taken — so nothing jumps when it changes. */
+.note {
+  margin: 0.35rem 0 0;
+  color: $faint;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  gap: 0.45rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+button {
+  border: 1px solid $line;
+  border-radius: 0.55rem;
+  background: $panel2;
+  color: $text;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+
+  &.quiet {
+    background: none;
+    color: $dim;
+  }
+
+  &.primary {
+    border-color: transparent;
+    background: $amber;
+    color: $ink;
+    font-weight: 600;
+  }
+}

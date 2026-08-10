@@ -22,7 +22,15 @@ export { resolveTier, tierFromMapping, tierGrowth } from "./tier.js";
 export type { Tierable } from "./tier.js";
 export { distinctTopicTags, topicTiers, withTopicTier } from "./topics.js";
 export type { TopicTier } from "./topics.js";
-export { cramClamp, cramPlan, daysBetween, isCrammed } from "./cram.js";
+export {
+  cramClamp,
+  cramPlans,
+  daysBetween,
+  governingCram,
+  isCrammed,
+  isWithinScope,
+  runningCrams,
+} from "./cram.js";
 export type { CramPlan } from "./cram.js";
 export { addDays, isDue, newReviewState, schedule, STARTING_EASE } from "./schedule.js";
 export type { SchedulingOptions } from "./schedule.js";

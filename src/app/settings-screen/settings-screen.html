@@ -141,55 +141,35 @@
 </section>
 
 <section class="group">
-  <h2>Cram</h2>
+  <h2>Exams</h2>
   <p class="hint">
-    Deadline-scoped focus on one topic. Intervals are capped so nothing schedules past the exam, and
-    it stops on its own the day after — no reset step.
+    Deadline-scoped focus on a topic. Intervals are capped so nothing schedules past the exam, and
+    each one stops on its own the day after — no reset step. Add as many as you have: where two
+    cover the same cards, the sooner exam sets the pace.
   </p>
-  <label class="row">
-    <input
-      type="checkbox"
-      name="cramActive"
-      [ngModel]="draft().cram?.active ?? false"
-      (ngModelChange)="updateCram({ active: $event })"
-    />
-    <span>Cramming for an exam</span>
-  </label>
-  @if (draft().cram?.active) {
-  <label class="field">
-    <span>Topic tag</span>
-    <input
-      name="cramScope"
-      placeholder="#flashcards/lang/certexam"
-      [ngModel]="draft().cram?.scope ?? ''"
-      (ngModelChange)="updateCram({ scope: $event })"
-    />
-  </label>
-  <label class="field">
-    <span>Exam date</span>
-    <input
-      type="date"
-      name="cramDate"
-      [ngModel]="draft().cram?.examDate ?? ''"
-      (ngModelChange)="updateCram({ examDate: $event })"
-    />
-  </label>
-  <label class="field">
-    <span>New cards per session</span>
-    <input
-      type="number"
-      name="cramPerSession"
-      min="1"
-      max="200"
-      [ngModel]="draft().cram?.perSession ?? 0"
-      (ngModelChange)="updateCram({ perSession: Number($event) })"
-    />
-  </label>
+
+  <!-- A summary, not a form: the fields are asked for in the dialog, where they
+       can be checked against the vault before they count. -->
+  @for (cram of draft().crams; track $index) {
+  <div class="exam">
+    <button type="button" class="exam-open" (click)="openExam($index)">
+      <span class="exam-name">{{ cram.scope }}</span>
+      <span class="exam-when">{{ describeExam(cram) }}</span>
+    </button>
+    <button type="button" class="drop" (click)="removeCram($index)">Remove</button>
+  </div>
+  } @empty {
+  <p class="hint small">No exams. Cards follow their tier as usual.</p>
+  }
+
+  <button type="button" class="add" (click)="openExam(NEW)">Add an exam</button>
+
   <p class="hint small">
-    Your pace for this topic, from gentle to intensive. It is a target, not a wall — Today shows how
-    far along you are and what pace the exam actually demands, and nothing stops you starting
-    another session when you want to push further.
+    Each exam carries its own pace, from gentle to intensive, and each gets that portion of new
+    cards in a session. It is a target, not a wall — Today shows how far along you are and what pace
+    the exam actually demands, and nothing stops you starting another session.
   </p>
+
   <label class="field">
     <span>Passes needed to learn a card</span>
     <input
@@ -206,7 +186,6 @@
     This is not used to withhold anything — it is how the required pace is worked out, by not
     counting the last {{ draft().cramMinPasses - 1 }} days as time to start new material.
   </p>
-  }
 </section>
 
 <button type="button" class="primary" (click)="onSave()" [disabled]="saving()">
@@ -215,4 +194,16 @@
 
 @if (message()) {
 <p class="message">{{ message() }}</p>
+}
+
+<!-- Over the whole screen rather than inside the Exams group: it is one thing
+     to answer, and the fields it checks are checked together. -->
+@if (editing() !== null) {
+<gn-exam-dialog
+  [exam]="examUnderEdit()"
+  [topics]="deckTopics()"
+  [today]="today()"
+  (save)="saveExam($event)"
+  (dismissed)="closeExam()"
+/>
 }

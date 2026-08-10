@@ -1,6 +1,7 @@
 import { Component, computed, inject } from "@angular/core";
 import { Router, RouterLink } from "@angular/router";
 
+import { isWithinScope } from "../../vault";
 import type { Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import { ReviewSessionService } from "../services/review-session.service";
@@ -53,12 +54,28 @@ export class TodayScreen {
   protected readonly heldBackReviews = this.deck.heldBackReviews;
   protected readonly heldCrammed = this.deck.heldCrammed;
 
-  /** While a cram runs the deadline leads, not the tier ring — see CLAUDE.md. */
-  protected readonly cram = this.deck.cram;
-  protected readonly cramDue = computed(() => this.deck.cramDue().length);
+  /**
+   * While an exam runs the deadline leads, not the tier ring — see CLAUDE.md.
+   *
+   * One countdown per exam, soonest first, so an exam week reads as the week it
+   * is rather than as whichever exam happens to be nearest.
+   */
+  protected readonly crams = this.deck.crams;
+
   /** The tag's last segment: `#flashcards/lang/certexam` reads as `certexam`. */
-  protected readonly cramTopic = computed(() => lastSegment(this.deck.cramScope()));
-  protected readonly cramPercent = computed(() => Math.round((this.cram()?.progress ?? 0) * 100));
+  protected topicOf(scope: string): string {
+    return lastSegment(scope);
+  }
+
+  protected percentOf(progress: number): number {
+    return Math.round(progress * 100);
+  }
+
+  /** Due cards for one exam, so each countdown carries its own figure. */
+  protected dueFor(scope: string): number {
+    return this.deck.due().filter((card) => card.topicTags.some((tag) => isWithinScope(tag, scope)))
+      .length;
+  }
   protected readonly loaded = computed(() => this.deck.all().length > 0);
 
   protected readonly segments = computed(() => toSegments(this.due()));

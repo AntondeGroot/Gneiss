@@ -15,29 +15,29 @@
   </span>
 </header>
 
-@if (cram(); as plan) {
+@if (crams().length > 0) { @for (plan of crams(); track plan.scope) {
 <section class="cram">
-  <span class="topic">{{ cramTopic() }}</span>
+  <span class="topic">{{ topicOf(plan.scope) }}</span>
   <p class="countdown">
     <span class="days">{{ plan.daysLeft }}</span>
     <span class="unit">{{ plan.daysLeft === 1 ? "day" : "days" }}</span>
     <span class="sep" aria-hidden="true">·</span>
-    <span class="days">{{ cramDue() }}</span>
+    <span class="days">{{ dueFor(plan.scope) }}</span>
     <span class="unit">due</span>
   </p>
 
   <div
     class="bar"
     role="progressbar"
-    [attr.aria-valuenow]="cramPercent()"
+    [attr.aria-valuenow]="percentOf(plan.progress)"
     aria-valuemin="0"
     aria-valuemax="100"
     [attr.aria-label]="'Topic covered'"
   >
-    <span class="fill" [style.width.%]="cramPercent()"></span>
+    <span class="fill" [style.width.%]="percentOf(plan.progress)"></span>
   </div>
   <p class="coverage">
-    <strong>{{ cramPercent() }}%</strong> met · {{ plan.met }} of {{ plan.total }}
+    <strong>{{ percentOf(plan.progress) }}%</strong> met · {{ plan.met }} of {{ plan.total }}
   </p>
 
   @if (plan.remaining === 0) {
@@ -57,7 +57,7 @@
   </p>
   }
 </section>
-} @else {
+} } @else {
 <section class="ring-wrap">
   <svg
     viewBox="0 0 128 128"

@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from "@angular/core";
 
 import {
   DEFAULT_CONFIG,
-  cramPlan,
+  cramPlans,
   distinctTopicTags,
   folderOf,
   isCrammed,
@@ -111,7 +111,7 @@ export class DeckService {
     selectDue(this.cards(), today(), {
       newPerSession: this.config().newPerSession,
       reviewsPerSession: this.config().reviewsPerSession,
-      cram: this.config().cram,
+      crams: this.config().crams,
     }),
   );
 
@@ -123,20 +123,17 @@ export class DeckService {
   readonly heldCrammed = computed(() => this.selection().heldCrammed);
 
   /**
-   * How the cram is going and what pace the deadline demands, or null when none
-   * is running. An expired cram reads as absent, so the date is the off-switch
-   * here too and no manual reset is needed.
+   * How each exam is going and what pace its deadline demands, soonest first.
+   * An exam that has been sat drops out, so the date is the off-switch here too
+   * and no manual reset is needed.
    */
-  readonly cram = computed(() =>
-    cramPlan(this.cards(), this.config().cram, this.config().cramMinPasses, today()),
+  readonly crams = computed(() =>
+    cramPlans(this.cards(), this.config().crams, this.config().cramMinPasses, today()),
   );
 
-  /** The cram's topic tag, for naming it on screen. */
-  readonly cramScope = computed(() => this.config().cram?.scope ?? "");
-
-  /** Due cards inside the cram's scope — what the countdown is actually about. */
+  /** Due cards with an exam attached — what the countdowns are actually about. */
   readonly cramDue = computed(() =>
-    this.due().filter((card) => isCrammed(card.topicTags, this.config().cram)),
+    this.due().filter((card) => isCrammed(card.topicTags, this.config().crams, today())),
   );
 
   /**
@@ -481,7 +478,7 @@ export class DeckService {
       spread: this.config().spread,
       today: today(),
       topicTags: card.topicTags,
-      cram: this.config().cram,
+      crams: this.config().crams,
     };
   }
 }

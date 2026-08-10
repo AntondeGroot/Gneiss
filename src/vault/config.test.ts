@@ -18,12 +18,10 @@ describe("config round trip", () => {
       backupReminderAt: "21:30",
       cramMinPasses: 4,
       tiers: { "#flashcards/git": "core", "#flashcards/lang/certexam": "optional" },
-      cram: {
-        active: true,
-        scope: "#flashcards/lang/certexam",
-        examDate: "2026-09-01",
-        perSession: 12,
-      },
+      crams: [
+        { scope: "#flashcards/lang/certexam", examDate: "2026-09-01", perSession: 12 },
+        { scope: "#flashcards/Angular", examDate: "2026-09-03", perSession: 8 },
+      ],
     };
 
     expect(parseConfig(formatConfig(config))).toEqual(config);
@@ -38,10 +36,9 @@ newPerSession: 8
 tiers:
   "#flashcards/git": core
   "#flashcards/tools": standard
-cram:
-  active: true
-  scope: "#flashcards/lang"
-  examDate: 2026-12-01
+crams:
+  - scope: "#flashcards/lang"
+    examDate: 2026-12-01
 ---
 
 # Gneiss
@@ -64,7 +61,7 @@ Notes below the frontmatter are ignored.
       // need not list every setting.
       cramMinPasses: 3,
       tiers: { "#flashcards/git": "core", "#flashcards/tools": "standard" },
-      cram: { active: true, scope: "#flashcards/lang", examDate: "2026-12-01", perSession: 10 },
+      crams: [{ scope: "#flashcards/lang", examDate: "2026-12-01", perSession: 10 }],
     });
   });
 
@@ -87,14 +84,50 @@ tiers:
     expect(parseConfig(typo).tiers).toEqual({ "#flashcards/git": "core" });
   });
 
-  it("treats a cram missing its scope or date as no cram at all", () => {
+  it("drops an exam missing its scope or date, keeping the ones beside it", () => {
     const halfWritten = `---
-cram:
-  active: true
+crams:
+  - scope: "#flashcards/lang"
+  - scope: "#flashcards/Angular"
+    examDate: 2026-09-03
 ---
 `;
 
-    // A cram with no scope would otherwise clamp against an undefined date.
-    expect(parseConfig(halfWritten).cram).toBeNull();
+    // An exam with no date would otherwise clamp against an undefined deadline.
+    expect(parseConfig(halfWritten).crams).toEqual([
+      { scope: "#flashcards/Angular", examDate: "2026-09-03", perSession: 10 },
+    ]);
+  });
+});
+
+describe("several exams in the config", () => {
+  it("round-trips a week of them, in the order they were written", () => {
+    const week = [
+      { scope: "#flashcards/lang/certexam", examDate: "2026-09-01", perSession: 12 },
+      { scope: "#flashcards/Angular", examDate: "2026-09-03", perSession: 8 },
+      { scope: "#flashcards/Java", examDate: "2026-09-03", perSession: 5 },
+    ];
+
+    // Two on the same day is ordinary, not a clash — they are different topics.
+    expect(parseConfig(formatConfig({ ...DEFAULT_CONFIG, crams: week })).crams).toEqual(week);
+  });
+
+  it("writes no exam section at all when there are none", () => {
+    // An empty `crams:` heading would read as a setting that had been cleared.
+    expect(formatConfig({ ...DEFAULT_CONFIG, crams: [] })).not.toContain("crams:");
+  });
+
+  it("keeps the tier map readable beside the list", () => {
+    const written = formatConfig({
+      ...DEFAULT_CONFIG,
+      tiers: { "#flashcards/git": "core" },
+      crams: [{ scope: "#flashcards/Java", examDate: "2026-09-03", perSession: 5 }],
+    });
+
+    // The two nested shapes sit next to each other; parsing must not run one
+    // into the other.
+    const back = parseConfig(written);
+    expect(back.tiers).toEqual({ "#flashcards/git": "core" });
+    expect(back.crams).toHaveLength(1);
   });
 });

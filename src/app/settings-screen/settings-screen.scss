@@ -220,3 +220,76 @@ input[name="cramScope"] {
   font-size: 0.82rem;
   text-align: center;
 }
+
+/**
+ * One exam, as a row that opens it.
+ *
+ * A summary rather than a form: the fields are asked for in the dialog, so what
+ * is left here is the question a list has to answer at a glance — which date
+ * belongs to which topic, and at what pace.
+ */
+.exam {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid $line;
+  border-radius: 0.7rem;
+  background: $panel2;
+  padding: 0.6rem 0.7rem;
+  margin-bottom: 0.6rem;
+}
+
+// The row itself is the way in — a separate "Edit" button beside "Remove" would
+// make the two look like a matched pair of equal weight, which they are not.
+.exam-open {
+  flex: 1;
+  display: block;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exam-name {
+  display: block;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: $text;
+  overflow-wrap: anywhere;
+}
+
+.exam-when {
+  display: block;
+  margin-top: 0.15rem;
+  color: $dim;
+  font-size: 0.74rem;
+}
+
+// Destructive, so it does not wear the amber of the things you are meant to
+// press — but no confirm step either: an exam is four fields, and typing it
+// again costs less than a dialog on every removal.
+.drop {
+  flex: none;
+  border: 1px solid $line;
+  border-radius: 0.45rem;
+  background: none;
+  color: $dim;
+  font: inherit;
+  font-size: 0.74rem;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+}
+
+.add {
+  width: 100%;
+  border: 1px dashed $line;
+  border-radius: 0.6rem;
+  background: none;
+  color: $dim;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.6rem;
+  cursor: pointer;
+}

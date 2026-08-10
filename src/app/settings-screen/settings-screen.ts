@@ -1,9 +1,10 @@
 import { Component, computed, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 
-import { DEFAULT_CRAM_PER_SESSION, schedule, topicTiers, withTopicTier } from "../../vault";
+import { daysBetween, schedule, topicTiers, withTopicTier } from "../../vault";
 import type { CramState, GneissConfig, Tier } from "../../vault";
-import { DeckService } from "../services/deck.service";
+import { ExamDialog } from "../exam-dialog/exam-dialog";
+import { DeckService, today } from "../services/deck.service";
 import { ReminderService } from "../services/reminder.service";
 
 /** The card the preview is computed against: an established one, graded Medium. */
@@ -14,6 +15,9 @@ const PREVIEW_TIERS: readonly Tier[] = ["core", "standard", "optional"];
 /** The choices offered per topic. `null` is "inherit", which is not the same as `standard`. */
 export const TOPIC_CHOICES: readonly (Tier | null)[] = [null, "core", "standard", "optional"];
 
+/** What the dialog is opened on when there is no exam yet to edit. */
+const NEW = "new" as const;
+
 export interface TierPreview {
   readonly tier: Tier;
   readonly days: number;
@@ -21,7 +25,7 @@ export interface TierPreview {
 
 @Component({
   selector: "gn-settings-screen",
-  imports: [FormsModule],
+  imports: [FormsModule, ExamDialog],
   templateUrl: "./settings-screen.html",
   styleUrl: "./settings-screen.scss",
 })
@@ -46,7 +50,7 @@ export class SettingsScreen {
         spread: this.draft().spread,
         today: "2026-01-01",
         topicTags: [],
-        cram: null,
+        crams: [],
       }).interval,
     })),
   );
@@ -54,23 +58,71 @@ export class SettingsScreen {
   /** A row per topic tag in the vault — the primary way tiers get assigned. */
   protected readonly topics = computed(() => topicTiers(this.deck.topicTags(), this.draft().tiers));
 
+  /** The tags themselves, which is what an exam's scope is checked against. */
+  protected readonly deckTopics = this.deck.topicTags;
+
   protected readonly choices = TOPIC_CHOICES;
 
-  /** Angular templates cannot call global functions, and the number input hands back a string. */
-  protected readonly Number = Number;
+  /** Which exam the dialog is asking about — an index, `NEW`, or closed. */
+  protected readonly editing = signal<number | typeof NEW | null>(null);
+  protected readonly NEW = NEW;
+
+  /** The exam the dialog opens on: an existing one, or null for a blank form. */
+  protected readonly examUnderEdit = computed(() => {
+    const at = this.editing();
+    return typeof at === "number" ? (this.draft().crams[at] ?? null) : null;
+  });
+
+  protected readonly today = today;
+
+  protected openExam(at: number | typeof NEW): void {
+    this.editing.set(at);
+  }
+
+  protected closeExam(): void {
+    this.editing.set(null);
+  }
 
   /**
-   * Patches one field of the cram, filling in a blank one on first touch. Kept
-   * here rather than in the template so enabling a cram cannot half-build it.
+   * Takes what the dialog vouched for: a new exam onto the end, an edited one
+   * back where it came from.
+   *
+   * Nothing is validated here on purpose. The dialog is the only way an exam is
+   * built, so a half-made one cannot reach the list — which is what lets a row
+   * be a summary rather than a form.
    */
-  protected updateCram(patch: Partial<CramState>): void {
-    const current: CramState = this.draft().cram ?? {
-      active: false,
-      scope: "",
-      examDate: "",
-      perSession: DEFAULT_CRAM_PER_SESSION,
-    };
-    this.update("cram", { ...current, ...patch });
+  protected saveExam(exam: CramState): void {
+    const at = this.editing();
+    if (at === null) return;
+
+    const crams = this.draft().crams;
+    this.update(
+      "crams",
+      at === NEW
+        ? [...crams, exam]
+        : crams.map((existing, index) => (index === at ? exam : existing)),
+    );
+    this.closeExam();
+  }
+
+  /** A row's one line: when the exam is, and at what pace. */
+  protected describeExam(cram: CramState): string {
+    return `${cram.examDate} · ${whenLabel(daysBetween(today(), cram.examDate))} · ${cram.perSession} a session`;
+  }
+
+  /**
+   * Drops an exam outright.
+   *
+   * The way to stop cramming, in place of the old on/off switch: with a list,
+   * an exam that is off is just an exam that is not there. Sitting the exam
+   * ends it on its own, so this is for the one cancelled, moved, or entered by
+   * mistake.
+   */
+  protected removeCram(index: number): void {
+    this.update(
+      "crams",
+      this.draft().crams.filter((_, at) => at !== index),
+    );
   }
 
   protected setTopicTier(tag: string, tier: Tier | null): void {
@@ -106,6 +158,19 @@ export class SettingsScreen {
       this.saving.set(false);
     }
   }
+}
+
+/**
+ * How far off an exam is, in words.
+ *
+ * A date that has been and gone is named as such rather than counted down from:
+ * it applies to nothing, and the row is the only place left that could say so.
+ */
+function whenLabel(daysLeft: number): string {
+  if (daysLeft > 1) return `in ${daysLeft} days`;
+  if (daysLeft === 1) return "tomorrow";
+  if (daysLeft === 0) return "today";
+  return "passed";
 }
 
 function messageOf(error: unknown): string {

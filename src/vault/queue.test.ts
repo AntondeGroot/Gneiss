@@ -5,7 +5,7 @@ import type { SessionLimits, Schedulable } from "./queue.js";
 import type { Tier } from "./types.js";
 
 const TODAY = "2026-08-01";
-const NO_CRAM = { cram: null, cramMinPasses: 3 };
+const NO_CRAM = { crams: [], cramMinPasses: 3 };
 const GENEROUS: SessionLimits = { newPerSession: 100, reviewsPerSession: 100, ...NO_CRAM };
 
 interface TestCard extends Schedulable {
@@ -138,7 +138,7 @@ function cramming(examDate: string, perSession = 4): SessionLimits {
   return {
     newPerSession: 2,
     reviewsPerSession: 100,
-    cram: { active: true, scope: EXAM_TAG, examDate, perSession },
+    crams: [{ scope: EXAM_TAG, examDate, perSession }],
   };
 }
 
@@ -194,5 +194,62 @@ describe("selectDue under a cram", () => {
     expect(selection.queue).toHaveLength(6);
     expect(selection.heldCrammed).toBe(0);
     expect(selection.heldBackNew).toBe(0);
+  });
+});
+
+describe("selectDue across an exam week", () => {
+  const ANGULAR = "#flashcards/Angular";
+
+  const week: SessionLimits = {
+    newPerSession: 2,
+    reviewsPerSession: 100,
+    crams: [
+      { scope: EXAM_TAG, examDate: "2026-08-20", perSession: 4 },
+      { scope: ANGULAR, examDate: "2026-08-22", perSession: 3 },
+    ],
+  };
+
+  it("gives each exam its own portion, side by side", () => {
+    const cards = [
+      ...Array.from({ length: 6 }, (_, i) => newCard(`exam${i}`, "standard", [EXAM_TAG])),
+      ...Array.from({ length: 6 }, (_, i) => newCard(`ng${i}`, "standard", [ANGULAR])),
+    ];
+
+    const selection = selectDue(cards, TODAY, week);
+
+    // 4 + 3, not one pooled portion: a distant exam must not eat the runway of
+    // a near one, and a near one must not starve the other.
+    expect(selection.queue).toHaveLength(7);
+    expect(selection.heldCrammed).toBe(5);
+  });
+
+  it("serves a card both exams want once, against the sooner one", () => {
+    const shared = Array.from({ length: 6 }, (_, i) =>
+      newCard(`both${i}`, "standard", [EXAM_TAG, ANGULAR]),
+    );
+
+    const selection = selectDue(shared, TODAY, week);
+
+    // The sooner exam's pace of 4 — not 7, which would serve the same material
+    // twice in one sitting.
+    expect(selection.queue).toHaveLength(4);
+  });
+
+  it("stops portioning for an exam that has been sat, leaving the others running", () => {
+    const cards = [
+      ...Array.from({ length: 6 }, (_, i) => newCard(`exam${i}`, "standard", [EXAM_TAG])),
+      ...Array.from({ length: 6 }, (_, i) => newCard(`ng${i}`, "standard", [ANGULAR])),
+    ];
+
+    // The day after the first exam. Its topic rejoins the ordinary pool, where
+    // the shared budget backfills it because nothing is due for review — while
+    // Angular keeps its own portion of 3, unaffected.
+    const selection = selectDue(cards, "2026-08-21", week);
+
+    const angular = selection.queue.filter((card) => card.id.startsWith("ng"));
+    expect(angular).toHaveLength(3);
+    expect(selection.heldCrammed).toBe(3);
+    // Nothing of the sat exam's is held back as crammed any more.
+    expect(selection.queue.filter((card) => card.id.startsWith("exam"))).toHaveLength(6);
   });
 });
