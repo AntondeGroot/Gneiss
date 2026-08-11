@@ -55,6 +55,68 @@ Redirects stderr into stdout.
     ]);
   });
 
+  it("reads a lone dot as a blank line, carrying the answer on past it", () => {
+    const md = `What is a merge commit?
+?
+A commit with two parents.
+.
+It records that two histories were joined.
+
+#flashcards/git
+`;
+
+    const { cards } = parseNote(md, "merge.md");
+
+    // Without the marker the answer ends at the paragraph break, and the second
+    // half is left in the note as prose belonging to no card.
+    expect(cards).toEqual([
+      {
+        front: "What is a merge commit?",
+        back: "A commit with two parents.\n\nIt records that two histories were joined.",
+      },
+    ]);
+  });
+
+  it("leaves a lone dot inside a fence as the line of output it is", () => {
+    const md = `What does \`ls -a\` show that \`ls\` does not?
+?
+\`\`\`
+.
+..
+.git
+\`\`\`
+
+#flashcards/shell
+`;
+
+    const { cards } = parseNote(md, "listing.md");
+
+    // The marker is prose punctuation, and code is not prose: here the dot is the
+    // current directory, and swapping it for a blank line would change what the
+    // command is shown to print.
+    expect(cards[0]?.back).toBe("```\n.\n..\n.git\n```");
+  });
+
+  it("reads a dot above the ? as a break in the question", () => {
+    const md = `Two branches have been joined into one history.
+.
+What kind of commit records that?
+?
+A merge commit.
+
+#flashcards/git
+`;
+
+    const { cards } = parseNote(md, "merge.md");
+
+    // A question is often context and then the ask, and the break between them is
+    // the reader's pause. Without it the setup would be a card of its own with no
+    // answer — dropped — and the question would arrive without what it refers to.
+    expect(cards[0]?.front).toBe(
+      "Two branches have been joined into one history.\n\nWhat kind of commit records that?",
+    );
+  });
+
   it("parses each inline :: line as its own card, trimming around the separator", () => {
     const md = `Redirect stdout to a file :: \`cmd > out.txt\`
 Count the lines in a file :: \`wc -l file\`

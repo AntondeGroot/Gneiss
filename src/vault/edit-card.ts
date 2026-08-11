@@ -12,6 +12,7 @@
  * lets a question be corrected without resetting its schedule.
  */
 
+import { markBlankLines } from "./blank-lines.js";
 import { locateCards } from "./parse-note.js";
 import type { CardLocation } from "./parse-note.js";
 
@@ -72,14 +73,37 @@ function commentIn(span: string[]): string {
 /**
  * The card as markdown, in the form it was already written in. A card keeps its
  * shape through an edit: an inline card does not silently become a block one.
+ *
+ * Unless it no longer fits. `::` is a one-line form, so an answer that has gained
+ * a line break cannot be written that way — the extra lines would land in the
+ * note as loose prose and be lost from the card. The form follows what the card
+ * now holds, which is the only reading under which nothing is dropped.
  */
 function renderCard(next: CardText, kind: CardLocation["kind"], comment: string): string[] {
-  if (kind === "inline") {
-    const line = `${next.front} :: ${next.back}`;
-    return [comment ? `${line} ${comment}` : line];
-  }
+  return kind === "inline" && fitsOneLine(next)
+    ? renderInline(next, comment)
+    : renderBlock(next, comment);
+}
 
-  const lines = [next.front, BLOCK_SEPARATOR, ...next.back.split("\n")];
+function fitsOneLine(next: CardText): boolean {
+  return !next.front.includes("\n") && !next.back.includes("\n");
+}
+
+function renderInline(next: CardText, comment: string): string[] {
+  const line = `${next.front} :: ${next.back}`;
+  return [comment ? `${line} ${comment}` : line];
+}
+
+/**
+ * The block form, with blank lines written as the marker that survives a re-read
+ * — an unmarked one would end the card and cut the rest of the answer loose.
+ */
+function renderBlock(next: CardText, comment: string): string[] {
+  const lines = [
+    ...markBlankLines(next.front).split("\n"),
+    BLOCK_SEPARATOR,
+    ...markBlankLines(next.back).split("\n"),
+  ];
   return comment ? [...lines, comment] : lines;
 }
 

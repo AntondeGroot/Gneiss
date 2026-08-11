@@ -32,6 +32,15 @@ describe("splitCard", () => {
     ]);
   });
 
+  it("keeps a break between two paragraphs inside the run of prose", () => {
+    const back = "A commit with two parents.\n\nIt records that two histories were joined.";
+
+    // One segment, not two: prose is rendered pre-wrapped, so the blank line is
+    // the gap on the card. Splitting here would hand back two paragraphs with
+    // nothing to say how far apart they stood — which is all the marker asked for.
+    expect(shape(back)).toEqual([{ kind: "text", text: back }]);
+  });
+
   it("pulls out a pasted image, keeping the prose either side", () => {
     const back = "The stages run left to right.\n![[Pasted image 20260104.png]]\nThat is all.";
 
