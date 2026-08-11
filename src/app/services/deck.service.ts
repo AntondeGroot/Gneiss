@@ -31,6 +31,7 @@ import { ClockService, today } from "./clock.service";
 import { DeckCacheService } from "./deck-cache.service";
 import { ReminderService } from "./reminder.service";
 import type { VaultSource } from "./vault-source";
+import { NoteWriter } from "./note-writer";
 
 /** A parsed card plus everything scheduling needs to act on it. */
 export interface DeckCard {
@@ -63,6 +64,7 @@ export class DeckService {
    * staying frozen on the day it was first computed.
    */
   private readonly clock = inject(ClockService);
+  private readonly writer = inject(NoteWriter);
   private source: VaultSource | null = null;
   private readonly cards = signal<readonly DeckCard[]>([]);
   /**
@@ -79,7 +81,7 @@ export class DeckService {
   readonly config = signal<GneissConfig>(DEFAULT_CONFIG);
 
   /** Set when a write to the vault failed, so the UI can say so rather than lie. */
-  readonly writeError = signal<string | null>(null);
+  readonly writeError = this.writer.error;
 
   /** True while a vault is still being walked, so the screen can show progress. */
   readonly reading = signal(false);
@@ -321,7 +323,7 @@ export class DeckService {
     };
     this.replace(card, edited);
 
-    await this.persist(() =>
+    await this.writer.write(card.note, () =>
       this.source?.editNote(card.note, (md) => withEditedCard(md, card.front, next)),
     );
   }
@@ -330,7 +332,9 @@ export class DeckService {
   async deleteCard(card: DeckCard): Promise<void> {
     this.cards.update((cards) => cards.filter((existing) => existing.id !== card.id));
 
-    await this.persist(() => this.source?.editNote(card.note, (md) => withoutCard(md, card.front)));
+    await this.writer.write(card.note, () =>
+      this.source?.editNote(card.note, (md) => withoutCard(md, card.front)),
+    );
   }
 
   /**
@@ -390,8 +394,17 @@ export class DeckService {
       ),
     );
 
-    await this.persist(() => this.source?.editNote(note, (md) => withTier(md, tier)));
+    await this.writer.write(note, () => this.source?.editNote(note, (md) => withTier(md, tier)));
     this.cache.save(this.vaultName(), this.config(), this.cards(), this.topics());
+  }
+
+  /**
+   * Whether a note is being written right now. Asked before handing it to
+   * Obsidian: opening a file Gneiss is part-way through rewriting is how the two
+   * come to hold different versions, which is a conflict for the vault's sync.
+   */
+  writing(note: string): boolean {
+    return this.writer.writing(note);
   }
 
   /** Where a note lives in the vault, and the link that opens it in Obsidian. */
@@ -418,7 +431,7 @@ export class DeckService {
     if (this.reading()) this.gradedWhileReading.set(card.id, review);
     this.cache.save(this.source?.vaultName() ?? "", this.config(), this.cards(), this.topics());
 
-    await this.persist(async () => {
+    await this.writer.write(card.note, async () => {
       await this.source?.writeReviewState(card.note, card.front, review);
       await this.recordReviewDay();
     });
@@ -428,21 +441,6 @@ export class DeckService {
     this.cards.update((cards) =>
       cards.map((existing) => (existing.id === card.id ? next : existing)),
     );
-  }
-
-  /**
-   * Runs a write against the vault, recording a failure rather than throwing it
-   * at the screen. The in-memory change is never rolled back: the user's action
-   * genuinely happened, and discarding it would be worse than a note that is
-   * briefly out of date, which the surfaced error tells them about.
-   */
-  private async persist(write: () => Promise<unknown> | undefined): Promise<void> {
-    try {
-      await write();
-      this.writeError.set(null);
-    } catch (error) {
-      this.writeError.set(error instanceof Error ? error.message : String(error));
-    }
   }
 
   /** Advances the streak on the first review of a new day, and persists it. */

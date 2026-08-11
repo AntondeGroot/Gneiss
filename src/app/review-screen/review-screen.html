@@ -54,6 +54,7 @@
     [folder]="link().folder"
     [noteUri]="link().uri"
     [notePath]="card.note"
+    [saving]="saving()"
     (save)="saveEdit($event)"
     (remove)="deleteCard()"
     (dismissed)="closeEditor()"

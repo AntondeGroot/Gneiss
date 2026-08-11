@@ -27,6 +27,14 @@ export class CardEditor {
   readonly folder = input("");
   readonly noteUri = input("");
   readonly notePath = input("");
+  /**
+   * Whether the note is being written at this moment.
+   *
+   * The way out to Obsidian is withheld while it is. Opening the note there
+   * mid-write is how two programs come to hold different versions of one file,
+   * and the sync the vault rides on can only keep both.
+   */
+  readonly saving = input(false);
 
   readonly save = output<CardText>();
   readonly remove = output<void>();

@@ -524,6 +524,56 @@ a listener left behind by a failed walk would double every note on the next read
 - `android/` and `ios/` are generated and hold a copy of the built web bundle, so both are
   excluded from lint and formatting.
 
+### Writing into a folder something else is syncing (DECIDED)
+
+Every write Gneiss makes lands in a folder Obsidian Sync, Dropbox or Syncthing is watching,
+and all of them keep **both** versions of a file whenever the two sides moved since the tool
+last looked. Gneiss cannot stop the other side moving — the vault is not its to own. What it
+can do is **not be a side that moved for no reason**, and it was one in three ways. All three
+were found from a real conflicted copy on a phone, and the surprise was how much of it was
+self-inflicted.
+
+**A no-op counted as an edit.** `editNote` wrote `transform(contents)` unconditionally, and
+the transforms hand the note straight back when no card carries that question —
+`withReviewState`, `withEditedCard` and `withoutCard` all do, and a grade re-applied after a
+vault read is often byte-identical. Writing those touched the file's timestamp with nothing
+to show for it, which can only ever manufacture a conflict; it can never resolve one.
+
+**A note written on Windows came back rewritten end to end.** The transforms work in `\n` and
+normalise the whole file on the way in, so grading one card produced a diff across every line
+of the note — a bigger conflict, and an unreadable one.
+
+Both are the same mistake, writing more than was meant, so both are answered in one place:
+`editedNote(original, transform)` returns the rewrite **in the note's own line endings**, or
+`null` when nothing changed and the right thing to write is nothing at all. All three sources
+call it, because it is the point that knows what the file said before.
+
+**Two writes to one note could interleave.** Each is a read-modify-write against the file as
+it is on disk, so two that overlap both read the note *before* either has written it — and
+the second puts back a copy that never saw the first. A grade quietly undone by an edit that
+landed at the same moment. `NoteWriter` chains them **per note**, so a write to one file is
+not held up by a write to another. Its stored tail must never carry a rejection: one failed
+write would otherwise settle every write queued behind it on that note without any being
+attempted, and that note would stop being written to for the rest of the session. Failures
+are recorded rather than thrown at the screen — the in-memory change is never rolled back,
+because the user's action genuinely happened. `DeckService` delegates to it and no longer
+carries that plumbing itself.
+
+**The handoff to Obsidian is sequenced.** The "Open in Obsidian" link writes nothing — it is
+an `obsidian://` href — but the app used to fire the save and forget it (`void
+deck.editCard(…)`), closing the editor while the file was still being rewritten, with its own
+link right there. Saving now waits for the note to be written before the editor closes, and
+while a write is in flight the footer says *Saving to the note…* in place of the link. A file
+two programs are inside at once is how they come to hold different versions of it.
+
+**What this does not fix, and knowingly.** If Obsidian is open on that note anywhere while
+Gneiss writes it, both sides genuinely have a version and the sync tool is right to keep both.
+**OPEN:** Gneiss writes a note on *every grade*, which is far more often than a person edits
+notes, so it is likely to be one side of any conflict. Holding grades in memory and flushing
+per note at the end of a session would cut that by an order of magnitude — but it contradicts
+*grades go straight into the notes* above, and is parked until a sync log says the other
+writer is a second device rather than something still fixable here.
+
 ### The trade this accepts
 
 This is route 2 below. It deliberately gives up the *easiest* vault access (route 1, the

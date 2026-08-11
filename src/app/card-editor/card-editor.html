@@ -54,7 +54,11 @@
 
   <footer class="where">
     <span class="path">{{ folder() || "vault root" }}</span>
-    @if (noteUri()) {
+    @if (saving()) {
+    <!-- Said rather than simply removed: the link vanishing without a word reads
+         as the app losing track of the note, which is the opposite of the truth. -->
+    <span class="unavailable">Saving to the note…</span>
+    } @else if (noteUri()) {
     <a class="open" [href]="noteUri()">Open in Obsidian ↗</a>
     } @else {
     <span class="unavailable">{{ notePath() }}</span>
