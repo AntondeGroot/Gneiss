@@ -145,11 +145,15 @@ export class ReviewSessionService {
    * The queue was frozen when the session began, so it still holds the old text.
    * Without this the card would go on showing the typo that was just fixed.
    */
-  edit(next: CardText): void {
+  async edit(next: CardText): Promise<void> {
     const card = this.current();
     if (!card) return;
 
-    void this.deck.editCard(card, next);
+    // The write is started, not awaited, before the queue is corrected: the card
+    // on screen must not go on showing the typo while the file is being written.
+    // The promise is handed back so the caller can wait before moving on, which
+    // is what keeps the note from being opened elsewhere mid-write.
+    const written = this.deck.editCard(card, next);
     this.queue.update((cards) =>
       cards.map((existing) =>
         existing.id === card.id
@@ -158,6 +162,7 @@ export class ReviewSessionService {
       ),
     );
     this.persist();
+    await written;
   }
 
   /** Drops the card from the note and from the queue. */

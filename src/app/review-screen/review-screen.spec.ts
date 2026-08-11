@@ -2,10 +2,64 @@ import { TestBed } from "@angular/core/testing";
 import { Router, provideRouter } from "@angular/router";
 
 import { DEFAULT_CONFIG, parseNote } from "../../vault";
+import type { GneissConfig, ParsedNote } from "../../vault";
 import { DeckService } from "../services/deck.service";
+import type { NoteBatch, VaultSource } from "../services/vault-source";
 import { ReviewScreen } from "./review-screen";
 
 const THREE = "Q1? :: A1\n\nQ2? :: A2\n\nQ3? :: A3\n\n#flashcards/git\n";
+
+/**
+ * A vault whose write can be caught in flight.
+ *
+ * `editNote` hangs until `finish()` is called, which is the only way to observe
+ * the window this test is about — on a real device it is the moment between
+ * tapping Save and the file on disk having changed.
+ */
+class HeldVault implements VaultSource {
+  readonly label = "Held vault";
+  private finishWrite: (() => void) | null = null;
+
+  isAvailable(): boolean {
+    return true;
+  }
+  canWrite(): boolean {
+    return true;
+  }
+  open(): Promise<void> {
+    return Promise.resolve();
+  }
+  readNotes(onBatch?: NoteBatch): Promise<ParsedNote[]> {
+    const notes = [parseNote(THREE, "git.md")];
+    onBatch?.(notes);
+    return Promise.resolve(notes);
+  }
+  writeReviewState(): Promise<void> {
+    return Promise.resolve();
+  }
+  editNote(): Promise<void> {
+    return new Promise((resolve) => {
+      this.finishWrite = resolve;
+    });
+  }
+  vaultName(): string {
+    return "vault";
+  }
+  readAttachment(): Promise<string> {
+    return Promise.resolve("");
+  }
+  readConfig(): Promise<GneissConfig> {
+    return Promise.resolve(DEFAULT_CONFIG);
+  }
+  writeConfig(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  /** Lets the write that is waiting go through. */
+  finish(): void {
+    this.finishWrite?.();
+  }
+}
 
 /**
  * Storage the tests own, cleared between them.
@@ -154,12 +208,44 @@ describe("ReviewScreen editing", () => {
     );
   }
 
+  /** Drains the promises a save runs through before the editor can close. */
+  function settled(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
   function type(html: HTMLElement, text: string): void {
     const box = html.querySelector<HTMLTextAreaElement>("textarea[name='front']");
     if (!box) throw new Error("no question box");
     box.value = text;
     box.dispatchEvent(new Event("input"));
   }
+
+  it("keeps the editor open until the note has actually been written", async () => {
+    const vault = new HeldVault();
+    const { fixture, deck, html } = await shown();
+    await deck.open(vault, "vault");
+
+    press(html, "button.edit");
+    fixture.detectChanges();
+    type(html, "A better question?");
+    fixture.detectChanges();
+
+    press(html, "gn-card-editor button.primary");
+    await settled();
+    fixture.detectChanges();
+
+    // The write is still in flight. Saving used to be fired and forgotten, so the
+    // editor shut here — with its own link to open the note in Obsidian, which is
+    // handing a file to another program in the middle of rewriting it.
+    expect(html.querySelector("gn-card-editor")).not.toBeNull();
+    expect(html.textContent).toContain("Saving to the note");
+
+    vault.finish();
+    await settled();
+    fixture.detectChanges();
+
+    expect(html.querySelector("gn-card-editor")).toBeNull();
+  });
 
   it("closes on a second press, having opened on the first", async () => {
     const { fixture, html } = await shown();
@@ -198,6 +284,9 @@ describe("ReviewScreen editing", () => {
     fixture.detectChanges();
 
     inDialog(html, "Save")?.click();
+    // Closing now waits on the note actually being written, so the editor is
+    // still up for as long as the write is in flight.
+    await fixture.whenStable();
     fixture.detectChanges();
 
     expect(html.querySelector("gn-card-editor")).toBeNull();

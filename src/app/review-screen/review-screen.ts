@@ -42,6 +42,12 @@ export class ReviewScreen {
   /** The open editor, so the ✎ can ask it whether closing is safe. */
   private readonly editor = viewChild(CardEditor);
 
+  /** Whether this card's note is being written, so the editor can hold its link. */
+  protected readonly saving = computed(() => {
+    const card = this.current();
+    return card !== null && this.deck.writing(card.note);
+  });
+
   /** Where the note lives, and the link that hands over to Obsidian. */
   protected readonly link = computed(() => {
     const card = this.current();
@@ -97,8 +103,15 @@ export class ReviewScreen {
     this.editing.set(false);
   }
 
-  protected saveEdit(next: CardText): void {
-    this.session.edit(next);
+  /**
+   * Stays open until the note has actually been written.
+   *
+   * The write used to be fired and forgotten, so the editor shut while the file
+   * was still being rewritten — and its own "Open in Obsidian" link was right
+   * there to hand the half-written note to another program.
+   */
+  protected async saveEdit(next: CardText): Promise<void> {
+    await this.session.edit(next);
     this.closeEditor();
   }
 
