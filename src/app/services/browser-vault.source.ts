@@ -1,6 +1,13 @@
 import { Injectable } from "@angular/core";
 
-import { DEFAULT_CONFIG, formatConfig, parseConfig, parseNote, withReviewState } from "../../vault";
+import {
+  DEFAULT_CONFIG,
+  editedNote,
+  formatConfig,
+  parseConfig,
+  parseNote,
+  withReviewState,
+} from "../../vault";
 import type { GneissConfig, ParsedNote, ReviewState } from "../../vault";
 import type { NoteBatch, VaultSource } from "./vault-source";
 
@@ -66,7 +73,10 @@ export class BrowserVaultSource implements VaultSource {
     if (!this.writable) return;
 
     const file = await this.fileAt(notePath);
-    await write(file, transform(await (await file.getFile()).text()));
+    const edited = editedNote(await (await file.getFile()).text(), transform);
+    if (edited === null) return;
+
+    await write(file, edited);
   }
 
   /** The folder the user picked, which is the vault root by our own convention. */
