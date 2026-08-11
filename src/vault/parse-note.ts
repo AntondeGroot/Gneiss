@@ -7,13 +7,14 @@
  * Fenced code blocks inside an answer are passed through intact.
  */
 
+import { BLANK_LINE_MARKER } from "./blank-lines.js";
+import { countFences } from "./fences.js";
 import { findTierOverride, findTopicTags } from "./tags.js";
 import { parseReviewStates, stripReviewComments } from "./review-state.js";
 import type { ParsedCard, ParsedNote } from "./types.js";
 
 const BLOCK_SEPARATOR = "?";
 const INLINE_SEPARATOR = "::";
-const FENCE = "```";
 const FRONTMATTER_DELIMITER = "---";
 const HEADING_MARKER = /^#+\s*/;
 const TIER_TAG = /#(core|optional)\b/gi;
@@ -122,10 +123,6 @@ class CardScanner {
   private consume(line: string): void {
     const trimmed = line.trim();
 
-    // Counted, not matched at the start: a fence glued to the end of a sentence
-    // still opens a block, and a line holding both an opening and a closing one
-    // leaves the card outside code where it started. Getting this wrong ends the
-    // card at the next blank line and truncates its answer.
     const fences = countFences(line);
     if (fences > 0) {
       if (fences % 2 === 1) this.insideFence = !this.insideFence;
@@ -142,6 +139,12 @@ class CardScanner {
     }
     if (trimmed === BLOCK_SEPARATOR) {
       this.startBlockAnswer();
+      return;
+    }
+    // The blank line the author asked for, taken as one — see `blank-lines`. It
+    // is content, so the card carries on where a real blank line would end it.
+    if (trimmed === BLANK_LINE_MARKER) {
+      this.take("");
       return;
     }
     if (trimmed === "") {
@@ -210,14 +213,6 @@ class CardScanner {
     this.cards.push({ front, back, ...(review ? { review } : {}) });
     this.locations.push(location);
   }
-}
-
-function countFences(line: string): number {
-  let count = 0;
-  for (let at = line.indexOf(FENCE); at !== -1; at = line.indexOf(FENCE, at + FENCE.length)) {
-    count++;
-  }
-  return count;
 }
 
 function cleanFront(text: string): string {

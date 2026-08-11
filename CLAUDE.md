@@ -279,6 +279,41 @@ editing a question resets its history. A stable per-card ID in the note
 (e.g. an appended `^cardid` block ref, which is what the Obsidian SR plugin does)
 would be more robust.
 
+### A lone dot is a blank line (DECIDED)
+
+A blank line is what *ends* a card, so a card's own text could never hold one — an answer
+written with a paragraph break in it was read as a short answer followed by unrelated prose,
+and half of it silently left the deck. **A line holding nothing but `.` is the break.**
+Typing `<p>` was the alternative and was rejected as too much ceremony for something written
+constantly; a dot is one keystroke and reads as a full stop, which is roughly what it is.
+
+The marker is a **storage detail that stops at the edge of the vault.** `parse-note` expands it
+into the blank line it stands for on the way in, `markBlankLines` puts it back on the way out.
+Nothing in between meets one: it is not typed into the card editor and never shown on a card, so
+it is seen only by someone editing the markdown directly — which is the one place it has to be
+typed. It applies to questions as much as answers; a question is often context, a break, then
+the ask.
+
+Three rules fall out of round-tripping, and each is tested:
+
+- **Inside a fenced block a dot is left alone.** There, a line reading `.` is the current
+  directory in some `ls -a` output — swapping it for a blank line changes what the card claims a
+  command prints. `countFences` is therefore shared (`fences.ts`) rather than counted twice: the
+  reader and the writer disagreeing about which lines are code is a note that changes shape when
+  it is saved.
+- **A break at either edge is dropped, not marked.** It separates nothing, and parsing trims a
+  card's edges anyway — so a dot there is punctuation written into the user's note that the next
+  read throws straight away. The trim lives in `markBlankLines`, not in the editor that happens
+  to call `.trim()` today.
+- **An inline card whose text gains a line break is rewritten as a block card.** `::` holds one
+  line, so keeping the form would leave everything after the first line lying in the note as
+  loose prose — gone from the card. This narrows *a card keeps its shape through an edit* to
+  where the shape can still hold it. Pre-existing, but blank lines make it easy to trigger.
+
+**Known ambiguity, accepted:** a card whose prose really is a single full stop on its own line
+comes back as a blank line. An escape would put a second convention into notes to buy back
+something nobody writes.
+
 ## Vault conventions this assumes
 
 These come from surveying an existing SR-plugin vault and are what the decisions above
