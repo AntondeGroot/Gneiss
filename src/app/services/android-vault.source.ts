@@ -1,7 +1,14 @@
 import { Injectable } from "@angular/core";
 import { Capacitor } from "@capacitor/core";
 
-import { DEFAULT_CONFIG, formatConfig, parseConfig, parseNote, withReviewState } from "../../vault";
+import {
+  DEFAULT_CONFIG,
+  editedNote,
+  formatConfig,
+  parseConfig,
+  parseNote,
+  withReviewState,
+} from "../../vault";
 import type { GneissConfig, ParsedNote, ReviewState } from "../../vault";
 import { VaultAccess } from "./vault-access.plugin";
 import type { NoteBatch, VaultSource } from "./vault-source";
@@ -121,7 +128,11 @@ export class AndroidVaultSource implements VaultSource {
   async editNote(notePath: string, transform: (md: string) => string): Promise<void> {
     const uri = this.require();
     const { contents } = await VaultAccess.readFile({ uri, path: notePath });
-    await VaultAccess.writeFile({ uri, path: notePath, contents: transform(contents) });
+
+    const edited = editedNote(contents, transform);
+    if (edited === null) return;
+
+    await VaultAccess.writeFile({ uri, path: notePath, contents: edited });
   }
 
   vaultName(): string {

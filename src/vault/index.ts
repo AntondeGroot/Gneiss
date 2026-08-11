@@ -47,3 +47,4 @@ export { folderOf, obsidianNoteUri } from "./obsidian-link.js";
 export { NEVER, nextStreak, standingStreak } from "./streak.js";
 export { selectDue } from "./queue.js";
 export type { SessionLimits, DueSelection, Schedulable } from "./queue.js";
+export { editedNote } from "./write-note.js";

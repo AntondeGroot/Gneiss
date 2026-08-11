@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 
-import { parseNote, withReviewState } from "../../vault";
+import { editedNote, parseNote, withReviewState } from "../../vault";
 import type { ParsedNote, ReviewState } from "../../vault";
 import type { NoteBatch } from "./vault-source";
 
@@ -89,9 +89,12 @@ export class VaultService {
       encoding: Encoding.UTF8,
     });
 
+    const edited = editedNote(await asText(data), transform);
+    if (edited === null) return;
+
     await Filesystem.writeFile({
       path: full,
-      data: transform(await asText(data)),
+      data: edited,
       directory: this.directory,
       encoding: Encoding.UTF8,
     });
