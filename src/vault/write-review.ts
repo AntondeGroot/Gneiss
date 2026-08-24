@@ -7,7 +7,7 @@
  * truth and has no backup.
  */
 
-import { locateCards } from "./parse-note.js";
+import { locateCard } from "./parse-note.js";
 import type { CardLocation } from "./parse-note.js";
 import { formatReviewComment } from "./review-state.js";
 import type { ReviewState } from "./types.js";
@@ -16,13 +16,22 @@ const COMMENT = /<!--SR:(?:![\d-]+,\d+,\d+)+-->/;
 const COMMENT_ONLY_LINE = /^\s*<!--SR:(?:![\d-]+,\d+,\d+)+-->\s*$/;
 
 /**
- * Records `review` against the card whose question is `front`.
+ * Records `review` against the card whose question is `front`, and which is the
+ * `occurrence`-th card in the note asking it.
  *
  * Returns the note unchanged when no such card exists — an edited or deleted
- * question must never cause state to be written against the wrong card.
+ * question must never cause state to be written against the wrong card. The
+ * occurrence is part of that refusal: a note asking the same question twice
+ * holds two cards, and matching on the text alone sent both grades to the first
+ * of them, leaving the second unable to record one at all.
  */
-export function withReviewState(md: string, front: string, review: ReviewState): string {
-  const at = locateCards(md).find((location) => location.front === front);
+export function withReviewState(
+  md: string,
+  front: string,
+  occurrence: number,
+  review: ReviewState,
+): string {
+  const at = locateCard(md, front, occurrence);
   if (!at) return md;
 
   const lines = md.replace(/\r\n/g, "\n").split("\n");
@@ -38,7 +47,7 @@ function applyAt(lines: string[], at: CardLocation, comment: string): string[] {
   if (COMMENT.test(existing)) {
     return replaceLine(lines, at.answerEndLine, existing.replace(COMMENT, comment));
   }
-  return insertComment(lines, at, comment, existing);
+  return insertComment(lines, at, comment);
 }
 
 function replaceLine(lines: string[], index: number, replacement: string): string[] {
@@ -48,18 +57,16 @@ function replaceLine(lines: string[], index: number, replacement: string): strin
 }
 
 /**
- * Inline cards take the comment on the same line, block cards on the line below —
- * matching where the SR plugin puts it, so notes stay readable by both.
+ * The comment goes on its own line after the card — where the SR plugin puts it,
+ * for inline and block cards alike, so notes stay readable by both.
+ *
+ * **CORRECTED:** inline cards used to take it at the end of their own line. The
+ * plugin only writes there when its `cardCommentOnSameLine` setting is on, which
+ * is off by default, so a plugin-written vault had every inline card's state on
+ * the line below — unread, and then overwritten with a fresh schedule as if the
+ * card had never been seen.
  */
-function insertComment(
-  lines: string[],
-  at: CardLocation,
-  comment: string,
-  existing: string,
-): string[] {
-  if (at.kind === "inline") {
-    return replaceLine(lines, at.answerEndLine, `${existing} ${comment}`);
-  }
+function insertComment(lines: string[], at: CardLocation, comment: string): string[] {
   const copy = [...lines];
   copy.splice(at.answerEndLine + 1, 0, comment);
   return copy;

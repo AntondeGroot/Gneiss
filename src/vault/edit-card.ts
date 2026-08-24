@@ -13,7 +13,7 @@
  */
 
 import { markBlankLines } from "./blank-lines.js";
-import { locateCards } from "./parse-note.js";
+import { locateCard } from "./parse-note.js";
 import type { CardLocation } from "./parse-note.js";
 
 const COMMENT = /<!--SR:(?:![\d-]+,\d+,\d+)+-->/;
@@ -27,11 +27,19 @@ export interface CardText {
 /**
  * Replaces one card's question and answer, keeping its review state.
  *
- * Returns the note unchanged when no card has that question — the same refusal
+ * Returns the note unchanged when the note holds no such card — the same refusal
  * `withReviewState` makes, so a stale front can never rewrite the wrong card.
+ * `occurrence` tells two cards asking the same question apart.
  */
-export function withEditedCard(md: string, front: string, next: CardText): string {
-  return rewriteSpan(md, front, (at, span) => renderCard(next, at.kind, commentIn(span)));
+export function withEditedCard(
+  md: string,
+  front: string,
+  occurrence: number,
+  next: CardText,
+): string {
+  return rewriteSpan(md, front, occurrence, (at, span) =>
+    renderCard(next, at.kind, commentIn(span)),
+  );
 }
 
 /**
@@ -40,18 +48,19 @@ export function withEditedCard(md: string, front: string, next: CardText): strin
  * Only the card goes: surrounding prose, headings and the note's tag block are
  * not the app's to delete.
  */
-export function withoutCard(md: string, front: string): string {
-  return rewriteSpan(md, front, () => []);
+export function withoutCard(md: string, front: string, occurrence: number): string {
+  return rewriteSpan(md, front, occurrence, () => []);
 }
 
 /** Applies `replace` to the card's lines, leaving the rest of the note alone. */
 function rewriteSpan(
   md: string,
   front: string,
+  occurrence: number,
   replace: (at: CardLocation, span: string[]) => string[],
 ): string {
   const normalized = md.replace(/\r\n/g, "\n");
-  const at = locateCards(normalized).find((location) => location.front === front);
+  const at = locateCard(normalized, front, occurrence);
   if (!at) return md;
 
   const lines = normalized.split("\n");
@@ -89,9 +98,10 @@ function fitsOneLine(next: CardText): boolean {
   return !next.front.includes("\n") && !next.back.includes("\n");
 }
 
+/** The comment on its own line below, as the SR plugin writes it. */
 function renderInline(next: CardText, comment: string): string[] {
   const line = `${next.front} :: ${next.back}`;
-  return [comment ? `${line} ${comment}` : line];
+  return comment ? [line, comment] : [line];
 }
 
 /**

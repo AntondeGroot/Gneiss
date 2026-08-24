@@ -204,7 +204,7 @@ describe("ReviewSessionService when the vault changes underneath", () => {
     // The position counts cards, not identities, so dropping two from behind
     // the reader has to move it back by two — otherwise pruning skips as many
     // cards as it removes.
-    expect(session.current()?.id).toBe("shell.md::Q4?");
+    expect(session.current()?.id).toBe("shell.md::Q4?#0");
     expect(session.remaining()).toBe(2);
   });
 });

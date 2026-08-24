@@ -22,6 +22,16 @@ export interface ReviewState {
 export interface ParsedCard {
   front: string;
   back: string;
+  /**
+   * Which card with this question this is, counting from the top of the note.
+   *
+   * Nearly always 0. It exists for the note that asks the same question twice —
+   * two genuinely different cards, since the answers differ — which the question
+   * text alone cannot tell apart. Without it both cards share an identity, the
+   * deck keeps one and the vault writes to the other, and the one on screen can
+   * never record a grade.
+   */
+  occurrence: number;
   /** Present only when the note already carried SR state for this card. */
   review?: ReviewState;
 }

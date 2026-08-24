@@ -14,6 +14,15 @@ import { parseReviewStates, stripReviewComments } from "./review-state.js";
 import type { ParsedCard, ParsedNote } from "./types.js";
 
 const BLOCK_SEPARATOR = "?";
+/**
+ * A line holding nothing but review state.
+ *
+ * Where the Obsidian SR plugin puts an inline card's `<!--SR:-->` comment: on
+ * the line *below* the card, not at the end of it. Reading it anywhere else
+ * imported every inline card in a plugin-written vault as never-seen — a card
+ * learned months ago arriving as new material.
+ */
+const COMMENT_ONLY_LINE = /^\s*<!--SR:(?:![\d-]+,\d+,\d+)+-->\s*$/;
 const INLINE_SEPARATOR = "::";
 const FRONTMATTER_DELIMITER = "---";
 const HEADING_MARKER = /^#+\s*/;
@@ -22,6 +31,8 @@ const TIER_TAG = /#(core|optional)\b/gi;
 /** Where a card sits in the note, so review state can be written back to it. */
 export interface CardLocation {
   readonly front: string;
+  /** Which card with this question this is — see `ParsedCard.occurrence`. */
+  readonly occurrence: number;
   /** Inline cards carry their comment on the same line; block cards on the next. */
   readonly kind: "inline" | "block";
   /**
@@ -33,10 +44,11 @@ export interface CardLocation {
   /**
    * Index into the note's lines, counting from the top of the file.
    *
-   * Note this is the last line the card *occupies*, which for a block card that
+   * Note this is the last line the card *occupies*, which for a card that
    * already carries review state is the `<!--SR:-->` line rather than the last
-   * line of prose — the scanner takes that line as content and strips it from
-   * the answer afterwards.
+   * line of prose. A block card's comment is taken as content by the scanner and
+   * stripped from the answer afterwards; an inline card's is the line below,
+   * which the scanner looks ahead to.
    */
   readonly answerEndLine: number;
 }
@@ -64,6 +76,23 @@ export function parseNote(md: string, filename: string): ParsedNote {
  */
 export function locateCards(md: string): CardLocation[] {
   return scanBody((md ?? "").replace(/\r\n/g, "\n")).locations;
+}
+
+/**
+ * The one card a write is meant for, or nothing when the note no longer holds it.
+ *
+ * Question text alone is not an identity: a note may ask the same thing twice,
+ * and matching on the text would send every write to the first of them. The
+ * occurrence is what separates them, and it is counted the same way here as by
+ * `parseNote`, so the deck and the note can never disagree about which card is
+ * which.
+ */
+export function locateCard(
+  md: string,
+  front: string,
+  occurrence: number,
+): CardLocation | undefined {
+  return locateCards(md).find((at) => at.front === front && at.occurrence === occurrence);
 }
 
 function scanBody(normalized: string): ScanResult {
@@ -99,6 +128,7 @@ function bodyLines(md: string): string[] {
  * whenever a complete question/answer pair closes.
  */
 class CardScanner {
+  private lines: string[] = [];
   private readonly cards: ParsedCard[] = [];
   private readonly locations: CardLocation[] = [];
   private buffer: string[] = [];
@@ -110,8 +140,11 @@ class CardScanner {
   /** Where the current buffer began, and where the pending question began. */
   private bufferStartLine = -1;
   private pendingFrontLine = -1;
+  /** A comment line already claimed by the inline card above it. */
+  private commentLine = -1;
 
   scan(lines: string[]): ScanResult {
+    this.lines = lines;
     for (const [index, line] of lines.entries()) {
       this.lineIndex = index;
       this.consume(line);
@@ -121,18 +154,11 @@ class CardScanner {
   }
 
   private consume(line: string): void {
-    const trimmed = line.trim();
+    // Already read as the card above it, and not content of anything else.
+    if (this.lineIndex === this.commentLine) return;
+    if (this.takeFenced(line)) return;
 
-    const fences = countFences(line);
-    if (fences > 0) {
-      if (fences % 2 === 1) this.insideFence = !this.insideFence;
-      this.take(line);
-      return;
-    }
-    if (this.insideFence) {
-      this.take(line);
-      return;
-    }
+    const trimmed = line.trim();
     if (this.startsInlineCard(trimmed)) {
       this.takeInlineCard(line);
       return;
@@ -154,6 +180,23 @@ class CardScanner {
     this.take(line);
   }
 
+  /**
+   * Inside a fenced block every line is content, whatever it looks like: a bare
+   * `?` there is shell output, not a card's separator.
+   */
+  private takeFenced(line: string): boolean {
+    const fences = countFences(line);
+    if (fences > 0) {
+      if (fences % 2 === 1) this.insideFence = !this.insideFence;
+      this.take(line);
+      return true;
+    }
+    if (!this.insideFence) return false;
+
+    this.take(line);
+    return true;
+  }
+
   private take(line: string): void {
     if (this.buffer.length === 0) this.bufferStartLine = this.lineIndex;
     this.buffer.push(line);
@@ -164,15 +207,27 @@ class CardScanner {
     return this.pendingFront === null && trimmed.includes(INLINE_SEPARATOR);
   }
 
+  /**
+   * An inline card, plus the review comment on the line below it if there is one.
+   *
+   * The card's span stretches over that line, so everything downstream — reading
+   * the state, rewriting the card, removing it — treats the comment as part of
+   * the card rather than as loose text that happens to follow it.
+   */
   private takeInlineCard(line: string): void {
     const separator = line.indexOf(INLINE_SEPARATOR);
     const front = cleanFront(line.slice(0, separator));
-    const rest = line.slice(separator + INLINE_SEPARATOR.length);
+    const below = this.lines[this.lineIndex + 1] ?? "";
+    const carriesComment = COMMENT_ONLY_LINE.test(below);
+    const rest = line.slice(separator + INLINE_SEPARATOR.length) + (carriesComment ? below : "");
+
+    if (carriesComment) this.commentLine = this.lineIndex + 1;
     this.addCard(front, stripReviewComments(rest).trim(), parseReviewStates(rest), {
       front,
+      occurrence: this.occurrenceOf(front),
       kind: "inline",
       startLine: this.lineIndex,
-      answerEndLine: this.lineIndex,
+      answerEndLine: carriesComment ? this.lineIndex + 1 : this.lineIndex,
     });
     this.buffer = [];
   }
@@ -193,6 +248,7 @@ class CardScanner {
       const raw = this.buffer.join("\n");
       this.addCard(this.pendingFront, stripReviewComments(raw).trim(), parseReviewStates(raw), {
         front: this.pendingFront,
+        occurrence: this.occurrenceOf(this.pendingFront),
         kind: "block",
         startLine: this.pendingFrontLine,
         answerEndLine: this.lastContentLine,
@@ -200,6 +256,17 @@ class CardScanner {
       this.pendingFront = null;
     }
     this.buffer = [];
+  }
+
+  /**
+   * How many cards already emitted ask this same question.
+   *
+   * Counted over what was *kept*, not over every question seen: a question with
+   * no answer never becomes a card, so counting it would offset every later
+   * duplicate by one and point writes at the wrong card.
+   */
+  private occurrenceOf(front: string): number {
+    return this.locations.filter((at) => at.front === front).length;
   }
 
   private addCard(
@@ -210,7 +277,12 @@ class CardScanner {
   ): void {
     if (!front || !back) return;
     const review = reviews[0];
-    this.cards.push({ front, back, ...(review ? { review } : {}) });
+    this.cards.push({
+      front,
+      back,
+      occurrence: location.occurrence,
+      ...(review ? { review } : {}),
+    });
     this.locations.push(location);
   }
 }

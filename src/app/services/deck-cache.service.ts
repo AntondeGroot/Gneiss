@@ -113,6 +113,10 @@ export function isDeckCard(value: unknown): value is DeckCard {
     isString(card.note) &&
     isString(card.front) &&
     isString(card.back) &&
+    // A cache written before cards carried an occurrence is dropped rather than
+    // adopted: its ids are the old shape, and a write keyed on one would look
+    // for a card the note cannot match.
+    typeof card.occurrence === "number" &&
     isString(card.tier) &&
     Array.isArray(card.topicTags) &&
     isString(review?.due) &&

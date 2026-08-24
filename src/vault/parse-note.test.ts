@@ -23,6 +23,7 @@ public class Duck implements Comparable<Duck> {
     expect(cards).toEqual([
       {
         front: "How do you sort a custom collection?",
+        occurrence: 0,
         back: `\`\`\`java
 public class Duck implements Comparable<Duck> {
 
@@ -49,6 +50,7 @@ Redirects stderr into stdout.
     expect(cards).toEqual([
       {
         front: "What does `2>&1` do?",
+        occurrence: 0,
         back: "Redirects stderr into stdout.",
         review: { due: "2026-08-21", interval: 3, ease: 2.5 },
       },
@@ -72,6 +74,7 @@ It records that two histories were joined.
     expect(cards).toEqual([
       {
         front: "What is a merge commit?",
+        occurrence: 0,
         back: "A commit with two parents.\n\nIt records that two histories were joined.",
       },
     ]);
@@ -127,8 +130,32 @@ Count the lines in a file :: \`wc -l file\`
     const { cards } = parseNote(md, "redirection.md");
 
     expect(cards).toEqual([
-      { front: "Redirect stdout to a file", back: "`cmd > out.txt`" },
-      { front: "Count the lines in a file", back: "`wc -l file`" },
+      { front: "Redirect stdout to a file", back: "`cmd > out.txt`", occurrence: 0 },
+      { front: "Count the lines in a file", back: "`wc -l file`", occurrence: 0 },
+    ]);
+  });
+
+  /**
+   * Where the SR plugin actually puts it. Reading only the card's own line meant
+   * a plugin-written vault imported every inline card as never-seen — months of
+   * review discarded, and the card served as new material the next morning.
+   */
+  it("reads an inline card's review state from the line below, as the plugin writes it", () => {
+    const md = `Redirect stdout to a file :: \`cmd > out.txt\`
+<!--SR:!2026-08-21,3,250-->
+
+#flashcards/shell
+`;
+
+    const { cards } = parseNote(md, "redirection.md");
+
+    expect(cards).toEqual([
+      {
+        front: "Redirect stdout to a file",
+        occurrence: 0,
+        back: "`cmd > out.txt`",
+        review: { due: "2026-08-21", interval: 3, ease: 2.5 },
+      },
     ]);
   });
 
@@ -143,6 +170,7 @@ Count the lines in a file :: \`wc -l file\`
     expect(cards).toEqual([
       {
         front: "Redirect stdout to a file",
+        occurrence: 0,
         back: "`cmd > out.txt`",
         review: { due: "2026-08-21", interval: 3, ease: 2.5 },
       },
@@ -161,7 +189,9 @@ Redirects stderr into stdout.
 
     expect(parseNote(md, "redirection.md")).toEqual({
       note: "redirection.md",
-      cards: [{ front: "What does `2>&1` do?", back: "Redirects stderr into stdout." }],
+      cards: [
+        { front: "What does `2>&1` do?", back: "Redirects stderr into stdout.", occurrence: 0 },
+      ],
       topicTags: ["#flashcards/shell"],
       tierOverride: "core",
     });
@@ -184,7 +214,9 @@ Redirects stderr into stdout.
     // tags are the supported path. Only a #core / #optional tag sets the override.
     expect(parseNote(md, "redirection.md")).toEqual({
       note: "redirection.md",
-      cards: [{ front: "What does `2>&1` do?", back: "Redirects stderr into stdout." }],
+      cards: [
+        { front: "What does `2>&1` do?", back: "Redirects stderr into stdout.", occurrence: 0 },
+      ],
       topicTags: ["#flashcards/shell"],
     });
   });

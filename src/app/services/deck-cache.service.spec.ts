@@ -9,6 +9,7 @@ function card(id: string, due: string): DeckCard {
     id,
     note: "git.md",
     front: `Q ${id}`,
+    occurrence: 0,
     back: "A",
     tier: "core",
     topicTags: ["#flashcards/git"],

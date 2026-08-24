@@ -65,9 +65,12 @@ export class VaultService {
     vaultPath: string,
     notePath: string,
     front: string,
+    occurrence: number,
     review: ReviewState,
   ): Promise<void> {
-    return this.editNote(vaultPath, notePath, (md) => withReviewState(md, front, review));
+    return this.editNote(vaultPath, notePath, (md) =>
+      withReviewState(md, front, occurrence, review),
+    );
   }
 
   /**

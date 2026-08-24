@@ -8,7 +8,7 @@ import { DeckService } from "./deck.service";
 function note(name: string, topicTags: string[], tierOverride?: Tier): ParsedNote {
   return {
     note: name,
-    cards: [{ front: "Question?", back: "Answer" }],
+    cards: [{ front: "Question?", back: "Answer", occurrence: 0 }],
     topicTags,
     ...(tierOverride ? { tierOverride } : {}),
   };
@@ -77,6 +77,7 @@ function backlog(name: string, cards: number): ParsedNote {
     cards: Array.from({ length: cards }, (_, i) => ({
       front: `Q${i}`,
       back: "A",
+      occurrence: 0,
       review: { due: "2024-01-01", interval: 5, ease: 2.5 },
     })),
     topicTags: ["#flashcards/git"],
@@ -163,7 +164,7 @@ describe("DeckService card editing", () => {
 
     // Identity is the question text, so a stale id would point at a question the
     // note no longer contains and the next write would silently do nothing.
-    expect(deck.all()[0]?.id).toBe("shell.md::Corrected?");
+    expect(deck.all()[0]?.id).toBe("shell.md::Corrected?#0");
     expect(deck.all()[0]?.front).toBe("Corrected?");
   });
 
@@ -289,7 +290,7 @@ describe("DeckService opening twice", () => {
 
     // Checked *during* the read, which is when reviewing happens — the final
     // state was always right, because the last read replaces the deck wholesale.
-    expect(deck.all().map((card) => card.id)).toEqual(["git.md::Q1?", "git.md::Q2?"]);
+    expect(deck.all().map((card) => card.id)).toEqual(["git.md::Q1?#0", "git.md::Q2?#0"]);
     await Promise.all([first, second]);
   });
 
