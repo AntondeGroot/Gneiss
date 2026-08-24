@@ -9,7 +9,7 @@
 
 import { locateCard } from "./parse-note.js";
 import type { CardLocation } from "./parse-note.js";
-import { formatReviewComment } from "./review-state.js";
+import { formatReviewComment, parseReviewStates } from "./review-state.js";
 import type { ReviewState } from "./types.js";
 
 const COMMENT = /<!--SR:(?:![\d-]+,\d+,\d+)+-->/;
@@ -35,9 +35,40 @@ export function withReviewState(
   if (!at) return md;
 
   const lines = md.replace(/\r\n/g, "\n").split("\n");
-  const comment = formatReviewComment([review]);
+  const entries = entriesWith(parseReviewStates(lines[at.answerEndLine] ?? ""), at, review);
+  if (!entries) return md;
 
-  return applyAt(lines, at, comment).join("\n");
+  return applyAt(lines, at, formatReviewComment(entries)).join("\n");
+}
+
+/**
+ * The comment's entries with this card's own one brought up to date, or `null`
+ * when the card cannot be recorded without inventing a schedule for another.
+ *
+ * A comment holds one entry per card it serves, in order, so a reversed card's
+ * two directions are told apart by position alone. That has two consequences
+ * here, and both are about not writing something untrue:
+ *
+ * - **Entries beyond what the card serves are dropped.** A `??` edited by hand
+ *   down to `?` leaves a second entry behind that now schedules nothing, and
+ *   keeping it would let the plugin go on reading a card that no longer exists.
+ * - **A gap in front of this entry is refused.** The queue offers a reversed
+ *   card's forward direction first, so its entry is always written before the
+ *   reverse one needs a slot behind it. If that ever stopped holding, writing
+ *   the reverse direction's schedule as the first entry would silently hand it
+ *   to the forward direction — so nothing is written at all instead.
+ */
+function entriesWith(
+  existing: readonly ReviewState[],
+  at: CardLocation,
+  review: ReviewState,
+): ReviewState[] | null {
+  const served = at.kind === "reversed" ? 2 : 1;
+  const entries = existing.slice(0, served);
+  if (at.entry > entries.length) return null;
+
+  entries[at.entry] = review;
+  return entries;
 }
 
 function applyAt(lines: string[], at: CardLocation, comment: string): string[] {

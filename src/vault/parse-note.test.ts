@@ -36,6 +36,137 @@ public class Duck implements Comparable<Duck> {
     ]);
   });
 
+  /**
+   * `??` is the SR plugin's reversed card: one written card, two asked of you —
+   * term→definition and definition→term — and they are genuinely not learned at
+   * the same rate. The plugin stores that as two entries in one comment, in
+   * order. The two here are deliberately far apart: fluent one way at `60,310`,
+   * and at the ease floor the other way at `1,210`.
+   *
+   * So the two entries are matched to the two directions **by position**, and
+   * reading only the first would hand the reverse direction the forward
+   * direction's schedule.
+   */
+  it("yields both directions of a reversed card, each with its own review state", () => {
+    const md = `madrugar
+??
+to get up early
+<!--SR:!2026-04-11,60,310!2026-02-25,1,210-->
+
+#flashcards/lang
+`;
+
+    const { cards } = parseNote(md, "vocabulary.md");
+
+    expect(cards).toEqual([
+      {
+        front: "madrugar",
+        back: "to get up early",
+        occurrence: 0,
+        review: { due: "2026-04-11", interval: 60, ease: 3.1 },
+      },
+      {
+        front: "to get up early",
+        back: "madrugar",
+        occurrence: 0,
+        review: { due: "2026-02-25", interval: 1, ease: 2.1 },
+      },
+    ]);
+  });
+
+  /**
+   * The common case by far: most reversed cards in a vault are still unreviewed,
+   * carrying no comment at all. Both directions are then simply unseen, and a
+   * card with no state must not be handed an invented one — the
+   * queue tells new cards from cards in rotation by the absence of `review`.
+   *
+   * The question is written with a trailing space, as it is in the note, so the
+   * usual trimming is shown to apply to a reversed card's question and to the
+   * answer that becomes the other direction's question.
+   */
+  it("yields two unseen cards for a reversed card carrying no review state", () => {
+    const md = `el hormiguero 
+??
+the anthill
+
+#flashcards/lang
+`;
+
+    const { cards } = parseNote(md, "vocabulary.md");
+
+    expect(cards).toEqual([
+      { front: "el hormiguero", back: "the anthill", occurrence: 0 },
+      { front: "the anthill", back: "el hormiguero", occurrence: 0 },
+    ]);
+  });
+
+  /**
+   * `?` and `??` differ by a single character, and are told apart by an exact
+   * match rather than a prefix. A scanner reaching for `startsWith("?")` would
+   * read every one-way card as reversed and quietly double the deck — asking,
+   * in one direction, questions the note never posed.
+   *
+   * The two forms also have to survive each other within one note, which is how
+   * they actually appear, so both are here rather than in separate notes.
+   */
+  it("keeps a one-way card one-way in a note that also holds a reversed one", () => {
+    const md = `el paraguas
+?
+the umbrella
+
+la bombilla
+??
+the light bulb
+
+#flashcards/lang
+`;
+
+    const { cards } = parseNote(md, "vocabulary.md");
+
+    expect(cards).toEqual([
+      { front: "el paraguas", back: "the umbrella", occurrence: 0 },
+      { front: "la bombilla", back: "the light bulb", occurrence: 0 },
+      { front: "the light bulb", back: "la bombilla", occurrence: 0 },
+    ]);
+  });
+
+  /**
+   * Inside a fence every line is content, whatever it looks like — the guarantee
+   * a bare `?` already has, now needed by `??` for the same reason: a note about
+   * the card format itself holds a worked example of one.
+   *
+   * This is an ordering constraint on the scanner, not a separate feature. The
+   * fence has to be consulted *before* either separator, so a reversed card
+   * recognised too eagerly would cut this answer in half and leave the rest of
+   * the block loose in the note.
+   */
+  it("leaves a `??` inside a fenced block as code rather than a card separator", () => {
+    const md = `How does a reversed card look in the plugin's own syntax?
+?
+\`\`\`md
+term
+??
+definition
+\`\`\`
+
+#flashcards/lang
+`;
+
+    const { cards } = parseNote(md, "vocabulary.md");
+
+    expect(cards).toEqual([
+      {
+        front: "How does a reversed card look in the plugin's own syntax?",
+        occurrence: 0,
+        back: `\`\`\`md
+term
+??
+definition
+\`\`\``,
+      },
+    ]);
+  });
+
   it("attaches existing review state to the card and keeps it out of the answer text", () => {
     const md = `What does \`2>&1\` do?
 ?

@@ -11,9 +11,18 @@ import { BLANK_LINE_MARKER } from "./blank-lines.js";
 import { countFences } from "./fences.js";
 import { findTierOverride, findTopicTags } from "./tags.js";
 import { parseReviewStates, stripReviewComments } from "./review-state.js";
-import type { ParsedCard, ParsedNote } from "./types.js";
+import type { ParsedCard, ParsedNote, ReviewState } from "./types.js";
 
 const BLOCK_SEPARATOR = "?";
+/**
+ * The SR plugin's *reversed* card: one card written, two asked — question to
+ * answer, and answer back to question. They are genuinely not learned at the
+ * same rate, so they are two cards here with a schedule each.
+ *
+ * Matched exactly rather than by prefix. `??` and `?` differ by one character,
+ * and a prefix test would read every one-way card as reversed.
+ */
+const REVERSED_SEPARATOR = "??";
 /**
  * A line holding nothing but review state.
  *
@@ -33,8 +42,17 @@ export interface CardLocation {
   readonly front: string;
   /** Which card with this question this is — see `ParsedCard.occurrence`. */
   readonly occurrence: number;
-  /** Inline cards carry their comment on the same line; block cards on the next. */
-  readonly kind: "inline" | "block";
+  /** Which of the three written forms the card takes. */
+  readonly kind: "inline" | "block" | "reversed";
+  /**
+   * Which entry of the card's `<!--SR:-->` comment holds this card's schedule.
+   *
+   * Always 0 but for the second direction of a reversed card. The comment lists
+   * one entry per card it serves, in order, so position is the only thing tying
+   * a schedule to a direction — and writing at the wrong index hands a direction
+   * the other one's history.
+   */
+  readonly entry: number;
   /**
    * First line of the card — the question. With `answerEndLine` this gives the
    * card's whole span, which is what lets a card be rewritten or removed without
@@ -50,6 +68,12 @@ export interface CardLocation {
    * stripped from the answer afterwards; an inline card's is the line below,
    * which the scanner looks ahead to.
    */
+  readonly answerEndLine: number;
+}
+
+/** Where a card begins and ends, shared by the directions of a reversed one. */
+interface Span {
+  readonly startLine: number;
   readonly answerEndLine: number;
 }
 
@@ -133,6 +157,8 @@ class CardScanner {
   private readonly locations: CardLocation[] = [];
   private buffer: string[] = [];
   private pendingFront: string | null = null;
+  /** Whether the pending question was separated by `??` rather than `?`. */
+  private pendingReversed = false;
   private insideFence = false;
   /** Index of the last line taken as content — where a card's answer ends. */
   private lastContentLine = -1;
@@ -163,8 +189,12 @@ class CardScanner {
       this.takeInlineCard(line);
       return;
     }
+    if (trimmed === REVERSED_SEPARATOR) {
+      this.startBlockAnswer(true);
+      return;
+    }
     if (trimmed === BLOCK_SEPARATOR) {
-      this.startBlockAnswer();
+      this.startBlockAnswer(false);
       return;
     }
     // The blank line the author asked for, taken as one — see `blank-lines`. It
@@ -222,17 +252,19 @@ class CardScanner {
     const rest = line.slice(separator + INLINE_SEPARATOR.length) + (carriesComment ? below : "");
 
     if (carriesComment) this.commentLine = this.lineIndex + 1;
-    this.addCard(front, stripReviewComments(rest).trim(), parseReviewStates(rest), {
+    this.addCard(front, stripReviewComments(rest).trim(), parseReviewStates(rest)[0], {
       front,
       occurrence: this.occurrenceOf(front),
       kind: "inline",
+      entry: 0,
       startLine: this.lineIndex,
       answerEndLine: carriesComment ? this.lineIndex + 1 : this.lineIndex,
     });
     this.buffer = [];
   }
 
-  private startBlockAnswer(): void {
+  private startBlockAnswer(reversed: boolean): void {
+    this.pendingReversed = reversed;
     // Joined with newlines, as the answer already is. A space seemed harmless
     // while questions were a single sentence, but it flattens a question that
     // holds a code block into one line — and code without its line breaks is
@@ -246,16 +278,63 @@ class CardScanner {
   private flush(): void {
     if (this.pendingFront !== null) {
       const raw = this.buffer.join("\n");
-      this.addCard(this.pendingFront, stripReviewComments(raw).trim(), parseReviewStates(raw), {
-        front: this.pendingFront,
-        occurrence: this.occurrenceOf(this.pendingFront),
-        kind: "block",
-        startLine: this.pendingFrontLine,
-        answerEndLine: this.lastContentLine,
-      });
+      const back = stripReviewComments(raw).trim();
+      const reviews = parseReviewStates(raw);
+      const span = { startLine: this.pendingFrontLine, answerEndLine: this.lastContentLine };
+
+      if (this.pendingReversed) this.addBothDirections(this.pendingFront, back, reviews, span);
+      else this.addOneWay(this.pendingFront, back, reviews[0], span);
+
       this.pendingFront = null;
+      this.pendingReversed = false;
     }
     this.buffer = [];
+  }
+
+  /** The `?` form: one card, owning the comment's only entry. */
+  private addOneWay(
+    front: string,
+    back: string,
+    review: ReviewState | undefined,
+    span: Span,
+  ): void {
+    this.addCard(front, back, review, {
+      front,
+      occurrence: this.occurrenceOf(front),
+      kind: "block",
+      entry: 0,
+      ...span,
+    });
+  }
+
+  /**
+   * The `??` form: the card as written, then the same card asked backwards.
+   *
+   * Emitted in that order because the comment lists its entries in that order,
+   * and because the queue serves tying cards in the order they were parsed —
+   * which is what has the forward entry already written by the time the reverse
+   * direction needs a slot in front of its own.
+   */
+  private addBothDirections(
+    front: string,
+    back: string,
+    reviews: readonly ReviewState[],
+    span: Span,
+  ): void {
+    this.addCard(front, back, reviews[0], {
+      front,
+      occurrence: this.occurrenceOf(front),
+      kind: "reversed",
+      entry: 0,
+      ...span,
+    });
+    this.addCard(back, front, reviews[1], {
+      front: back,
+      occurrence: this.occurrenceOf(back),
+      kind: "reversed",
+      entry: 1,
+      ...span,
+    });
   }
 
   /**
@@ -269,17 +348,26 @@ class CardScanner {
     return this.locations.filter((at) => at.front === front).length;
   }
 
+  /**
+   * One card, as it is *asked*.
+   *
+   * Deliberately not `front`/`back`: those name the card the way the note writes
+   * it, and a reversed card is precisely the case where the two orders come
+   * apart — its second direction asks the note's answer and answers with the
+   * note's question. Naming the parameters for the card rather than the note is
+   * what makes the swap at that one call site read as intended rather than as a
+   * slip.
+   */
   private addCard(
-    front: string,
-    back: string,
-    reviews: ReturnType<typeof parseReviewStates>,
+    question: string,
+    answer: string,
+    review: ReviewState | undefined,
     location: CardLocation,
   ): void {
-    if (!front || !back) return;
-    const review = reviews[0];
+    if (!question || !answer) return;
     this.cards.push({
-      front,
-      back,
+      front: question,
+      back: answer,
       occurrence: location.occurrence,
       ...(review ? { review } : {}),
     });

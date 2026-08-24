@@ -18,6 +18,7 @@ import type { CardLocation } from "./parse-note.js";
 
 const COMMENT = /<!--SR:(?:![\d-]+,\d+,\d+)+-->/;
 const BLOCK_SEPARATOR = "?";
+const REVERSED_SEPARATOR = "??";
 
 export interface CardText {
   readonly front: string;
@@ -37,9 +38,7 @@ export function withEditedCard(
   occurrence: number,
   next: CardText,
 ): string {
-  return rewriteSpan(md, front, occurrence, (at, span) =>
-    renderCard(next, at.kind, commentIn(span)),
-  );
+  return rewriteSpan(md, front, occurrence, (at, span) => renderCard(next, at, commentIn(span)));
 }
 
 /**
@@ -88,10 +87,32 @@ function commentIn(span: string[]): string {
  * note as loose prose and be lost from the card. The form follows what the card
  * now holds, which is the only reading under which nothing is dropped.
  */
-function renderCard(next: CardText, kind: CardLocation["kind"], comment: string): string[] {
-  return kind === "inline" && fitsOneLine(next)
+function renderCard(next: CardText, at: CardLocation, comment: string): string[] {
+  if (at.kind === "reversed") return renderReversed(next, at.entry, comment);
+
+  return at.kind === "inline" && fitsOneLine(next)
     ? renderInline(next, comment)
     : renderBlock(next, comment);
+}
+
+/**
+ * The `??` form, put back the way the note holds it rather than the way the card
+ * was shown.
+ *
+ * Only one of the two directions is written down, so editing the other means the
+ * question being corrected is the note's answer line. Writing it as shown would
+ * swap the two lines — and with them the two entries of the comment, which are
+ * matched to the directions by position — handing each direction the other's
+ * schedule without changing a character of the comment itself.
+ */
+function renderReversed(next: CardText, entry: number, comment: string): string[] {
+  const written = entry === 0 ? next : { front: next.back, back: next.front };
+  const lines = [
+    ...markBlankLines(written.front).split("\n"),
+    REVERSED_SEPARATOR,
+    ...markBlankLines(written.back).split("\n"),
+  ];
+  return comment ? [...lines, comment] : lines;
 }
 
 function fitsOneLine(next: CardText): boolean {
