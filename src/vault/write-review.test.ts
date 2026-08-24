@@ -20,6 +20,105 @@ const GRADED: ReviewState = { due: "2026-09-15", interval: 12, ease: 2.7 };
 
 describe("withReviewState", () => {
   /**
+   * A reversed `??` card is two cards sharing one comment, one entry per
+   * direction, in order. Grading either one must rewrite *its* entry and leave
+   * the other's byte-for-byte — the two directions are genuinely learned at
+   * different rates, which is the whole reason the plugin stores two.
+   *
+   * Writing a single entry here is what a naive implementation does, and it
+   * would silently discard the sibling's history — which in a vault carried over
+   * from the plugin is years of it.
+   */
+  it("keeps the other direction's entry when one direction is graded", () => {
+    const reversed = `el rompecabezas
+??
+the jigsaw puzzle
+<!--SR:!2026-03-01,14,290!2026-03-04,16,300-->
+
+#flashcards/lang
+`;
+
+    // The reverse direction: its question is the answer above.
+    const written = withReviewState(reversed, "the jigsaw puzzle", 0, GRADED);
+
+    // The whole note, not just the comment: this edits mid-note in a file the
+    // app cannot restore, so every byte outside the one entry must be shown to
+    // survive — the card's text, the blank line and the tag block included.
+    expect(written).toBe(`el rompecabezas
+??
+the jigsaw puzzle
+<!--SR:!2026-03-01,14,290!2026-09-15,12,270-->
+
+#flashcards/lang
+`);
+  });
+
+  /**
+   * The safety net under the queue's ordering guarantee.
+   *
+   * The forward direction is always offered first, so by the time the reverse
+   * one is graded its sibling's entry is already there. Should that ever stop
+   * holding, the entries are still positional: writing the reverse direction's
+   * schedule as the *only* entry would hand it to the forward direction on the
+   * next read, and nothing downstream could tell that had happened.
+   *
+   * Refusing is the answer this module already gives a front it cannot find. It
+   * loses a grade, which is bad; a card silently carrying the other direction's
+   * schedule is worse, and unlike a lost grade it never announces itself.
+   */
+  it("refuses to grade the reverse direction while the forward one has no entry", () => {
+    const unseen = `el hormiguero
+??
+the anthill
+
+#flashcards/lang
+`;
+
+    expect(withReviewState(unseen, "the anthill", 0, GRADED)).toBe(unseen);
+  });
+
+  /**
+   * A reversed card's answer is also a question — its other direction's — so it
+   * can collide with a one-way card elsewhere in the note that happens to ask
+   * the same thing. Two cards, same front, and only `occurrence` separates them.
+   *
+   * The count has to run over both directions in the order they are emitted, or
+   * the reverse direction of the reversed card and the one-way card above it
+   * share an identity: a grade meant for one lands on the other, and the card
+   * actually answered never records anything.
+   */
+  it("tells a reverse direction apart from a one-way card asking the same question", () => {
+    const collides = `the umbrella
+?
+you open it in the rain
+<!--SR:!2026-05-01,20,250-->
+
+el paraguas
+??
+the umbrella
+<!--SR:!2026-03-01,14,290!2026-03-04,16,300-->
+
+#flashcards/lang
+`;
+
+    // Occurrence 1: the reversed card's other direction, not the one-way card.
+    const written = withReviewState(collides, "the umbrella", 1, GRADED);
+
+    expect(written).toBe(`the umbrella
+?
+you open it in the rain
+<!--SR:!2026-05-01,20,250-->
+
+el paraguas
+??
+the umbrella
+<!--SR:!2026-03-01,14,290!2026-09-15,12,270-->
+
+#flashcards/lang
+`);
+  });
+
+  /**
    * The bug this exists for: a note may ask the same question twice — two cards,
    * since the answers differ — and matching on the question alone sent both
    * grades to the first of them. The second could never record one, so it fell

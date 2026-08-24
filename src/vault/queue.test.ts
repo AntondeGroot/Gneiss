@@ -28,6 +28,34 @@ function newCard(id: string, tier: Tier, topicTags: string[] = []): TestCard {
 }
 
 describe("selectDue", () => {
+  /**
+   * A reversed `??` card stores its two schedules as two entries in one comment,
+   * matched to the directions by position — so the forward direction's entry
+   * cannot be written after the reverse one's without inventing a placeholder
+   * for the slot in front of it.
+   *
+   * Nothing needs to invent one, because the forward direction is always offered
+   * first: both directions of an unseen card tie on tier and on due date, and a
+   * tie keeps the order they were parsed in, which is the order they are written
+   * in the note. This pins that, since the guarantee is what the writer relies
+   * on rather than anything the writer can check for itself. A shuffle, or an
+   * ordering that broke the tie some other way, would land here.
+   */
+  it("keeps tying cards in note order, so a reversed card's forward direction leads its reverse", () => {
+    const inNoteOrder = [
+      newCard("el hormiguero -> the anthill", "standard"),
+      newCard("the anthill -> el hormiguero", "standard"),
+      newCard("la bombilla -> the light bulb", "standard"),
+      newCard("the light bulb -> la bombilla", "standard"),
+      newCard("el paraguas -> the umbrella", "standard"),
+      newCard("the umbrella -> el paraguas", "standard"),
+    ];
+
+    const { queue } = selectDue(inNoteOrder, TODAY, GENEROUS);
+
+    expect(queue.map((served) => served.id)).toEqual(inNoteOrder.map((card) => card.id));
+  });
+
   it("portions a years-old backlog instead of surfacing all of it at once", () => {
     // The shape of a real vault on first import: everything scheduled in 2024.
     const backlog = Array.from({ length: 200 }, (_, index) =>

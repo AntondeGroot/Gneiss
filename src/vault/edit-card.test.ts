@@ -17,7 +17,73 @@ Use \`git add -p\` and answer \`y\`.
 #flashcards/shell
 `;
 
+describe("withoutCard on a reversed card", () => {
+  /**
+   * Both directions of a `??` card are the same three lines, so there is no
+   * edit that removes one and leaves the other where it is. Delete therefore
+   * takes the card: changing a card's direction is an edit to the note, and
+   * belongs in the editor the note is written in.
+   *
+   * Deleting from *either* direction does the same thing — the reverse one is
+   * used here because it is the one whose question is not the note's first line,
+   * and so the one a span taken from the wrong end would get wrong.
+   */
+  it("removes both directions, and only the card, when either one is deleted", () => {
+    const md = `Some prose that must survive untouched.
+
+la bombilla
+??
+the light bulb
+<!--SR:!2026-03-01,14,290!2026-03-04,16,300-->
+
+#flashcards/lang
+`;
+
+    const removed = withoutCard(md, "the light bulb", 0);
+
+    expect(removed).toBe(`Some prose that must survive untouched.
+
+#flashcards/lang
+`);
+  });
+});
+
 describe("withEditedCard", () => {
+  /**
+   * A reversed card is written one way round and asked both ways, so the card on
+   * screen is not always the card in the note: editing the *reverse* direction
+   * means the question the user is correcting is the note's answer line.
+   *
+   * The card therefore has to be put back the way the note holds it, question
+   * first — writing it as it was shown would swap the two lines, and with them
+   * the two entries in the comment, silently handing each direction the other's
+   * schedule. A card keeps its shape through an edit, and for `??` its shape
+   * includes which way round it is.
+   */
+  it("writes a reversed card back question-first when its reverse direction is edited", () => {
+    const md = `la bombilla
+??
+the light bulb
+<!--SR:!2026-03-01,14,290!2026-03-04,16,300-->
+
+#flashcards/lang
+`;
+
+    // The reverse direction as it is shown: the note's answer is its question.
+    const edited = withEditedCard(md, "the light bulb", 0, {
+      front: "the light bulb",
+      back: "la bombilla (de bajo consumo)",
+    });
+
+    expect(edited).toBe(`la bombilla (de bajo consumo)
+??
+the light bulb
+<!--SR:!2026-03-01,14,290!2026-03-04,16,300-->
+
+#flashcards/lang
+`);
+  });
+
   it("keeps an inline card's review state when its question is corrected", () => {
     const edited = withEditedCard(NOTE, "What does grep do?", 0, {
       front: "What does grep do, exactly?",
