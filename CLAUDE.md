@@ -329,6 +329,22 @@ rest on. No real vault data lives in this repo — the prototype's `SEED` is inv
   natural key for the tag→tier mapping, with longest-prefix match.
 - **Review state already exists**, as an SR-plugin HTML comment after each card:
   `<!--SR:!YYYY-MM-DD,<interval>,<ease>-->`. Import it rather than resetting it.
+
+  **CORRECTED:** the comment sits on the line *below* the card — for inline cards too, not
+  only block ones. The plugin only writes it at the end of the card's own line when its
+  `cardCommentOnSameLine` setting is on, which is off by default. Gneiss assumed the
+  same-line form for inline cards, so in a real vault it read none of their state and
+  **imported every one of them as never-seen**: 68 of 73 inline cards in the survey vault,
+  learned over two years, arriving as new material with a fresh ease. Worse, grading one
+  then wrote a second comment on the card's own line, leaving two schedules for one card
+  with the stale one first — so the plugin, reading the same note, would see the older.
+  A card's span therefore *includes* the comment line below it, which is also what lets an
+  edit carry the state across and a deletion take it with the card.
+
+  A card that carries both is the fossil of that bug rather than a case to support, so
+  nothing in the reader or the writer accommodates it: the notes were repaired instead,
+  keeping the entry from the **most recent review** (`due - interval`, longest interval
+  breaking a tie) and writing it below.
 - **Expect two data-hygiene gaps**, and surface them in the Vault screen rather than
   silently skipping: notes containing cards but carrying no `#flashcards` tag (invisible
   to the deck), and tagged notes containing zero cards (tagged as intent, never filled in).

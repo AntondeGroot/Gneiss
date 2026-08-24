@@ -43,8 +43,18 @@ export interface VaultSource {
    */
   readNotes(onBatch?: NoteBatch): Promise<ParsedNote[]>;
 
-  /** Records one card's review state. No-op on a read-only source. */
-  writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void>;
+  /**
+   * Records one card's review state. No-op on a read-only source.
+   *
+   * The card is named by its question *and* its occurrence within the note, so
+   * a note asking the same question twice can still hold two schedules.
+   */
+  writeReviewState(
+    notePath: string,
+    front: string,
+    occurrence: number,
+    review: ReviewState,
+  ): Promise<void>;
 
   /**
    * Reads a note, applies a pure transform, writes the result back. No-op on a

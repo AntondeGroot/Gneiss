@@ -4,7 +4,9 @@ import { Router, RouterLink } from "@angular/router";
 import { CardBody } from "../card-body/card-body";
 import { CardEditor } from "../card-editor/card-editor";
 
-import type { CardText, Grade } from "../../vault";
+import type { CardText, Grade, Standing } from "../../vault";
+import { cardStanding, tallyStandings } from "../../vault";
+import { ClockService } from "../services/clock.service";
 import { DeckService } from "../services/deck.service";
 import { ReviewSessionService } from "../services/review-session.service";
 
@@ -19,6 +21,7 @@ const GRADES: readonly Grade[] = ["difficult", "medium", "easy"];
 export class ReviewScreen {
   private readonly deck = inject(DeckService);
   private readonly session = inject(ReviewSessionService);
+  private readonly clock = inject(ClockService);
   private readonly router = inject(Router);
 
   protected readonly grades = GRADES;
@@ -33,6 +36,23 @@ export class ReviewScreen {
   protected readonly gradedAcrossSessions = this.session.gradedToday;
 
   protected readonly dueCount = computed(() => this.deck.due().length);
+
+  /**
+   * Why this card is being asked — new, due today, or overdue by so many days.
+   *
+   * On screen rather than in a log because the question it answers is asked in
+   * front of the card: a card that keeps coming back reads exactly like one
+   * that is genuinely due, and the difference is only in the note's `<!--SR:-->`
+   * comment. A card that says `new` after being graded yesterday is a grade
+   * that never reached the vault.
+   */
+  protected readonly standing = computed(() => {
+    const card = this.current();
+    return card ? cardStanding(card.review, this.clock.today()) : null;
+  });
+
+  /** What a next session would be made of, so the offer says what it serves. */
+  protected readonly ready = computed(() => tallyStandings(this.deck.due(), this.clock.today()));
   protected readonly writeError = this.deck.writeError;
   protected readonly finished = computed(() => this.started() && this.current() === null);
 
@@ -125,6 +145,32 @@ export class ReviewScreen {
   protected preview(grade: Grade): string {
     const card = this.current();
     return card ? describeInterval(this.deck.preview(card, grade).interval) : "";
+  }
+
+  /** Short enough for the card header, which is deliberately quiet. */
+  protected describeStanding(standing: Standing): string {
+    if (standing.kind === "new") return "new";
+    if (standing.kind === "due") return "due today";
+    if (standing.kind === "overdue") return `${standing.days}d overdue`;
+    // Never expected: the queue serves nothing scheduled ahead. Named on screen
+    // rather than hidden, since seeing it is the only way it gets reported.
+    return `scheduled in ${standing.days}d`;
+  }
+
+  /**
+   * What "Another session" would actually serve, in the words the card header
+   * uses. Offered before pressing it, so a session made entirely of cards that
+   * have already been graded is visible rather than discovered a card at a time.
+   */
+  protected describeReady(): string {
+    const { fresh, due, overdue, ahead } = this.ready();
+    const parts = [
+      fresh > 0 ? `${fresh} new` : "",
+      due > 0 ? `${due} due today` : "",
+      overdue > 0 ? `${overdue} overdue` : "",
+      ahead > 0 ? `${ahead} scheduled ahead` : "",
+    ].filter(Boolean);
+    return parts.join(", ");
   }
 
   protected grade(grade: Grade): void {

@@ -127,10 +127,11 @@ Case-insensitive search? :: grep -i "pattern" file
       cards: [
         {
           front: "What does `grep -v` do?",
+          occurrence: 0,
           back: "Prints only the lines that do NOT match.",
           review: { due: "2026-08-21", interval: 3, ease: 2.5 },
         },
-        { front: "Case-insensitive search?", back: 'grep -i "pattern" file' },
+        { front: "Case-insensitive search?", back: 'grep -i "pattern" file', occurrence: 0 },
       ],
     });
   });
@@ -144,6 +145,8 @@ Case-insensitive search? :: grep -i "pattern" file
 
     const [note] = await service.readNotes(VAULT_PATH);
 
-    expect(note?.cards).toEqual([{ front: "Case-insensitive search?", back: "grep -i" }]);
+    expect(note?.cards).toEqual([
+      { front: "Case-insensitive search?", back: "grep -i", occurrence: 0 },
+    ]);
   });
 });

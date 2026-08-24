@@ -163,6 +163,21 @@ button {
   }
 }
 
+/**
+ * Why the card is here. Faint on purpose: it is there to be looked for, not to
+ * compete with the question. `odd` is the case that should never happen, so it
+ * is the one that is allowed to shout.
+ */
+.standing {
+  color: $faint;
+  white-space: nowrap;
+
+  &.odd {
+    color: $amber;
+    font-weight: 600;
+  }
+}
+
 /* Deliberately quiet — present when wanted, invisible while recalling. */
 .edit,
 .leave {

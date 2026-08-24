@@ -6,7 +6,6 @@ import {
   distinctTopicTags,
   folderOf,
   isCrammed,
-  newReviewState,
   nextStreak,
   resolveTier,
   schedule,
@@ -18,34 +17,18 @@ import {
   withTier,
   withoutCard,
 } from "../../vault";
-import type {
-  CardText,
-  GneissConfig,
-  Grade,
-  ParsedNote,
-  ReviewState,
-  Tier,
-  TierMapping,
-} from "../../vault";
-import { ClockService, today } from "./clock.service";
+import type { CardText, GneissConfig, Grade, ParsedNote, ReviewState, Tier } from "../../vault";
+import { ClockService } from "./clock.service";
 import { DeckCacheService } from "./deck-cache.service";
 import { ReminderService } from "./reminder.service";
 import type { VaultSource } from "./vault-source";
 import { NoteWriter } from "./note-writer";
+import { cardId, onlyTagged, toCards, withoutRepeats, withOverride } from "./deck-card";
+import type { DeckCard } from "./deck-card";
 
-/** A parsed card plus everything scheduling needs to act on it. */
-export interface DeckCard {
-  /** Note path and question text — see CLAUDE.md on why this identity is fragile. */
-  readonly id: string;
-  readonly note: string;
-  readonly front: string;
-  readonly back: string;
-  readonly tier: Tier;
-  readonly topicTags: string[];
-  /** Kept alongside the resolved tier so the card can be re-tiered in place. */
-  readonly tierOverride?: Tier;
-  readonly review: ReviewState;
-}
+// Re-exported so the screens and the cache go on importing a card's type from
+// the service that serves them, rather than following it to a second file.
+export type { DeckCard } from "./deck-card";
 
 /**
  * Holds the deck for the session: reads the vault once, flattens it into cards,
@@ -317,14 +300,16 @@ export class DeckService {
   async editCard(card: DeckCard, next: CardText): Promise<void> {
     const edited: DeckCard = {
       ...card,
-      id: `${card.note}::${next.front}`,
+      id: cardId(card.note, next.front, card.occurrence),
       front: next.front,
       back: next.back,
     };
     this.replace(card, edited);
 
     await this.writer.write(card.note, () =>
-      this.source?.editNote(card.note, (md) => withEditedCard(md, card.front, next)),
+      this.source?.editNote(card.note, (md) =>
+        withEditedCard(md, card.front, card.occurrence, next),
+      ),
     );
   }
 
@@ -333,7 +318,7 @@ export class DeckService {
     this.cards.update((cards) => cards.filter((existing) => existing.id !== card.id));
 
     await this.writer.write(card.note, () =>
-      this.source?.editNote(card.note, (md) => withoutCard(md, card.front)),
+      this.source?.editNote(card.note, (md) => withoutCard(md, card.front, card.occurrence)),
     );
   }
 
@@ -432,7 +417,7 @@ export class DeckService {
     this.cache.save(this.source?.vaultName() ?? "", this.config(), this.cards(), this.topics());
 
     await this.writer.write(card.note, async () => {
-      await this.source?.writeReviewState(card.note, card.front, review);
+      await this.source?.writeReviewState(card.note, card.front, card.occurrence, review);
       await this.recordReviewDay();
     });
   }
@@ -486,67 +471,4 @@ export class DeckService {
       crams: this.config().crams,
     };
   }
-}
-
-function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
-  const tier = resolveTier(note, tiers);
-  return note.cards.map((card) => ({
-    id: `${note.note}::${card.front}`,
-    note: note.note,
-    front: card.front,
-    back: card.back,
-    tier,
-    topicTags: note.topicTags,
-    ...(note.tierOverride ? { tierOverride: note.tierOverride } : {}),
-    review: card.review ?? newReviewState(today()),
-  }));
-}
-
-/**
- * The card with its per-note tier tag set or cleared, and its tier resolved
- * again from that.
- *
- * Built by hand rather than by assigning `undefined`: the deck is compiled with
- * `exactOptionalPropertyTypes`, so an absent override and one set to `undefined`
- * are different things.
- */
-function withOverride(card: DeckCard, override: Tier | undefined, config: GneissConfig): DeckCard {
-  const tierable = { topicTags: card.topicTags, ...(override ? { tierOverride: override } : {}) };
-
-  // Every field named rather than spread: spreading would carry the old override
-  // through, and dropping a key by destructuring leaves a variable nothing uses.
-  return {
-    id: card.id,
-    note: card.note,
-    front: card.front,
-    back: card.back,
-    topicTags: card.topicTags,
-    review: card.review,
-    ...(override ? { tierOverride: override } : {}),
-    tier: resolveTier(tierable, config.tiers),
-  };
-}
-
-/**
- * Only notes the user tagged join the deck.
- *
- * Gneiss never opts a note in: a `::` or a bare `?` can appear in any note, and
- * treating that as a flashcard would adopt half a vault. The `#flashcards` tag
- * is the consent, which also means **removing it takes the cards out again** —
- * without this, untagging a topic changed nothing at all.
- */
-function onlyTagged(notes: readonly ParsedNote[]): readonly ParsedNote[] {
-  return notes.filter((note) => note.topicTags.length > 0);
-}
-
-/**
- * One card per id, keeping the last seen.
- *
- * A card's id is its note path and question, so a repeat means the same note was
- * read twice — never two genuinely different cards. Two notes that happen to ask
- * the same thing have different paths and both survive, which is right: they are
- * two cards in the vault.
- */
-function withoutRepeats(cards: readonly DeckCard[]): DeckCard[] {
-  return [...new Map(cards.map((card) => [card.id, card])).values()];
 }

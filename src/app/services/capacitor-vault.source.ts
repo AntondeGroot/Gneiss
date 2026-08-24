@@ -39,8 +39,13 @@ export class CapacitorVaultSource implements VaultSource {
     return this.vault.readNotes(this.path, onBatch);
   }
 
-  writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void> {
-    return this.vault.writeReviewState(this.path, notePath, front, review);
+  writeReviewState(
+    notePath: string,
+    front: string,
+    occurrence: number,
+    review: ReviewState,
+  ): Promise<void> {
+    return this.vault.writeReviewState(this.path, notePath, front, occurrence, review);
   }
 
   editNote(notePath: string, transform: (md: string) => string): Promise<void> {

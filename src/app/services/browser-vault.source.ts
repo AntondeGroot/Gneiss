@@ -65,8 +65,13 @@ export class BrowserVaultSource implements VaultSource {
     return toDataUrl(await handle.getFile());
   }
 
-  writeReviewState(notePath: string, front: string, review: ReviewState): Promise<void> {
-    return this.editNote(notePath, (md) => withReviewState(md, front, review));
+  writeReviewState(
+    notePath: string,
+    front: string,
+    occurrence: number,
+    review: ReviewState,
+  ): Promise<void> {
+    return this.editNote(notePath, (md) => withReviewState(md, front, occurrence, review));
   }
 
   async editNote(notePath: string, transform: (md: string) => string): Promise<void> {

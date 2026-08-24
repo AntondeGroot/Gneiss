@@ -19,21 +19,22 @@ Use \`git add -p\` and answer \`y\`.
 
 describe("withEditedCard", () => {
   it("keeps an inline card's review state when its question is corrected", () => {
-    const edited = withEditedCard(NOTE, "What does grep do?", {
+    const edited = withEditedCard(NOTE, "What does grep do?", 0, {
       front: "What does grep do, exactly?",
       back: "search text for a pattern",
     });
 
-    // The comment sits on the card's own line, so a naive span replacement would
-    // drop it — and correcting a typo would silently reset the card's schedule.
+    // The comment sits on the line below, inside the card's span, so a naive
+    // span replacement would drop it — and correcting a typo would silently
+    // reset the card's schedule.
     expect(edited).toContain(
-      "What does grep do, exactly? :: search text for a pattern <!--SR:!2026-09-01,12,250-->",
+      "What does grep do, exactly? :: search text for a pattern\n<!--SR:!2026-09-01,12,250-->",
     );
     expect(parseNote(edited, "shell.md").cards[0]?.review?.interval).toBe(12);
   });
 
   it("keeps a block card's review state, which sits on its own line", () => {
-    const edited = withEditedCard(NOTE, "How do you stage a hunk?", {
+    const edited = withEditedCard(NOTE, "How do you stage a hunk?", 0, {
       front: "How do you stage a single hunk?",
       back: "Use `git add -p` and answer `y`.",
     });
@@ -44,7 +45,7 @@ describe("withEditedCard", () => {
   });
 
   it("marks a break inside the answer, but never one at its edges", () => {
-    const edited = withEditedCard(NOTE, "How do you stage a hunk?", {
+    const edited = withEditedCard(NOTE, "How do you stage a hunk?", 0, {
       front: "How do you stage a hunk?",
       back: "\nUse `git add -p`.\n\nThen answer `y`.\n\n",
     });
@@ -69,7 +70,7 @@ git add -p
 git commit -v
 \`\`\``;
 
-    const edited = withEditedCard(NOTE, "How do you stage a hunk?", {
+    const edited = withEditedCard(NOTE, "How do you stage a hunk?", 0, {
       front: "How do you stage a hunk?",
       back,
     });
@@ -89,7 +90,7 @@ git commit -v
   it("rewrites an inline card as a block one when its answer no longer fits a line", () => {
     const back = "search text for a pattern\n\nprints every matching line";
 
-    const edited = withEditedCard(NOTE, "What does grep do?", {
+    const edited = withEditedCard(NOTE, "What does grep do?", 0, {
       front: "What does grep do?",
       back,
     });
@@ -113,7 +114,7 @@ prints every matching line
   it("keeps a run of breaks the width it was written", () => {
     const back = "Stage the hunk.\n\n\n\nThen commit it.";
 
-    const edited = withEditedCard(NOTE, "How do you stage a hunk?", {
+    const edited = withEditedCard(NOTE, "How do you stage a hunk?", 0, {
       front: "How do you stage a hunk?",
       back,
     });
@@ -131,7 +132,7 @@ Then commit it.`);
   });
 
   it("leaves every other byte of the note alone", () => {
-    const edited = withEditedCard(NOTE, "What does grep do?", {
+    const edited = withEditedCard(NOTE, "What does grep do?", 0, {
       front: "What does grep do?",
       back: "search text for a pattern",
     });
@@ -142,13 +143,13 @@ Then commit it.`);
   });
 
   it("refuses to touch the note when no card has that question", () => {
-    expect(withEditedCard(NOTE, "Never asked", { front: "x", back: "y" })).toBe(NOTE);
+    expect(withEditedCard(NOTE, "Never asked", 0, { front: "x", back: "y" })).toBe(NOTE);
   });
 });
 
 describe("withoutCard", () => {
   it("removes just the card, leaving its neighbours intact", () => {
-    const trimmed = withoutCard(NOTE, "What does grep do?");
+    const trimmed = withoutCard(NOTE, "What does grep do?", 0);
 
     const remaining = parseNote(trimmed, "shell.md");
     expect(remaining.cards.map((card) => card.front)).toEqual(["How do you stage a hunk?"]);
@@ -157,7 +158,7 @@ describe("withoutCard", () => {
   });
 
   it("takes the block card's review comment with it, leaving no orphan", () => {
-    const trimmed = withoutCard(NOTE, "How do you stage a hunk?");
+    const trimmed = withoutCard(NOTE, "How do you stage a hunk?", 0);
 
     // An SR comment left behind would attach itself to whatever card came next.
     expect(trimmed).not.toContain("2026-10-01");
@@ -165,7 +166,7 @@ describe("withoutCard", () => {
   });
 
   it("does not leave a growing gap where the card was", () => {
-    const trimmed = withoutCard(NOTE, "What does grep do?");
+    const trimmed = withoutCard(NOTE, "What does grep do?", 0);
 
     expect(trimmed).not.toContain("\n\n\n");
   });

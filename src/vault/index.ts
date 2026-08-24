@@ -36,7 +36,7 @@ export { addDays, isDue, newReviewState, schedule, STARTING_EASE } from "./sched
 export type { SchedulingOptions } from "./schedule.js";
 export { DEFAULT_CONFIG, DEFAULT_CRAM_PER_SESSION, formatConfig, parseConfig } from "./config.js";
 export type { GneissConfig } from "./config.js";
-export { locateCards } from "./parse-note.js";
+export { locateCard, locateCards } from "./parse-note.js";
 export type { CardLocation } from "./parse-note.js";
 export { withReviewState } from "./write-review.js";
 export { withEditedCard, withoutCard } from "./edit-card.js";
@@ -46,5 +46,7 @@ export type { CardText } from "./edit-card.js";
 export { folderOf, obsidianNoteUri } from "./obsidian-link.js";
 export { NEVER, nextStreak, standingStreak } from "./streak.js";
 export { selectDue } from "./queue.js";
+export { cardStanding, tallyStandings } from "./standing.js";
+export type { Standing, StandingTally } from "./standing.js";
 export type { SessionLimits, DueSelection, Schedulable } from "./queue.js";
 export { editedNote } from "./write-note.js";

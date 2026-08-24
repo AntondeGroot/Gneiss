@@ -75,6 +75,20 @@ describe("schedule", () => {
     expect(next).toMatchObject({ interval: 2, due: "2026-09-01" });
   });
 
+  /**
+   * The anchor is *today*, not the date the card was supposed to be seen. A
+   * years-old imported card would otherwise be scheduled to a date already in
+   * the past, fall straight back into the due set, and never leave it however
+   * often it was graded.
+   */
+  it("measures the next due date from today, not from a due date long past", () => {
+    const stale = { due: "2024-04-14", interval: 10, ease: 2.7 };
+
+    const next = schedule(stale, "medium", { ...STANDARD, today: "2026-08-22" });
+
+    expect(next).toMatchObject({ interval: 27, due: "2026-09-18" });
+  });
+
   it("clamps the interval it produced when a cram is running", () => {
     const card = { due: "2026-08-01", interval: 10, ease: 2.5 };
     const cramming: SchedulingOptions = {

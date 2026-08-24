@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, signal } from "@angular/core";
 
 import type { CardText, Grade } from "../../vault";
 import { isDeckCard } from "./deck-cache.service";
+import { cardId } from "./deck-card";
 import { DeckService } from "./deck.service";
 import { today } from "./clock.service";
 import type { DeckCard } from "./deck.service";
@@ -157,7 +158,7 @@ export class ReviewSessionService {
     this.queue.update((cards) =>
       cards.map((existing) =>
         existing.id === card.id
-          ? { ...existing, id: `${card.note}::${next.front}`, ...next }
+          ? { ...existing, id: cardId(card.note, next.front, card.occurrence), ...next }
           : existing,
       ),
     );

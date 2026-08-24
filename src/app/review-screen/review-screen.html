@@ -28,6 +28,12 @@
   <header class="bar">
     <span class="note">{{ card.note }}</span>
     <span class="tier" [class]="'tier-' + card.tier">{{ card.tier }}</span>
+    <!-- Why this card is here at all. Quiet, but present: a card that keeps
+         coming back is indistinguishable from one that is genuinely due, and
+         that difference lives in the note's SR comment where nobody looks. -->
+    @if (standing(); as why) {
+    <span class="standing" [class.odd]="why.kind === 'ahead'">{{ describeStanding(why) }}</span>
+    }
     <!-- Small and out of the way: nothing should compete with the recall. -->
     <button
       type="button"
@@ -90,7 +96,9 @@
   <!-- The day's pace is a portion, not a limit: whatever it held back is offered
        straight away rather than made to wait for tomorrow. -->
   @if (dueCount() > 0) {
-  <p class="more">{{ dueCount() }} more ready now — today's pace is a target, not a limit.</p>
+  <p class="more">
+    {{ dueCount() }} more ready now — {{ describeReady() }}. Today's pace is a target, not a limit.
+  </p>
   } @else {
   <p class="sub">Nothing else is due today.</p>
   }
