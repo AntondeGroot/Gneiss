@@ -58,6 +58,8 @@ export interface VaultAccessPlugin {
   ): Promise<{ remove(): Promise<void> }>;
   readFile(options: { uri: string; path: string }): Promise<{ contents: string; found: boolean }>;
   writeFile(options: { uri: string; path: string; contents: string }): Promise<void>;
+  /** Removes one file. `deleted` is false when it was not there to begin with. */
+  deleteFile(options: { uri: string; path: string }): Promise<{ deleted: boolean }>;
 }
 
 export const VaultAccess = registerPlugin<VaultAccessPlugin>("VaultAccess");

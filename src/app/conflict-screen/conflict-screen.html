@@ -1,0 +1,86 @@
+@if (conflict(); as conflict) {
+<section class="page">
+  <header>
+    <h1>Two versions of this note</h1>
+    <p class="path">{{ conflict.note }}</p>
+  </header>
+
+  @if (loading()) {
+  <p class="hint">Reading both versions…</p>
+  } @else {
+  <p class="hint">
+    Review schedules are merged already — each card keeps whichever side reviewed it most recently.
+    @if (questions().length === 0) { Nothing else differs. } @else { {{ questions().length }}
+    difference{{ questions().length === 1 ? "" : "s" }} to settle. }
+  </p>
+
+  @for (question of questions(); track $index) {
+  <article class="hunk">
+    @if (question.oneSided) {
+    <p class="label">Only in {{ question.hunk.mine ? "this note" : "the copy" }}</p>
+    <pre>{{ question.mine || question.theirs }}</pre>
+    <div class="choices">
+      <button
+        type="button"
+        [class.picked]="chosen($index) !== (question.hunk.mine ? 'theirs' : 'mine')"
+        (click)="choose($index, question.hunk.mine ? 'mine' : 'both')"
+      >
+        Keep it
+      </button>
+      <button
+        type="button"
+        [class.picked]="chosen($index) === (question.hunk.mine ? 'theirs' : 'mine')"
+        (click)="choose($index, question.hunk.mine ? 'theirs' : 'mine')"
+      >
+        Leave it out
+      </button>
+    </div>
+    } @else {
+    <div class="side">
+      <p class="label">This note</p>
+      <pre>{{ question.mine }}</pre>
+    </div>
+    <div class="side">
+      <p class="label">The copy</p>
+      <pre>{{ question.theirs }}</pre>
+    </div>
+    <div class="choices">
+      <button
+        type="button"
+        [class.picked]="chosen($index) === 'mine'"
+        (click)="choose($index, 'mine')"
+      >
+        This note
+      </button>
+      <button
+        type="button"
+        [class.picked]="chosen($index) === 'theirs'"
+        (click)="choose($index, 'theirs')"
+      >
+        The copy
+      </button>
+      <button
+        type="button"
+        [class.picked]="chosen($index) === 'both'"
+        (click)="choose($index, 'both')"
+      >
+        Both
+      </button>
+    </div>
+    }
+  </article>
+  }
+
+  <div class="actions">
+    <button type="button" (click)="leave()" [disabled]="saving()">Cancel</button>
+    <button type="button" class="primary" (click)="apply()" [disabled]="saving()">
+      {{ saving() ? "Merging…" : "Merge and delete the copy" }}
+    </button>
+  </div>
+  <p class="hint small">
+    The result is written into this note, and the conflicted copy is deleted. Nothing else in the
+    vault is touched.
+  </p>
+  }
+</section>
+}

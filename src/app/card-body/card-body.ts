@@ -2,7 +2,7 @@ import { NgTemplateOutlet } from "@angular/common";
 import { Component, computed, inject, input, resource } from "@angular/core";
 
 import { splitCard } from "../../vault";
-import { DeckService } from "../services/deck.service";
+import { AttachmentService } from "../services/attachment.service";
 
 /**
  * A card's answer, images included.
@@ -23,7 +23,7 @@ import { DeckService } from "../services/deck.service";
 export class CardBody {
   readonly text = input.required<string>();
 
-  private readonly deck = inject(DeckService);
+  private readonly attachments = inject(AttachmentService);
 
   protected readonly segments = computed(() => splitCard(this.text()));
 
@@ -32,7 +32,7 @@ export class CardBody {
     params: () => this.segments(),
     loader: async ({ params }) => {
       const targets = params.filter((segment) => segment.kind === "embed");
-      const urls = await Promise.all(targets.map((image) => this.deck.attachment(image.target)));
+      const urls = await Promise.all(targets.map((image) => this.attachments.load(image.target)));
       return new Map(targets.map((image, index) => [image.target, urls[index] ?? ""]));
     },
   });

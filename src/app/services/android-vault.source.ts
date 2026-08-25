@@ -130,6 +130,15 @@ export class AndroidVaultSource implements VaultSource {
     return this.editNote(notePath, (md) => withReviewState(md, front, occurrence, review));
   }
 
+  async readNote(notePath: string): Promise<string> {
+    const { contents } = await VaultAccess.readFile({ uri: this.require(), path: notePath });
+    return contents;
+  }
+
+  async deleteNote(notePath: string): Promise<void> {
+    await VaultAccess.deleteFile({ uri: this.require(), path: notePath });
+  }
+
   async editNote(notePath: string, transform: (md: string) => string): Promise<void> {
     const uri = this.require();
     const { contents } = await VaultAccess.readFile({ uri, path: notePath });

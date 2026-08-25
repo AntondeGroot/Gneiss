@@ -65,7 +65,20 @@ export interface VaultSource {
    * write, and the interesting part belongs in the vault module where it can be
    * tested without a filesystem.
    */
+  /** One note's markdown, as it is on disk right now. Empty when it is not there. */
+  readNote(notePath: string): Promise<string>;
+
   editNote(notePath: string, transform: (md: string) => string): Promise<void>;
+
+  /**
+   * Removes a note from the vault. No-op on a read-only source.
+   *
+   * Deliberately narrow: this exists so a conflicted copy can be cleared away
+   * once it has been merged into the note it came from, which is the one time
+   * Gneiss has business deleting a file it did not create. Notes are the user's,
+   * and nothing else in the app removes one.
+   */
+  deleteNote(notePath: string): Promise<void>;
 
   /**
    * The vault's own folder name, which is what Obsidian knows it by. Empty when

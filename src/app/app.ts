@@ -7,8 +7,12 @@ import { AndroidVaultSource } from "./services/android-vault.source";
 import { DeckService } from "./services/deck.service";
 import { TabBar } from "./tab-bar/tab-bar";
 
-/** Only reviewing takes the whole screen — nothing should compete with the card. */
-const HIDDEN_ON = ["/review"];
+/**
+ * Screens that take the whole screen: reviewing, where nothing should compete
+ * with the card, and settling a conflict, which is a job with a way in and two
+ * ways out.
+ */
+const HIDDEN_ON = ["/review", "/conflict"];
 
 @Component({
   selector: "gn-root",

@@ -73,6 +73,28 @@ export class VaultService {
     );
   }
 
+  /** One note's markdown, or empty when it is not there. */
+  async readNoteText(vaultPath: string, notePath: string): Promise<string> {
+    try {
+      const { data } = await Filesystem.readFile({
+        path: joinPath(vaultPath, notePath),
+        directory: this.directory,
+        encoding: Encoding.UTF8,
+      });
+      return typeof data === "string" ? data : "";
+    } catch {
+      return "";
+    }
+  }
+
+  /** Removes one note from the vault. */
+  async deleteNote(vaultPath: string, notePath: string): Promise<void> {
+    await Filesystem.deleteFile({
+      path: joinPath(vaultPath, notePath),
+      directory: this.directory,
+    });
+  }
+
   /**
    * Rewrites one note through a pure transform.
    *

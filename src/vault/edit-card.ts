@@ -14,9 +14,9 @@
 
 import { markBlankLines } from "./blank-lines.js";
 import { locateCard } from "./parse-note.js";
+import { findReviewComment } from "./review-state.js";
 import type { CardLocation } from "./parse-note.js";
 
-const COMMENT = /<!--SR:(?:![\d-]+,\d+,\d+)+-->/;
 const BLOCK_SEPARATOR = "?";
 const REVERSED_SEPARATOR = "??";
 
@@ -75,7 +75,7 @@ function rewriteSpan(
 
 /** The card's existing review comment, if it carries one. */
 function commentIn(span: string[]): string {
-  return COMMENT.exec(span.join("\n"))?.[0] ?? "";
+  return findReviewComment(span.join("\n")) ?? "";
 }
 
 /**

@@ -54,6 +54,29 @@ the jigsaw puzzle
   });
 
   /**
+   * The SR plugin has a `cardCommentOnSameLine` setting. It is off by default,
+   * but a vault written with it on carries an inline card's state at the end of
+   * the card's own line rather than below it.
+   *
+   * Such a comment is replaced where it stands. Writing a fresh one on the line
+   * below instead would leave the card holding two schedules — and the plugin,
+   * reading the same note, takes the first, so the stale one would win.
+   */
+  it("replaces a comment written on the card's own line, rather than adding a second", () => {
+    const sameLine = `What does grep do? :: search text <!--SR:!2026-09-01,12,250-->
+
+#flashcards/shell
+`;
+
+    const written = withReviewState(sameLine, "What does grep do?", 0, GRADED);
+
+    expect(written).toBe(`What does grep do? :: search text <!--SR:!2026-09-15,12,270-->
+
+#flashcards/shell
+`);
+  });
+
+  /**
    * The safety net under the queue's ordering guarantee.
    *
    * The forward direction is always offered first, so by the time the reverse

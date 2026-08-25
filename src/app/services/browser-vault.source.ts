@@ -84,6 +84,21 @@ export class BrowserVaultSource implements VaultSource {
     await write(file, edited);
   }
 
+  async readNote(notePath: string): Promise<string> {
+    return await (await (await this.fileAt(notePath)).getFile()).text();
+  }
+
+  async deleteNote(notePath: string): Promise<void> {
+    if (!this.writable) return;
+
+    const segments = notePath.split("/");
+    const name = segments.pop() ?? "";
+    let directory = this.requireRoot();
+    for (const segment of segments) directory = await directory.getDirectoryHandle(segment);
+
+    await directory.removeEntry(name);
+  }
+
   /** The folder the user picked, which is the vault root by our own convention. */
   vaultName(): string {
     return this.root?.name ?? "";
@@ -207,6 +222,7 @@ interface DirectoryHandle {
   entries(): AsyncIterableIterator<[string, DirectoryHandle | FileHandle]>;
   getDirectoryHandle(name: string, options?: { create: boolean }): Promise<DirectoryHandle>;
   getFileHandle(name: string, options?: { create: boolean }): Promise<FileHandle>;
+  removeEntry(name: string): Promise<void>;
   queryPermission(options: { mode: "readwrite" }): Promise<"granted" | "denied" | "prompt">;
 }
 

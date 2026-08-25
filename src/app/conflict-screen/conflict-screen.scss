@@ -1,0 +1,136 @@
+@use "styles" as *;
+
+:host {
+  display: block;
+  color: $text;
+  font-family: "Hanken Grotesk", "Avenir Next", system-ui, sans-serif;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem 2.5rem;
+}
+
+h1 {
+  margin: 0;
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 500;
+  font-size: 1.5rem;
+}
+
+header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.path {
+  margin: 0;
+  color: $faint;
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  margin: 0;
+  color: $dim;
+  font-size: 0.8rem;
+  line-height: 1.5;
+
+  &.small {
+    color: $faint;
+    font-size: 0.72rem;
+  }
+}
+
+.hunk {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid $line;
+  border-radius: 0.55rem;
+  background: $panel2;
+}
+
+.label {
+  margin: 0;
+  color: $faint;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+pre {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  overflow-x: auto;
+  border-radius: 0.35rem;
+  background: $base;
+  color: $text;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+}
+
+button {
+  flex: 1 1 auto;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid $line;
+  border-radius: 0.45rem;
+  background: $panel;
+  color: $dim;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $amber;
+    outline-offset: 1px;
+  }
+}
+
+// The chosen answer carries it three ways — fill, ink and weight — so it does
+// not rely on telling two dark greys apart.
+.choices .picked {
+  border-color: $amber;
+  background: $amber;
+  color: $ink;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.actions .primary {
+  background: $amber;
+  border-color: $amber;
+  color: $ink;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

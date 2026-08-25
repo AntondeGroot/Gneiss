@@ -32,6 +32,16 @@ export interface NoteGroup {
 })
 export class VaultScreen {
   private readonly deck = inject(DeckService);
+
+  /**
+   * Notes with a conflicted copy beside them.
+   *
+   * Their copies already contribute no cards, so nothing is being asked *for* —
+   * this is the app saying what it found, rather than a sync problem that has to
+   * be noticed as material quietly no longer coming up.
+   */
+  protected readonly conflicts = this.deck.conflicts;
+
   private readonly samples = inject(SampleVaultService);
   private readonly deviceSource = inject(CapacitorVaultSource);
   private readonly browserSource = inject(BrowserVaultSource);

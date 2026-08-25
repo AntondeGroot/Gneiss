@@ -228,6 +228,30 @@ class VaultAccessPlugin : Plugin() {
         }
     }
 
+    /**
+     * Removes one file from the vault.
+     *
+     * Only ever used to clear away a sync tool's conflicted copy once it has
+     * been merged into the note it came from. Resolves `deleted: false` rather
+     * than failing when the file is already gone, since the caller's goal — that
+     * it not be there — has been met either way.
+     */
+    @PluginMethod
+    fun deleteFile(call: PluginCall) {
+        val tree = call.getString("uri")?.let(Uri::parse)
+        val path = call.getString("path")
+        if (tree == null || path == null) {
+            call.reject("A vault uri and a path are required")
+            return
+        }
+
+        try {
+            call.resolve(JSObject().put("deleted", delete(tree, path)))
+        } catch (error: SecurityException) {
+            call.reject("That folder is read-only", error)
+        }
+    }
+
     // ——— The tree ———
 
     /**
@@ -278,6 +302,21 @@ class VaultAccessPlugin : Plugin() {
 
     /** The document id at `path`, resolved a segment at a time. */
     private fun resolve(tree: Uri, path: String): String? {
+        var documentId = DocumentsContract.getTreeDocumentId(tree)
+        for (segment in path.split("/").filter { it.isNotEmpty() }) {
+            documentId = childNamed(tree, documentId, segment) ?: return null
+        }
+        return documentId
+    }
+
+    private fun delete(tree: Uri, path: String): Boolean {
+        val documentId = documentIdFor(tree, path) ?: return false
+        val file = DocumentsContract.buildDocumentUriUsingTree(tree, documentId)
+        return DocumentsContract.deleteDocument(context.contentResolver, file)
+    }
+
+    /** Walks an existing path, creating nothing — unlike `write`, which does. */
+    private fun documentIdFor(tree: Uri, path: String): String? {
         var documentId = DocumentsContract.getTreeDocumentId(tree)
         for (segment in path.split("/").filter { it.isNotEmpty() }) {
             documentId = childNamed(tree, documentId, segment) ?: return null

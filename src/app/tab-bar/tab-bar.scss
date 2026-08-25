@@ -71,3 +71,41 @@ a.active {
   font-size: 0.7rem;
   font-weight: 600;
 }
+
+/**
+ * A triangle, not a pill.
+ *
+ * The count beside Today says "here is a number"; this says "something is
+ * wrong", and the two must not read at a glance as the same kind of thing. They
+ * share the amber, so the *shape* is what separates them — which is why the
+ * corners are eased rather than sharp: a soft triangle and a pill are plainly
+ * different objects even in one hue.
+ *
+ * Drawn rather than typed: `⚠` arrives as a full-colour emoji on some Androids
+ * and a thin outline on others, and neither sits on the text baseline the way a
+ * shape sized in `em` does.
+ *
+ * Rounded by a round-joined stroke rather than by arcs in the path — the corner
+ * radius is then one number to change, instead of six curves to recompute.
+ */
+.warn {
+  // Height alone. Setting both dimensions letterboxes the drawing inside a
+  // square box — the viewBox is taller than it is wide, so the triangle came out
+  // squashed and read as bottom-heavy.
+  height: 1em;
+  width: auto;
+  flex: 0 0 auto;
+
+  .sign {
+    fill: $amber;
+    stroke: $amber;
+    stroke-width: 2.6;
+    stroke-linejoin: round;
+  }
+
+  // Cut in the bar's own colour, so the exclamation reads as a hole through the
+  // sign rather than a second shape sitting on it.
+  .mark {
+    fill: $panel;
+  }
+}

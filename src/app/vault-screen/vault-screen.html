@@ -31,7 +31,28 @@
   }
 </div>
 
-@if (sourceLabel()) {
+@if (conflicts().length > 0) {
+<section class="conflicts">
+  <p>
+    <strong
+      >{{ conflicts().length }} note{{ conflicts().length === 1 ? "" : "s" }} here {{
+      conflicts().length === 1 ? "has" : "have" }} a conflicted copy.</strong
+    >
+    Something syncing this vault kept two versions. The copies are out of the deck, so nothing is
+    asked twice — but only one version is getting your reviews.
+  </p>
+  @for (conflict of conflicts(); track conflict.copy) {
+  <div class="conflict">
+    <span class="path">{{ conflict.note }}</span>
+    @if (canWrite()) {
+    <a routerLink="/conflict" [queryParams]="{ copy: conflict.copy }">Resolve…</a>
+    }
+  </div>
+  } @if (!canWrite()) {
+  <p class="readonly">This vault is open read-only, so nothing can be merged.</p>
+  }
+</section>
+} @if (sourceLabel()) {
 <p class="source">
   {{ sourceLabel() }} @if (!canWrite()) {
   <span class="readonly">· read-only, grades will not be saved</span>
