@@ -34,6 +34,15 @@ export interface ParsedCard {
   occurrence: number;
   /** Present only when the note already carried SR state for this card. */
   review?: ReviewState;
+  /**
+   * Which reversed card in the note this is a direction of — its first line.
+   *
+   * Absent on a one-way card. Two cards sharing it ask the same material both
+   * ways, which is why a session serves only one of them. It is a position, not
+   * an identity: it groups the two directions within one read of one note, and
+   * nothing durable is keyed on it.
+   */
+  pair?: number;
 }
 
 export interface ParsedNote {

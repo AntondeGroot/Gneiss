@@ -35,6 +35,31 @@ beforeEach(() => {
 });
 
 describe("DeckCacheService", () => {
+  /**
+   * The case this was written for, from a real device: a cache saved by the
+   * build *before* reversed cards were paired holds both directions of one, and
+   * neither carries the `pair` the queue groups them by. Every card in it passes
+   * `isDeckCard` — `pair` is genuinely absent on a one-way card, so no per-card
+   * check can tell the two apart — and the session serves the pair together, the
+   * exact thing the pairing exists to stop.
+   *
+   * A field that is legitimately optional cannot be validated, so the payload
+   * carries the shape it was written against instead. An older one is dropped
+   * rather than read, which costs one slow launch and nothing else.
+   */
+  it("drops a cache written before cards carried their pairing", () => {
+    const stale = {
+      vault: "Obsidian",
+      config: "",
+      topics: [],
+      // Exactly what the previous build wrote: valid cards, no version, no pair.
+      cards: [card("forward", "2026-08-01"), card("reverse", "2026-08-01")],
+    };
+    store.set("gneiss.deck", JSON.stringify(stale));
+
+    expect(cache.load("Obsidian")).toBeNull();
+  });
+
   it("gives back the deck it was handed", () => {
     const config = { ...DEFAULT_CONFIG, spread: 0.4, newPerSession: 3 };
     cache.save("Obsidian", config, [card("a", "2026-08-01")], ["#flashcards/git"]);

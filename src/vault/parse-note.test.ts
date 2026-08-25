@@ -64,12 +64,14 @@ to get up early
         back: "to get up early",
         occurrence: 0,
         review: { due: "2026-04-11", interval: 60, ease: 3.1 },
+        pair: 0,
       },
       {
         front: "to get up early",
         back: "madrugar",
         occurrence: 0,
         review: { due: "2026-02-25", interval: 1, ease: 2.1 },
+        pair: 0,
       },
     ]);
   });
@@ -95,8 +97,9 @@ the anthill
     const { cards } = parseNote(md, "vocabulary.md");
 
     expect(cards).toEqual([
-      { front: "el hormiguero", back: "the anthill", occurrence: 0 },
-      { front: "the anthill", back: "el hormiguero", occurrence: 0 },
+      // Both directions share `pair`, which is what has a session serve one of them.
+      { front: "el hormiguero", back: "the anthill", occurrence: 0, pair: 0 },
+      { front: "the anthill", back: "el hormiguero", occurrence: 0, pair: 0 },
     ]);
   });
 
@@ -124,9 +127,10 @@ the light bulb
     const { cards } = parseNote(md, "vocabulary.md");
 
     expect(cards).toEqual([
+      // The one-way card has no `pair`: it has no sibling to crowd out.
       { front: "el paraguas", back: "the umbrella", occurrence: 0 },
-      { front: "la bombilla", back: "the light bulb", occurrence: 0 },
-      { front: "the light bulb", back: "la bombilla", occurrence: 0 },
+      { front: "la bombilla", back: "the light bulb", occurrence: 0, pair: 4 },
+      { front: "the light bulb", back: "la bombilla", occurrence: 0, pair: 4 },
     ]);
   });
 

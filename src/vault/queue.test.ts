@@ -29,6 +29,29 @@ function newCard(id: string, tier: Tier, topicTags: string[] = []): TestCard {
 
 describe("selectDue", () => {
   /**
+   * Both directions of a reversed card ask the same material, so serving them in
+   * one sitting makes the second one a freebie: its answer was on screen a
+   * moment ago. Only one goes out, and the other waits for a later session — by
+   * which time answering it is worth something.
+   *
+   * The one kept is the forward direction while neither has been reviewed, which
+   * is also what keeps the comment's first entry the first one written. It is not
+   * a separate rule: the two tie on due date, and a tie keeps parse order.
+   */
+  it("serves only one direction of a reversed card in a session", () => {
+    const pair = "vocabulary.md#12";
+    const cards = [
+      { ...newCard("term to definition", "standard"), pair },
+      { ...newCard("definition to term", "standard"), pair },
+      newCard("an unrelated card", "standard"),
+    ];
+
+    const { queue } = selectDue(cards, TODAY, GENEROUS);
+
+    expect(queue.map((served) => served.id)).toEqual(["term to definition", "an unrelated card"]);
+  });
+
+  /**
    * A reversed `??` card stores its two schedules as two entries in one comment,
    * matched to the directions by position — so the forward direction's entry
    * cannot be written after the reverse one's without inventing a placeholder
