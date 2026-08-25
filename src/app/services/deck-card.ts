@@ -6,7 +6,7 @@
  * note opted in at all — is decided here, without a service in sight.
  */
 
-import { newReviewState, resolveTier } from "../../vault";
+import { conflictedCopyOf, newReviewState, resolveTier } from "../../vault";
 import type { GneissConfig, ParsedNote, ReviewState, Tier, TierMapping } from "../../vault";
 import { today } from "./clock.service";
 
@@ -88,15 +88,58 @@ export function withOverride(
 }
 
 /**
- * Only notes the user tagged join the deck.
+ * The notes that produce cards. Two reasons a file does not.
  *
- * Gneiss never opts a note in: a `::` or a bare `?` can appear in any note, and
- * treating that as a flashcard would adopt half a vault. The `#flashcards` tag
- * is the consent, which also means **removing it takes the cards out again** —
- * without this, untagging a topic changed nothing at all.
+ * **It was never opted in.** Gneiss never adopts a note: a `::` or a bare `?`
+ * can appear anywhere, and treating that as a flashcard would take in half a
+ * vault. The `#flashcards` tag is the consent, which also means **removing it
+ * takes the cards out again** — without this, untagging a topic changed nothing.
+ *
+ * **It is a sync tool's leftover.** A conflicted copy holds the same cards as
+ * the note beside it, and a card's identity includes its note's path, so nothing
+ * downstream can tell the two apart — every card in that note is simply asked
+ * twice, and a grade reaches only one of them. Dropping it here means the
+ * duplicates stop as soon as the vault is read, rather than waiting for anyone
+ * to sit down and merge. Resolving the conflict is a separate, unhurried job.
  */
-export function onlyTagged(notes: readonly ParsedNote[]): readonly ParsedNote[] {
-  return notes.filter((note) => note.topicTags.length > 0);
+export function deckNotes(
+  notes: readonly ParsedNote[],
+  present: ReadonlySet<string> = new Set(notes.map((note) => note.note)),
+): readonly ParsedNote[] {
+  return notes.filter(
+    (note) => note.topicTags.length > 0 && !isConflictedDuplicate(note.note, present),
+  );
+}
+
+/** A note and the conflicted copy of it sitting alongside. */
+export interface VaultConflict {
+  readonly note: string;
+  readonly copy: string;
+}
+
+/** Every note in the vault that has a conflicted copy beside it. */
+export function conflictsIn(paths: ReadonlySet<string>): VaultConflict[] {
+  return [...paths].flatMap((copy) => {
+    const note = conflictedCopyOf(copy);
+    return note !== null && paths.has(note) ? [{ note, copy }] : [];
+  });
+}
+
+/**
+ * Whether this file is a conflicted copy *and* the note it copies is still here.
+ *
+ * Both halves matter. Skipping it is only ever de-duplication, so with the
+ * original gone — renamed, or deleted while the copy stayed behind — the copy is
+ * the last surviving version of that material and skipping it would throw the
+ * lot away, silently and with nothing on screen to say so.
+ *
+ * `present` is every note seen so far rather than the batch in hand: a vault is
+ * read in pieces, and a copy that arrived before its original would otherwise
+ * look like an orphan and be let in.
+ */
+export function isConflictedDuplicate(path: string, present: ReadonlySet<string>): boolean {
+  const original = conflictedCopyOf(path);
+  return original !== null && present.has(original);
 }
 
 /**
@@ -122,4 +165,28 @@ export function cardId(note: string, front: string, occurrence: number): string 
  */
 export function withoutRepeats(cards: readonly DeckCard[]): DeckCard[] {
   return [...new Map(cards.map((card) => [card.id, card])).values()];
+}
+
+/**
+ * The deck with one note's cards swapped for the ones it holds now, and a
+ * second note's dropped outright.
+ *
+ * Used when a conflict is settled: the note has just been rewritten, and the
+ * copy it was merged with is gone. Filtering by note path rather than by card id
+ * is what makes that safe — a merge can add, remove or reword cards, so the ids
+ * on either side of it do not line up.
+ */
+export function withNoteReplaced(
+  cards: readonly DeckCard[],
+  note: ParsedNote,
+  dropped: string,
+  tiers: TierMapping,
+  present: ReadonlySet<string>,
+): DeckCard[] {
+  const fresh = deckNotes([note], present).flatMap((kept) => toCards(kept, tiers));
+
+  return withoutRepeats([
+    ...cards.filter((card) => card.note !== note.note && card.note !== dropped),
+    ...fresh,
+  ]);
 }

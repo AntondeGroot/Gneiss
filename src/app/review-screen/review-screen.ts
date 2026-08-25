@@ -7,6 +7,7 @@ import { CardEditor } from "../card-editor/card-editor";
 import type { CardText, Grade, Standing } from "../../vault";
 import { cardStanding, tallyStandings } from "../../vault";
 import { ClockService } from "../services/clock.service";
+import { AttachmentService } from "../services/attachment.service";
 import { DeckService } from "../services/deck.service";
 import { ReviewSessionService } from "../services/review-session.service";
 
@@ -20,6 +21,7 @@ const GRADES: readonly Grade[] = ["difficult", "medium", "easy"];
 })
 export class ReviewScreen {
   private readonly deck = inject(DeckService);
+  private readonly images = inject(AttachmentService);
   private readonly session = inject(ReviewSessionService);
   private readonly clock = inject(ClockService);
   private readonly router = inject(Router);
@@ -78,7 +80,7 @@ export class ReviewScreen {
     // Warms this card's answer while the question is up, and the next card's
     // while this one is being answered — so an image is rarely waited on.
     effect(() => {
-      this.deck.prefetch(...this.session.upcoming());
+      this.images.prefetch(...this.session.upcoming());
     });
 
     // Arriving with a session already open carries it on. Today sends people

@@ -10,7 +10,7 @@
 import { BLANK_LINE_MARKER } from "./blank-lines.js";
 import { countFences } from "./fences.js";
 import { findTierOverride, findTopicTags } from "./tags.js";
-import { parseReviewStates, stripReviewComments } from "./review-state.js";
+import { isReviewCommentLine, parseReviewStates, stripReviewComments } from "./review-state.js";
 import type { ParsedCard, ParsedNote, ReviewState } from "./types.js";
 
 const BLOCK_SEPARATOR = "?";
@@ -23,15 +23,6 @@ const BLOCK_SEPARATOR = "?";
  * and a prefix test would read every one-way card as reversed.
  */
 const REVERSED_SEPARATOR = "??";
-/**
- * A line holding nothing but review state.
- *
- * Where the Obsidian SR plugin puts an inline card's `<!--SR:-->` comment: on
- * the line *below* the card, not at the end of it. Reading it anywhere else
- * imported every inline card in a plugin-written vault as never-seen — a card
- * learned months ago arriving as new material.
- */
-const COMMENT_ONLY_LINE = /^\s*<!--SR:(?:![\d-]+,\d+,\d+)+-->\s*$/;
 const INLINE_SEPARATOR = "::";
 const FRONTMATTER_DELIMITER = "---";
 const HEADING_MARKER = /^#+\s*/;
@@ -248,7 +239,7 @@ class CardScanner {
     const separator = line.indexOf(INLINE_SEPARATOR);
     const front = cleanFront(line.slice(0, separator));
     const below = this.lines[this.lineIndex + 1] ?? "";
-    const carriesComment = COMMENT_ONLY_LINE.test(below);
+    const carriesComment = isReviewCommentLine(below);
     const rest = line.slice(separator + INLINE_SEPARATOR.length) + (carriesComment ? below : "");
 
     if (carriesComment) this.commentLine = this.lineIndex + 1;

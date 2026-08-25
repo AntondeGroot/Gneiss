@@ -10,11 +10,40 @@
 import type { ReviewState } from "./types.js";
 
 const REVIEW_COMMENT = /<!--SR:((?:![\d-]+,\d+,\d+)+)-->/;
+/**
+ * The same comment, filling a line on its own.
+ *
+ * Tested against a trimmed line rather than padded with `\s*`, which keeps it
+ * linear and lets callers pass a line with or without its ending.
+ */
+const REVIEW_COMMENT_ONLY = /^<!--SR:(?:![\d-]+,\d+,\d+)+-->$/;
 const REVIEW_COMMENT_GLOBAL = new RegExp(REVIEW_COMMENT.source, "g");
 const ENTRY = /!(\d{4}-\d{2}-\d{2}),(\d+),(\d+)/g;
 
 /** The plugin stores ease as an integer percent: 210 means an ease of 2.10. */
 const EASE_PERCENT = 100;
+
+/**
+ * Whether this line holds review state and nothing else.
+ *
+ * Where the plugin puts an inline card's comment: on the line *below* the card.
+ * Four modules asked this question with four regexes of their own until one of
+ * them turned out not to understand a reversed card's two-entry comment, read it
+ * as card text, and discarded a direction's history. They ask here now.
+ */
+export function isReviewCommentLine(line: string): boolean {
+  return REVIEW_COMMENT_ONLY.test(line.trim());
+}
+
+/** The first review comment in `text`, or null. */
+export function findReviewComment(text: string): string | null {
+  return REVIEW_COMMENT.exec(text)?.[0] ?? null;
+}
+
+/** `text` with its first review comment swapped for `replacement`. */
+export function replaceReviewComment(text: string, replacement: string): string {
+  return text.replace(REVIEW_COMMENT, replacement);
+}
 
 export function parseReviewStates(text: string): ReviewState[] {
   const comment = REVIEW_COMMENT.exec(text);

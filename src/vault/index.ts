@@ -17,6 +17,8 @@ export type {
 
 export { parseNote } from "./parse-note.js";
 export { findTags, findTierOverride, findTopicTags, isFlashcardNote, withTier } from "./tags.js";
+export { conflictHunks, conflictedCopyOf, mergeNotes } from "./conflict.js";
+export type { ConflictHunk, Resolution } from "./conflict.js";
 export { formatReviewComment, parseReviewStates, stripReviewComments } from "./review-state.js";
 export { resolveTier, tierFromMapping, tierGrowth } from "./tier.js";
 export type { Tierable } from "./tier.js";

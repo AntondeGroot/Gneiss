@@ -1,13 +1,13 @@
 import { TestBed } from "@angular/core/testing";
 
 import { CardBody } from "./card-body";
-import { DeckService } from "../services/deck.service";
+import { AttachmentService } from "../services/attachment.service";
 
 /** Stands in for the vault: one known image, everything else missing. */
-class FakeDeck {
+class FakeAttachments {
   readonly asked: string[] = [];
 
-  attachment(target: string): Promise<string> {
+  load(target: string): Promise<string> {
     this.asked.push(target);
     return Promise.resolve(
       target === "Pasted image 20260104.png" ? "data:image/png;base64,AAAA" : "",
@@ -16,10 +16,10 @@ class FakeDeck {
 }
 
 async function render(text: string) {
-  const deck = new FakeDeck();
+  const deck = new FakeAttachments();
   await TestBed.configureTestingModule({
     imports: [CardBody],
-    providers: [{ provide: DeckService, useValue: deck }],
+    providers: [{ provide: AttachmentService, useValue: deck }],
   }).compileComponents();
 
   const fixture = TestBed.createComponent(CardBody);

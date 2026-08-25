@@ -129,6 +129,11 @@ function fakeSource(notes: Record<string, string>) {
       notes[path] = transform(notes[path] ?? "");
       return Promise.resolve();
     },
+    readNote: (path: string) => Promise.resolve(notes[path] ?? ""),
+    deleteNote: (path: string) => {
+      delete notes[path];
+      return Promise.resolve();
+    },
     vaultName: () => "MyVault",
     readAttachment: () => Promise.resolve(""),
     readConfig: () => Promise.resolve(DEFAULT_CONFIG),

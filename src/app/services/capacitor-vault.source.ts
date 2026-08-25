@@ -52,6 +52,14 @@ export class CapacitorVaultSource implements VaultSource {
     return this.vault.editNote(this.path, notePath, transform);
   }
 
+  readNote(notePath: string): Promise<string> {
+    return this.vault.readNoteText(this.path, notePath);
+  }
+
+  deleteNote(notePath: string): Promise<void> {
+    return this.vault.deleteNote(this.path, notePath);
+  }
+
   /**
    * Not supported here.
    *

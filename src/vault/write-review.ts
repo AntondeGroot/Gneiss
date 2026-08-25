@@ -9,11 +9,14 @@
 
 import { locateCard } from "./parse-note.js";
 import type { CardLocation } from "./parse-note.js";
-import { formatReviewComment, parseReviewStates } from "./review-state.js";
+import {
+  findReviewComment,
+  formatReviewComment,
+  isReviewCommentLine,
+  parseReviewStates,
+  replaceReviewComment,
+} from "./review-state.js";
 import type { ReviewState } from "./types.js";
-
-const COMMENT = /<!--SR:(?:![\d-]+,\d+,\d+)+-->/;
-const COMMENT_ONLY_LINE = /^\s*<!--SR:(?:![\d-]+,\d+,\d+)+-->\s*$/;
 
 /**
  * Records `review` against the card whose question is `front`, and which is the
@@ -74,9 +77,9 @@ function entriesWith(
 function applyAt(lines: string[], at: CardLocation, comment: string): string[] {
   const existing = lines[at.answerEndLine] ?? "";
 
-  if (COMMENT_ONLY_LINE.test(existing)) return replaceLine(lines, at.answerEndLine, comment);
-  if (COMMENT.test(existing)) {
-    return replaceLine(lines, at.answerEndLine, existing.replace(COMMENT, comment));
+  if (isReviewCommentLine(existing)) return replaceLine(lines, at.answerEndLine, comment);
+  if (findReviewComment(existing) !== null) {
+    return replaceLine(lines, at.answerEndLine, replaceReviewComment(existing, comment));
   }
   return insertComment(lines, at, comment);
 }

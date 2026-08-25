@@ -37,6 +37,12 @@ class HeldVault implements VaultSource {
   writeReviewState(): Promise<void> {
     return Promise.resolve();
   }
+  readNote(): Promise<string> {
+    return Promise.resolve("");
+  }
+  deleteNote(): Promise<void> {
+    return Promise.resolve();
+  }
   editNote(): Promise<void> {
     return new Promise((resolve) => {
       this.finishWrite = resolve;

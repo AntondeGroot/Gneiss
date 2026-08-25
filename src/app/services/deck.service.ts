@@ -11,19 +11,41 @@ import {
   schedule,
   obsidianNoteUri,
   selectDue,
-  splitCard,
   standingStreak,
   withEditedCard,
   withTier,
   withoutCard,
+  conflictHunks,
+  mergeNotes,
+  parseNote,
 } from "../../vault";
-import type { CardText, GneissConfig, Grade, ParsedNote, ReviewState, Tier } from "../../vault";
+import type {
+  CardText,
+  ConflictHunk,
+  GneissConfig,
+  Grade,
+  ParsedNote,
+  Resolution,
+  ReviewState,
+  Tier,
+} from "../../vault";
 import { ClockService } from "./clock.service";
+import { AttachmentService } from "./attachment.service";
 import { DeckCacheService } from "./deck-cache.service";
 import { ReminderService } from "./reminder.service";
 import type { VaultSource } from "./vault-source";
 import { NoteWriter } from "./note-writer";
-import { cardId, onlyTagged, toCards, withoutRepeats, withOverride } from "./deck-card";
+import {
+  cardId,
+  conflictsIn,
+  deckNotes,
+  isConflictedDuplicate,
+  toCards,
+  withNoteReplaced,
+  withoutRepeats,
+  withOverride,
+} from "./deck-card";
+import type { VaultConflict } from "./deck-card";
 import type { DeckCard } from "./deck-card";
 
 // Re-exported so the screens and the cache go on importing a card's type from
@@ -40,6 +62,7 @@ export type { DeckCard } from "./deck-card";
 @Injectable({ providedIn: "root" })
 export class DeckService {
   private readonly cache = inject(DeckCacheService);
+  private readonly images = inject(AttachmentService);
   private readonly reminders = inject(ReminderService);
   /**
    * Read as a signal, not as `today()`, everywhere below. That is what makes a
@@ -50,6 +73,16 @@ export class DeckService {
   private readonly writer = inject(NoteWriter);
   private source: VaultSource | null = null;
   private readonly cards = signal<readonly DeckCard[]>([]);
+  /** Every note path seen in this read, so a copy is judged against the whole vault. */
+  private readonly seen = new Set<string>();
+  /**
+   * Notes with a conflicted copy beside them.
+   *
+   * Their copies contribute no cards, so the deck is already correct — this is
+   * what lets the app *say so*, rather than leaving a sync problem to be noticed
+   * as material that quietly stopped coming up.
+   */
+  readonly conflicts = signal<readonly VaultConflict[]>([]);
   /**
    * The vault's topic tags, so Settings can offer a row per topic. Taken from the
    * notes rather than the cards: a note tagged but not yet filled in still names
@@ -85,7 +118,6 @@ export class DeckService {
   private readonly gradedWhileReading = new Map<string, ReviewState>();
 
   /** Images already fetched this session, keyed by what the note wrote. */
-  private readonly attachments = new Map<string, string>();
 
   /** The read in flight, so a second request for the same vault joins it. */
   private opening: { location: string; done: Promise<void> } | null = null;
@@ -183,7 +215,7 @@ export class DeckService {
     this.sourceLabel.set(source.label);
     this.canWrite.set(source.canWrite());
     this.config.set(await source.readConfig());
-    this.attachments.clear();
+    this.images.use(source);
     this.syncReminders();
 
     // With cards already on screen from the cache, streaming a second set in
@@ -197,6 +229,7 @@ export class DeckService {
     }
 
     const staged: ParsedNote[] = [];
+    this.seen.clear();
     this.reading.set(true);
     this.gradedWhileReading.clear();
     try {
@@ -256,11 +289,18 @@ export class DeckService {
    */
   addNotes(notes: readonly ParsedNote[]): void {
     const tiers = this.config().tiers;
-    const tagged = onlyTagged(notes);
+    for (const note of notes) this.seen.add(note.note);
+
+    const tagged = deckNotes(notes, this.seen);
     this.topics.update((topics) => [...new Set([...topics, ...distinctTopicTags(tagged)])]);
     this.cards.update((cards) =>
-      withoutRepeats([...cards, ...tagged.flatMap((note) => toCards(note, tiers))]),
+      // Filtered again after appending, because a batch can carry the note a
+      // copy from an earlier batch duplicates — and by then its cards are in.
+      withoutRepeats([...cards, ...tagged.flatMap((note) => toCards(note, tiers))]).filter(
+        (card) => !isConflictedDuplicate(card.note, this.seen),
+      ),
     );
+    this.conflicts.set(conflictsIn(this.seen));
   }
 
   /**
@@ -269,7 +309,11 @@ export class DeckService {
    * against a folder Gneiss did not read through VaultService.
    */
   setNotes(notes: readonly ParsedNote[]): void {
-    const tagged = onlyTagged(notes);
+    this.seen.clear();
+    for (const note of notes) this.seen.add(note.note);
+    this.conflicts.set(conflictsIn(this.seen));
+
+    const tagged = deckNotes(notes, this.seen);
     this.loaded.set(true);
     this.topics.set(distinctTopicTags(tagged));
     this.cards.set(withoutRepeats(tagged.flatMap((note) => toCards(note, this.config().tiers))));
@@ -323,39 +367,51 @@ export class DeckService {
   }
 
   /**
-   * An embedded image as something an `img` tag can load.
+   * Both versions of a conflicted note, and what they disagree about.
    *
-   * Cached for the session: the same diagram often sits on several cards, and on
-   * Android the bytes come back base64 across the bridge, which is the one part
-   * of showing an image that is worth not repeating.
+   * Read from disk rather than from the deck, because the copy's cards were
+   * deliberately never loaded — and because a merge has to be built from what
+   * the files say now, not from a snapshot taken when the vault was read.
    */
-  async attachment(target: string): Promise<string> {
-    const known = this.attachments.get(target);
-    if (known !== undefined) return known;
+  async openConflict(conflict: VaultConflict): Promise<ConflictHunk[]> {
+    const source = this.source;
+    if (!source) return [];
 
-    const url = (await this.source?.readAttachment(target)) ?? "";
-    // Only successes are kept. A miss can mean the vault has not finished
-    // listing itself, and remembering that would make the card show a raw link
-    // for as long as the app stays open.
-    if (url !== "") this.attachments.set(target, url);
-    return url;
+    const mine = await source.readNote(conflict.note);
+    return conflictHunks(mine, await source.readNote(conflict.copy));
   }
 
   /**
-   * Fetches a card's images ahead of being asked for them.
+   * Settles a conflict: the merge is written into the note, and the copy goes.
    *
-   * An image costs a round trip and a base64 decode, which is a visible pause if
-   * it starts when the card appears. Warming the answer's images while the
-   * question is still on screen — and the next card's while this one is being
-   * answered — spends that time where nobody is waiting.
+   * The copy is removed rather than left behind, because it *is* the duplicate —
+   * kept, it would go on being reported as a conflict for ever, and anyone
+   * opening the vault in Obsidian would still see two notes. This is the one
+   * file Gneiss deletes, and only once its contents are in the note it came from.
+   *
+   * The note is re-parsed rather than read back: the merge is exactly what was
+   * just written, so the deck catches up without waiting for a full read.
    */
-  prefetch(...cards: readonly (DeckCard | undefined)[]): void {
-    for (const card of cards) {
-      if (!card) continue;
-      for (const segment of splitCard(`${card.front}\n${card.back}`)) {
-        if (segment.kind === "embed") void this.attachment(segment.target);
-      }
-    }
+  async resolveConflict(
+    conflict: VaultConflict,
+    resolutions: readonly Resolution[],
+  ): Promise<void> {
+    const source = this.source;
+    if (!source) return;
+
+    const mine = await source.readNote(conflict.note);
+    const merged = mergeNotes(mine, await source.readNote(conflict.copy), resolutions);
+
+    await this.writer.write(conflict.note, () => source.editNote(conflict.note, () => merged));
+    await this.writer.write(conflict.copy, () => source.deleteNote(conflict.copy));
+
+    this.seen.delete(conflict.copy);
+    this.conflicts.set(conflictsIn(this.seen));
+
+    const rewritten = parseNote(merged, conflict.note);
+    this.cards.update((cards) =>
+      withNoteReplaced(cards, rewritten, conflict.copy, this.config().tiers, this.seen),
+    );
   }
 
   /** The open vault's own name, which is how state kept on the device is keyed. */

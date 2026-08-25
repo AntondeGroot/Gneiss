@@ -18,4 +18,10 @@ export class TabBar {
   private readonly deck = inject(DeckService);
 
   protected readonly due = this.deck.due;
+  /**
+   * A conflicted copy changes what gets reviewed without anything looking wrong,
+   * so the bar carries it: the Vault tab is not somewhere anyone thinks to look
+   * unless something sends them there.
+   */
+  protected readonly conflicts = this.deck.conflicts;
 }
