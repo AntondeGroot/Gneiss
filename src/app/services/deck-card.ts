@@ -30,6 +30,14 @@ export interface DeckCard {
   /** Kept alongside the resolved tier so the card can be re-tiered in place. */
   readonly tierOverride?: Tier;
   readonly review: ReviewState;
+  /**
+   * Set on both directions of a reversed card, to the same value — the note it
+   * came from and where in it. Absent on a one-way card.
+   *
+   * Carries the note path because the queue sees the whole vault at once, and a
+   * position on its own would collide across notes.
+   */
+  readonly pair?: string;
 }
 
 export function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
@@ -43,6 +51,7 @@ export function toCards(note: ParsedNote, tiers: TierMapping): DeckCard[] {
     tier,
     topicTags: note.topicTags,
     ...(note.tierOverride ? { tierOverride: note.tierOverride } : {}),
+    ...(card.pair === undefined ? {} : { pair: `${note.note}#${card.pair}` }),
     review: card.review ?? newReviewState(today()),
   }));
 }
@@ -72,6 +81,7 @@ export function withOverride(
     back: card.back,
     topicTags: card.topicTags,
     review: card.review,
+    ...(card.pair === undefined ? {} : { pair: card.pair }),
     ...(override ? { tierOverride: override } : {}),
     tier: resolveTier(tierable, config.tiers),
   };

@@ -1,7 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from "@angular/core";
 
 import type { CardText, Grade } from "../../vault";
-import { isDeckCard } from "./deck-cache.service";
+import { STORED_SHAPE, isDeckCard } from "./deck-cache.service";
 import { cardId } from "./deck-card";
 import { DeckService } from "./deck.service";
 import { today } from "./clock.service";
@@ -11,6 +11,8 @@ const KEY = "gneiss.session";
 
 /** What a session needs to be picked up again after the app has been closed. */
 interface SavedSession {
+  /** The build's `STORED_SHAPE`; anything else is not resumed. */
+  readonly version: number;
   /** The day it belongs to. Yesterday's session is not resumed. */
   readonly day: string;
   /** The vault it came from, so another vault's cards are never served. */
@@ -228,6 +230,7 @@ export class ReviewSessionService {
     }
 
     const saved: SavedSession = {
+      version: STORED_SHAPE,
       day: today(),
       vault: this.vault || this.deck.vaultName(),
       queue,
@@ -251,10 +254,14 @@ function readSession(parsed: unknown): SavedSession | null {
   if (typeof parsed !== "object" || parsed === null) return null;
 
   const saved = parsed as Partial<Record<keyof SavedSession, unknown>>;
+  // A queue picked by an older build can hold cards this one would not have put
+  // in one together — see `STORED_SHAPE`.
+  if (saved.version !== STORED_SHAPE) return null;
   if (typeof saved.day !== "string" || typeof saved.at !== "number") return null;
   if (!Array.isArray(saved.queue) || !saved.queue.every(isDeckCard)) return null;
 
   return {
+    version: STORED_SHAPE,
     day: saved.day,
     vault: typeof saved.vault === "string" ? saved.vault : "",
     queue: saved.queue,

@@ -321,20 +321,20 @@ class CardScanner {
     reviews: readonly ReviewState[],
     span: Span,
   ): void {
-    this.addCard(front, back, reviews[0], {
+    this.addCard(
       front,
-      occurrence: this.occurrenceOf(front),
-      kind: "reversed",
-      entry: 0,
-      ...span,
-    });
-    this.addCard(back, front, reviews[1], {
-      front: back,
-      occurrence: this.occurrenceOf(back),
-      kind: "reversed",
-      entry: 1,
-      ...span,
-    });
+      back,
+      reviews[0],
+      { front, occurrence: this.occurrenceOf(front), kind: "reversed", entry: 0, ...span },
+      span.startLine,
+    );
+    this.addCard(
+      back,
+      front,
+      reviews[1],
+      { front: back, occurrence: this.occurrenceOf(back), kind: "reversed", entry: 1, ...span },
+      span.startLine,
+    );
   }
 
   /**
@@ -363,6 +363,7 @@ class CardScanner {
     answer: string,
     review: ReviewState | undefined,
     location: CardLocation,
+    pair?: number,
   ): void {
     if (!question || !answer) return;
     this.cards.push({
@@ -370,6 +371,7 @@ class CardScanner {
       back: answer,
       occurrence: location.occurrence,
       ...(review ? { review } : {}),
+      ...(pair === undefined ? {} : { pair }),
     });
     this.locations.push(location);
   }

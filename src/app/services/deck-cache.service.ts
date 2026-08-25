@@ -14,7 +14,23 @@ const KEY = "gneiss.deck";
  */
 const SESSIONS = 4;
 
+/**
+ * The shape of the card state written to the device.
+ *
+ * Bumped whenever cards gain a field the scheduler relies on that `isDeckCard`
+ * cannot check for itself — which is any *optional* one, since its absence is
+ * indistinguishable from a card that legitimately lacks it. `pair` was the first:
+ * a cache from the build before it held both directions of a reversed card with
+ * nothing to group them by, and the session served the pair together.
+ *
+ * Read by the saved session too. Both are the same state written to the same
+ * device by the same build, and a version each would only drift.
+ */
+export const STORED_SHAPE = 2;
+
 interface CachedDeck {
+  /** The build's `STORED_SHAPE`; anything else is not read. */
+  readonly version: number;
   /** Which vault this came from, so another vault's cards are never served. */
   readonly vault: string;
   /** Stored in the same markdown the vault uses, so there is no second format. */
@@ -44,6 +60,7 @@ export class DeckCacheService {
     if (!vault) return;
 
     const deck: CachedDeck = {
+      version: STORED_SHAPE,
       vault,
       config: formatConfig(config),
       cards: keepEnoughFor(cards, config),
@@ -86,6 +103,7 @@ function readDeck(
   if (typeof parsed !== "object" || parsed === null) return null;
 
   const deck = parsed as Partial<Record<keyof CachedDeck, unknown>>;
+  if (deck.version !== STORED_SHAPE) return null;
   if (deck.vault !== vault || typeof deck.config !== "string") return null;
   if (!Array.isArray(deck.cards) || !deck.cards.every(isDeckCard)) return null;
 

@@ -25,6 +25,11 @@ export interface Schedulable {
   readonly tier: Tier;
   readonly topicTags: readonly string[];
   readonly review: ReviewState;
+  /**
+   * Set on both directions of a reversed card, to the same value. Absent on a
+   * one-way card, which has no sibling to crowd out.
+   */
+  readonly pair?: string;
 }
 
 export interface SessionLimits {
@@ -48,6 +53,32 @@ export interface DueSelection<T> {
   readonly heldCrammed: number;
 }
 
+/**
+ * At most one direction of any reversed card.
+ *
+ * The two ask the same material, so a sitting that serves both makes the second
+ * one a freebie — its answer was on screen a moment ago. Nothing is dropped from
+ * the deck: the other direction simply falls due again, and by the next session
+ * answering it is worth something.
+ *
+ * The one kept is whichever `byUrgency` put first, so the direction that has
+ * waited longest wins and neither can starve the other. While *neither* has been
+ * reviewed the two tie, and a tie keeps parse order — which is note order,
+ * forward first. That is also what has the comment's first entry always written
+ * before the second one needs a slot in front of it, so this ordering carries the
+ * write guarantee as well as the learning one.
+ */
+function oneDirectionEach<T extends Schedulable>(sorted: readonly T[]): T[] {
+  const served = new Set<string>();
+  return sorted.filter((card) => {
+    if (card.pair === undefined) return true;
+    if (served.has(card.pair)) return false;
+
+    served.add(card.pair);
+    return true;
+  });
+}
+
 /** Core first — the material worth the most review budget leads the session. */
 const TIER_RANK: Readonly<Record<Tier, number>> = { core: 0, standard: 1, optional: 2 };
 
@@ -56,7 +87,9 @@ export function selectDue<T extends Schedulable>(
   today: string,
   limits: SessionLimits,
 ): DueSelection<T> {
-  const dueToday = cards.filter((card) => isDue(card.review, today));
+  const dueToday = oneDirectionEach(
+    [...cards.filter((card) => isDue(card.review, today))].sort(byUrgency),
+  );
   const reviews = dueToday.filter(isSeen).sort(byUrgency);
   const fresh = dueToday.filter((card) => !isSeen(card)).sort(byUrgency);
 
