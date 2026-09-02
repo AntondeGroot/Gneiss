@@ -2,6 +2,10 @@
 
 // Palette inherited from the prototype: charcoal panels, safelight amber.
 
+// The glyph buttons' side padding, and the amount the last of them is pulled
+// back by so its glyph meets the card edge. One number, so they cannot drift.
+$glyph-pad-x: 0.3rem;
+
 :host {
   display: block;
   max-width: 34rem;
@@ -132,19 +136,39 @@ button {
 
 .bar {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
+  flex-direction: column;
+  gap: 0.5rem;
   padding-bottom: 0.9rem;
   border-bottom: 1px solid $line;
   font-size: 0.72rem;
 }
 
+/**
+ * Elided at the START, not the end: the filename identifies the note and the
+ * folders above it are the half worth losing — `…java/generics.md` places the
+ * card, `notes/java/gene…` does not. `text-overflow` only ever cuts the end, so
+ * the line is laid out right-to-left and pulled back to the left edge.
+ *
+ * The `rtl` is for the ellipsis, not for the text. Left to itself the path is
+ * read as right-to-left prose, and one opening on anything but a letter has that
+ * opening run moved to the far end — `101-basics/intro.md` renders as
+ * `basics/intro.md-101`. Hence the `<bdi dir="ltr">` around it in the template.
+ */
 .note {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
   color: $faint;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.68rem;
+  direction: rtl;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .tier {
@@ -170,6 +194,11 @@ button {
  */
 .standing {
   color: $faint;
+  // The one flexible thing in the row: on a narrow phone this gives way first,
+  // because the tier and the count are short and the buttons must stay hittable.
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 
   &.odd {
@@ -186,7 +215,7 @@ button {
   color: $faint;
   font-size: 0.85rem;
   line-height: 1;
-  padding: 0.2rem 0.3rem;
+  padding: 0.2rem $glyph-pad-x;
   cursor: pointer;
 
   // Lit while the editor is open, so the ✎ reads as a thing that is currently
@@ -201,13 +230,18 @@ button {
 }
 
 .leave {
-  margin-left: 0.2rem;
   font-size: 0.95rem;
+  // Cancels its own right padding, so the ✕ meets the card edge rather than
+  // sitting a padding's width inside it.
+  margin-right: -$glyph-pad-x;
 }
 
+// The auto margin takes all the slack, so this and the two buttons after it
+// sit against the right edge.
 .left {
   margin-left: auto;
   color: $faint;
+  white-space: nowrap;
 }
 
 .front {

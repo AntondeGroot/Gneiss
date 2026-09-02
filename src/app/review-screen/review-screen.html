@@ -27,29 +27,39 @@
 
   <section class="card">
     <header class="bar">
-      <span class="note">{{ card.note }}</span>
-      <span class="tier" [class]="'tier-' + card.tier">{{ card.tier }}</span>
-      <!-- Why this card is here at all. Quiet, but present: a card that keeps
-           coming back is indistinguishable from one that is genuinely due, and
-           that difference lives in the note's SR comment where nobody looks. -->
-      @if (standing(); as why) {
-        <span class="standing" [class.odd]="why.kind === 'ahead'">{{ describeStanding(why) }}</span>
-      }
-      <!-- Small and out of the way: nothing should compete with the recall. -->
-      <button
-        type="button"
-        class="edit"
-        [class.on]="editing()"
-        [attr.aria-label]="editing() ? 'Close the editor' : 'Edit this card'"
-        [attr.aria-expanded]="editing()"
-        (click)="toggleEditor()"
+      <!-- `dir` and the hugging formatting are both load-bearing: see `.note`
+           in the stylesheet, which lays this line out right-to-left. -->
+      <span class="note"
+        ><bdi dir="ltr">{{ card.note }}</bdi></span
       >
-        ✎
-      </button>
-      <span class="left">{{ remaining() }} left</span>
-      <!-- The tab bar is hidden while reviewing, so this is the way out. Nothing
-           is lost by leaving: every grade is already in the vault. -->
-      <button type="button" class="leave" aria-label="Leave the review" (click)="leave()">✕</button>
+      <div class="meta">
+        <span class="tier" [class]="'tier-' + card.tier">{{ card.tier }}</span>
+        <!-- Why this card is here at all. Quiet, but present: a card that keeps
+             coming back is indistinguishable from one that is genuinely due, and
+             that difference lives in the note's SR comment where nobody looks. -->
+        @if (standing(); as why) {
+          <span class="standing" [class.odd]="why.kind === 'ahead'">{{
+            describeStanding(why)
+          }}</span>
+        }
+        <!-- Small and out of the way: nothing should compete with the recall. -->
+        <span class="left">{{ remaining() }} left</span>
+        <button
+          type="button"
+          class="edit"
+          [class.on]="editing()"
+          [attr.aria-label]="editing() ? 'Close the editor' : 'Edit this card'"
+          [attr.aria-expanded]="editing()"
+          (click)="toggleEditor()"
+        >
+          ✎
+        </button>
+        <!-- The tab bar is hidden while reviewing, so this is the way out. Nothing
+             is lost by leaving: every grade is already in the vault. -->
+        <button type="button" class="leave" aria-label="Leave the review" (click)="leave()">
+          ✕
+        </button>
+      </div>
     </header>
 
     <gn-card-body class="front" [text]="card.front" />
