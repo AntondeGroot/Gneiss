@@ -43,25 +43,25 @@
   <!-- Armed rather than immediate: deleting edits a note Gneiss does not own,
        and there is no undo once the file is written. -->
   @if (confirmingDelete()) {
-  <div class="confirm">
-    <p>Delete this card from the note? The rest of the note is untouched.</p>
-    <div class="actions">
-      <button type="button" (click)="confirmingDelete.set(false)">Keep it</button>
-      <button type="button" class="danger" (click)="onDelete()">Delete card</button>
+    <div class="confirm">
+      <p>Delete this card from the note? The rest of the note is untouched.</p>
+      <div class="actions">
+        <button type="button" (click)="confirmingDelete.set(false)">Keep it</button>
+        <button type="button" class="danger" (click)="onDelete()">Delete card</button>
+      </div>
     </div>
-  </div>
   }
 
   <footer class="where">
     <span class="path">{{ folder() || "vault root" }}</span>
     @if (saving()) {
-    <!-- Said rather than simply removed: the link vanishing without a word reads
-         as the app losing track of the note, which is the opposite of the truth. -->
-    <span class="unavailable">Saving to the note…</span>
+      <!-- Said rather than simply removed: the link vanishing without a word reads
+           as the app losing track of the note, which is the opposite of the truth. -->
+      <span class="unavailable">Saving to the note…</span>
     } @else if (noteUri()) {
-    <a class="open" [href]="noteUri()">Open in Obsidian ↗</a>
+      <a class="open" [href]="noteUri()">Open in Obsidian ↗</a>
     } @else {
-    <span class="unavailable">{{ notePath() }}</span>
+      <span class="unavailable">{{ notePath() }}</span>
     }
   </footer>
 </section>
@@ -75,28 +75,28 @@
      No dismiss-on-tap-outside: it is unreachable from a keyboard, and the way
      back is already spelled out on a button. Escape does the same thing. -->
 @if (confirmingClose()) {
-<div class="scrim">
-  <div
-    #dialog
-    class="ask"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="ask-title"
-    tabindex="-1"
-  >
-    <h2 id="ask-title">Keep your changes?</h2>
-    <p>This card has edits that have not been saved to the note.</p>
-    @if (incomplete()) {
-    <p class="hint">A card needs both a question and an answer before it can be saved.</p>
-    }
+  <div class="scrim">
+    <div
+      #dialog
+      class="ask"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ask-title"
+      tabindex="-1"
+    >
+      <h2 id="ask-title">Keep your changes?</h2>
+      <p>This card has edits that have not been saved to the note.</p>
+      @if (incomplete()) {
+        <p class="hint">A card needs both a question and an answer before it can be saved.</p>
+      }
 
-    <div class="actions">
-      <button type="button" class="quiet" (click)="keepEditing()">Keep editing</button>
-      <button type="button" (click)="discard()">Discard</button>
-      <button type="button" class="primary" (click)="onSave()" [disabled]="incomplete()">
-        Save
-      </button>
+      <div class="actions">
+        <button type="button" class="quiet" (click)="keepEditing()">Keep editing</button>
+        <button type="button" (click)="discard()">Discard</button>
+        <button type="button" class="primary" (click)="onSave()" [disabled]="incomplete()">
+          Save
+        </button>
+      </div>
     </div>
   </div>
-</div>
 }

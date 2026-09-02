@@ -11,137 +11,147 @@
     "
   >
     @if (streak() > 0) {
-    <span class="flame" aria-hidden="true">▲</span> {{ streak() }} day streak }
+      <span class="flame" aria-hidden="true">▲</span> {{ streak() }} day streak
+    }
   </span>
 </header>
 
-@if (crams().length > 0) { @for (plan of crams(); track plan.scope) {
-<section class="cram">
-  <span class="topic">{{ topicOf(plan.scope) }}</span>
-  <p class="countdown">
-    <span class="days">{{ plan.daysLeft }}</span>
-    <span class="unit">{{ plan.daysLeft === 1 ? "day" : "days" }}</span>
-    <span class="sep" aria-hidden="true">·</span>
-    <span class="days">{{ dueFor(plan.scope) }}</span>
-    <span class="unit">due</span>
-  </p>
+@if (crams().length > 0) {
+  @for (plan of crams(); track plan.scope) {
+    <section class="cram">
+      <span class="topic">{{ topicOf(plan.scope) }}</span>
+      <p class="countdown">
+        <span class="days">{{ plan.daysLeft }}</span>
+        <span class="unit">{{ plan.daysLeft === 1 ? "day" : "days" }}</span>
+        <span class="sep" aria-hidden="true">·</span>
+        <span class="days">{{ dueFor(plan.scope) }}</span>
+        <span class="unit">due</span>
+      </p>
 
-  <div
-    class="bar"
-    role="progressbar"
-    [attr.aria-valuenow]="percentOf(plan.progress)"
-    aria-valuemin="0"
-    aria-valuemax="100"
-    [attr.aria-label]="'Topic covered'"
-  >
-    <span class="fill" [style.width.%]="percentOf(plan.progress)"></span>
-  </div>
-  <p class="coverage">
-    <strong>{{ percentOf(plan.progress) }}%</strong> met · {{ plan.met }} of {{ plan.total }}
-  </p>
-
-  @if (plan.remaining === 0) {
-  <p class="pace good">Everything started — the rest is repetition.</p>
-  } @else if (plan.onTrack) {
-  <p class="pace good">
-    One session of {{ plan.targetPerSession }} a day keeps you on track — {{ plan.requiredPerDay }}
-    a day is enough.
-  </p>
-  } @else {
-  <!-- Two cures, because onTrack assumes a single session a day: a bigger
-       portion, or more than one sitting. Both are the user's to choose. -->
-  <p class="pace behind">
-    One session of {{ plan.targetPerSession }} a day will not finish {{ plan.remaining }} in time.
-    You need <strong>{{ plan.requiredPerDay }} a day</strong> — raise the pace in Settings, or sit
-    more than one session.
-  </p>
-  }
-</section>
-} } @else {
-<section class="ring-wrap">
-  <svg
-    viewBox="0 0 128 128"
-    class="ring"
-    role="img"
-    [attr.aria-label]="due().length + ' cards due'"
-  >
-    <!-- New cards are the tier's own colour, hatched. Rotated with the ring so
-         the lines read as across the arc rather than along it. -->
-    <defs>
-      @for (tier of tiers; track tier) {
-      <pattern
-        [attr.id]="'hatch-' + tier"
-        patternUnits="userSpaceOnUse"
-        width="3"
-        height="3"
-        patternTransform="rotate(60)"
+      <div
+        class="bar"
+        role="progressbar"
+        [attr.aria-valuenow]="percentOf(plan.progress)"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        [attr.aria-label]="'Topic covered'"
       >
-        <line [class]="'hatch hatch-' + tier" x1="0" y1="0" x2="0" y2="5" />
-      </pattern>
+        <span class="fill" [style.width.%]="percentOf(plan.progress)"></span>
+      </div>
+      <p class="coverage">
+        <strong>{{ percentOf(plan.progress) }}%</strong> met · {{ plan.met }} of {{ plan.total }}
+      </p>
+
+      @if (plan.remaining === 0) {
+        <p class="pace good">Everything started — the rest is repetition.</p>
+      } @else if (plan.onTrack) {
+        <p class="pace good">
+          One session of {{ plan.targetPerSession }} a day keeps you on track —
+          {{ plan.requiredPerDay }}
+          a day is enough.
+        </p>
+      } @else {
+        <!-- Two cures, because onTrack assumes a single session a day: a bigger
+             portion, or more than one sitting. Both are the user's to choose. -->
+        <p class="pace behind">
+          One session of {{ plan.targetPerSession }} a day will not finish {{ plan.remaining }} in
+          time. You need <strong>{{ plan.requiredPerDay }} a day</strong> — raise the pace in
+          Settings, or sit more than one session.
+        </p>
       }
-    </defs>
-
-    <circle class="track" cx="64" cy="64" [attr.r]="radius" />
-
-    <!-- An open session, drawn inside the tier ring: the outer ring is what the
-         day holds, the inner arc is how far into it you are. -->
-    @if (unfinished()) {
-    <circle class="session-track" cx="64" cy="64" [attr.r]="innerRadius" />
-    <circle
-      class="session"
-      cx="64"
-      cy="64"
-      [attr.r]="innerRadius"
-      [attr.stroke-dasharray]="sessionArc()"
-      stroke-dashoffset="0"
-    />
-    } @for (segment of segments(); track segment.paint) {
-    <circle
-      [class]="'segment ' + segment.paint"
-      cx="64"
-      cy="64"
-      [attr.r]="radius"
-      [attr.stroke-dasharray]="segment.dash"
-      [attr.stroke-dashoffset]="segment.offset"
-    />
-    }
-  </svg>
-  <div class="centre">
-    <span class="count">{{ due().length }}</span>
-    <span class="label">due</span>
-  </div>
-</section>
-
-<ul class="legend">
-  @for (segment of segments(); track segment.paint) {
-  <li [class]="'tier-' + segment.tier">
-    <span class="dot" [class.new]="segment.fresh" aria-hidden="true"></span>{{ segment.count }} {{
-    segment.label }}
-  </li>
+    </section>
   }
-</ul>
-} @if (unfinished()) {
-<p class="left">{{ left() }} cards left</p>
-} @if (due().length > 0) {
-<button type="button" class="primary" (click)="start()">
-  {{ unfinished() ? "Continue review" : "Start review" }}
-</button>
-} @else if (loaded()) {
-<p class="empty">Nothing due today.</p>
 } @else {
-<p class="empty">No vault loaded yet.</p>
-<a class="link" routerLink="/vault">Open Vault</a>
-} @if (heldBackReviews() > 0 || heldBackNew() > 0 || heldCrammed() > 0) {
-<p class="held">
-  @if (heldBackReviews() > 0) {
-  <span>{{ heldBackReviews() }} more overdue cards beyond today's portion.</span>
-  } @if (heldBackNew() > 0) {
-  <span>{{ heldBackNew() }} more new cards beyond today's portion.</span>
-  } @if (heldCrammed() > 0) {
-  <span>{{ heldCrammed() }} more in this topic, beyond the pace you set for it.</span>
-  }
-  <span class="soft">
-    This is one session's portion, not a limit — finish it and you can start another.
-  </span>
-</p>
+  <section class="ring-wrap">
+    <svg
+      viewBox="0 0 128 128"
+      class="ring"
+      role="img"
+      [attr.aria-label]="due().length + ' cards due'"
+    >
+      <!-- New cards are the tier's own colour, hatched. Rotated with the ring so
+           the lines read as across the arc rather than along it. -->
+      <defs>
+        @for (tier of tiers; track tier) {
+          <pattern
+            [attr.id]="'hatch-' + tier"
+            patternUnits="userSpaceOnUse"
+            width="3"
+            height="3"
+            patternTransform="rotate(60)"
+          >
+            <line [class]="'hatch hatch-' + tier" x1="0" y1="0" x2="0" y2="5" />
+          </pattern>
+        }
+      </defs>
+
+      <circle class="track" cx="64" cy="64" [attr.r]="radius" />
+
+      <!-- An open session, drawn inside the tier ring: the outer ring is what the
+           day holds, the inner arc is how far into it you are. -->
+      @if (unfinished()) {
+        <circle class="session-track" cx="64" cy="64" [attr.r]="innerRadius" />
+        <circle
+          class="session"
+          cx="64"
+          cy="64"
+          [attr.r]="innerRadius"
+          [attr.stroke-dasharray]="sessionArc()"
+          stroke-dashoffset="0"
+        />
+      }
+      @for (segment of segments(); track segment.paint) {
+        <circle
+          [class]="'segment ' + segment.paint"
+          cx="64"
+          cy="64"
+          [attr.r]="radius"
+          [attr.stroke-dasharray]="segment.dash"
+          [attr.stroke-dashoffset]="segment.offset"
+        />
+      }
+    </svg>
+    <div class="centre">
+      <span class="count">{{ due().length }}</span>
+      <span class="label">due</span>
+    </div>
+  </section>
+
+  <ul class="legend">
+    @for (segment of segments(); track segment.paint) {
+      <li [class]="'tier-' + segment.tier">
+        <span class="dot" [class.new]="segment.fresh" aria-hidden="true"></span>{{ segment.count }}
+        {{ segment.label }}
+      </li>
+    }
+  </ul>
+}
+@if (unfinished()) {
+  <p class="left">{{ left() }} cards left</p>
+}
+@if (due().length > 0) {
+  <button type="button" class="primary" (click)="start()">
+    {{ unfinished() ? "Continue review" : "Start review" }}
+  </button>
+} @else if (loaded()) {
+  <p class="empty">Nothing due today.</p>
+} @else {
+  <p class="empty">No vault loaded yet.</p>
+  <a class="link" routerLink="/vault">Open Vault</a>
+}
+@if (heldBackReviews() > 0 || heldBackNew() > 0 || heldCrammed() > 0) {
+  <p class="held">
+    @if (heldBackReviews() > 0) {
+      <span>{{ heldBackReviews() }} more overdue cards beyond today's portion.</span>
+    }
+    @if (heldBackNew() > 0) {
+      <span>{{ heldBackNew() }} more new cards beyond today's portion.</span>
+    }
+    @if (heldCrammed() > 0) {
+      <span>{{ heldCrammed() }} more in this topic, beyond the pace you set for it.</span>
+    }
+    <span class="soft">
+      This is one session's portion, not a limit — finish it and you can start another.
+    </span>
+  </p>
 }

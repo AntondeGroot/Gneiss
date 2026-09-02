@@ -7,148 +7,157 @@
   <!-- Typing a path only means something where the app can read one. On Android
        the picker owns the folder, and a path box would be a dead end. -->
   @if (canReadByPath) {
-  <label class="field">
-    <span>Folder</span>
-    <input
-      name="path"
-      [ngModel]="path()"
-      (ngModelChange)="path.set($event)"
+    <label class="field">
+      <span>Folder</span>
+      <input
+        name="path"
+        [ngModel]="path()"
+        (ngModelChange)="path.set($event)"
+        [disabled]="busy()"
+        spellcheck="false"
+      />
+    </label>
+    <button type="button" class="primary" (click)="onLoad()" [disabled]="busy()">Read vault</button>
+    <button type="button" (click)="onSeed()" [disabled]="busy()">Seed sample notes</button>
+  }
+  @if (canPickFolder) {
+    <button
+      type="button"
+      [class.primary]="!canReadByPath"
+      (click)="onOpenFolder()"
       [disabled]="busy()"
-      spellcheck="false"
-    />
-  </label>
-  <button type="button" class="primary" (click)="onLoad()" [disabled]="busy()">Read vault</button>
-  <button type="button" (click)="onSeed()" [disabled]="busy()">Seed sample notes</button>
-  } @if (canPickFolder) {
-  <button
-    type="button"
-    [class.primary]="!canReadByPath"
-    (click)="onOpenFolder()"
-    [disabled]="busy()"
-  >
-    Choose vault folder…
-  </button>
+    >
+      Choose vault folder…
+    </button>
   }
 </div>
 
 @if (conflicts().length > 0) {
-<section class="conflicts">
-  <p>
-    <strong
-      >{{ conflicts().length }} note{{ conflicts().length === 1 ? "" : "s" }} here {{
-      conflicts().length === 1 ? "has" : "have" }} a conflicted copy.</strong
-    >
-    Something syncing this vault kept two versions. The copies are out of the deck, so nothing is
-    asked twice — but only one version is getting your reviews.
-  </p>
-  @for (conflict of conflicts(); track conflict.copy) {
-  <div class="conflict">
-    <span class="path">{{ conflict.note }}</span>
-    @if (canWrite()) {
-    <a routerLink="/conflict" [queryParams]="{ copy: conflict.copy }">Resolve…</a>
+  <section class="conflicts">
+    <p>
+      <strong
+        >{{ conflicts().length }} note{{ conflicts().length === 1 ? "" : "s" }} here
+        {{ conflicts().length === 1 ? "has" : "have" }} a conflicted copy.</strong
+      >
+      Something syncing this vault kept two versions. The copies are out of the deck, so nothing is
+      asked twice — but only one version is getting your reviews.
+    </p>
+    @for (conflict of conflicts(); track conflict.copy) {
+      <div class="conflict">
+        <span class="path">{{ conflict.note }}</span>
+        @if (canWrite()) {
+          <a routerLink="/conflict" [queryParams]="{ copy: conflict.copy }">Resolve…</a>
+        }
+      </div>
     }
-  </div>
-  } @if (!canWrite()) {
-  <p class="readonly">This vault is open read-only, so nothing can be merged.</p>
-  }
-</section>
-} @if (sourceLabel()) {
-<p class="source">
-  {{ sourceLabel() }} @if (!canWrite()) {
-  <span class="readonly">· read-only, grades will not be saved</span>
-  }
-</p>
+    @if (!canWrite()) {
+      <p class="readonly">This vault is open read-only, so nothing can be merged.</p>
+    }
+  </section>
+}
+@if (sourceLabel()) {
+  <p class="source">
+    {{ sourceLabel() }}
+    @if (!canWrite()) {
+      <span class="readonly">· read-only, grades will not be saved</span>
+    }
+  </p>
 }
 
 <p class="status">
-  {{ progress() }} @if (dueCount() > 0) {
-  <a class="review-link" routerLink="/review">Review {{ dueCount() }} due →</a>
+  {{ progress() }}
+  @if (dueCount() > 0) {
+    <a class="review-link" routerLink="/review">Review {{ dueCount() }} due →</a>
   }
 </p>
 
 @if (notes().length > 0) {
-<div class="find">
-  <div class="search">
-    <input
-      name="search"
-      type="search"
-      placeholder="Find a note…"
-      spellcheck="false"
-      [ngModel]="search()"
-      (ngModelChange)="search.set($event)"
-      (keyup.enter)="applySearch()"
-    />
-    @if (query()) {
-    <button type="button" class="clear" aria-label="Clear the search" (click)="clearSearch()">
-      ✕
-    </button>
-    }
-    <button type="button" class="primary" (click)="applySearch()">Search</button>
-  </div>
+  <div class="find">
+    <div class="search">
+      <input
+        name="search"
+        type="search"
+        placeholder="Find a note…"
+        spellcheck="false"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="applySearch()"
+      />
+      @if (query()) {
+        <button type="button" class="clear" aria-label="Clear the search" (click)="clearSearch()">
+          ✕
+        </button>
+      }
+      <button type="button" class="primary" (click)="applySearch()">Search</button>
+    </div>
 
-  <div class="tiers" role="group" aria-label="Filter by tier">
-    @for (choice of tierChoices; track choice) {
-    <button
-      type="button"
-      [class]="'tier-choice tier-' + choice"
-      [class.on]="tier() === choice"
-      [attr.aria-pressed]="tier() === choice"
-      (click)="showTier(choice)"
-    >
-      {{ choice }}
-    </button>
-    }
+    <div class="tiers" role="group" aria-label="Filter by tier">
+      @for (choice of tierChoices; track choice) {
+        <button
+          type="button"
+          [class]="'tier-choice tier-' + choice"
+          [class.on]="tier() === choice"
+          [attr.aria-pressed]="tier() === choice"
+          (click)="showTier(choice)"
+        >
+          {{ choice }}
+        </button>
+      }
+    </div>
   </div>
-</div>
-} @for (group of shown(); track group.note) {
-<section class="note">
-  <button type="button" class="note-head" (click)="toggle(group.note)">
-    <span class="name">{{ group.note }}</span>
-    <span class="meta">
-      <span class="tier" [class]="'tier-' + group.tier">{{ group.tier }}</span>
-      <span class="count">{{ group.cards.length }} cards</span>
-    </span>
-  </button>
+}
+@for (group of shown(); track group.note) {
+  <section class="note">
+    <button type="button" class="note-head" (click)="toggle(group.note)">
+      <span class="name">{{ group.note }}</span>
+      <span class="meta">
+        <span class="tier" [class]="'tier-' + group.tier">{{ group.tier }}</span>
+        <span class="count">{{ group.cards.length }} cards</span>
+      </span>
+    </button>
 
-  @if (expanded() === group.note) {
-  <div class="set-tier" role="group" [attr.aria-label]="'Tier for ' + group.note">
-    @for (choice of tiers; track choice) {
-    <button
-      type="button"
-      [class]="'tier-choice tier-' + choice"
-      [class.on]="group.tier === choice"
-      [attr.aria-pressed]="group.tier === choice"
-      [disabled]="!canWrite()"
-      (click)="setTier(group.note, choice)"
-    >
-      {{ choice }}
-    </button>
+    @if (expanded() === group.note) {
+      <div class="set-tier" role="group" [attr.aria-label]="'Tier for ' + group.note">
+        @for (choice of tiers; track choice) {
+          <button
+            type="button"
+            [class]="'tier-choice tier-' + choice"
+            [class.on]="group.tier === choice"
+            [attr.aria-pressed]="group.tier === choice"
+            [disabled]="!canWrite()"
+            (click)="setTier(group.note, choice)"
+          >
+            {{ choice }}
+          </button>
+        }
+      </div>
+      @if (!canWrite()) {
+        <p class="hint">This vault is open read-only, so the tag cannot be changed.</p>
+      }
+
+      <ul class="cards">
+        @for (card of group.cards; track card.id) {
+          <li>
+            <p class="front">{{ card.front }}</p>
+            <gn-card-body class="back" [text]="card.back" />
+            <p class="review">
+              due {{ card.review.due }} · interval {{ card.review.interval }}d · ease
+              {{ card.review.ease }}
+            </p>
+          </li>
+        }
+      </ul>
     }
-  </div>
-  @if (!canWrite()) {
-  <p class="hint">This vault is open read-only, so the tag cannot be changed.</p>
+  </section>
+} @empty {
+  @if (filtered()) {
+    <p class="empty">Nothing matches that.</p>
+  } @else {
+    <p class="empty">No notes loaded.</p>
   }
-
-  <ul class="cards">
-    @for (card of group.cards; track card.id) {
-    <li>
-      <p class="front">{{ card.front }}</p>
-      <gn-card-body class="back" [text]="card.back" />
-      <p class="review">
-        due {{ card.review.due }} · interval {{ card.review.interval }}d · ease {{ card.review.ease
-        }}
-      </p>
-    </li>
-    }
-  </ul>
-  }
-</section>
-} @empty { @if (filtered()) {
-<p class="empty">Nothing matches that.</p>
-} @else {
-<p class="empty">No notes loaded.</p>
-} } @if (beyond() > 0) {
-<!-- The list is trimmed on purpose: hundreds of rows cost more than scrolling
-     past them is worth. Search is how the rest is reached. -->
-<p class="beyond">{{ beyond() }} more match — search to narrow them down.</p>
+}
+@if (beyond() > 0) {
+  <!-- The list is trimmed on purpose: hundreds of rows cost more than scrolling
+       past them is worth. Search is how the rest is reached. -->
+  <p class="beyond">{{ beyond() }} more match — search to narrow them down.</p>
 }

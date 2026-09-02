@@ -1,15 +1,17 @@
 <nav>
   <a routerLink="/today" routerLinkActive="active">
-    Today @if (due().length > 0) {
-    <span class="badge">{{ due().length }}</span>
+    Today
+    @if (due().length > 0) {
+      <span class="badge">{{ due().length }}</span>
     }
   </a>
   <a routerLink="/vault" routerLinkActive="active">
-    Vault @if (conflicts().length > 0) {
-    <svg class="warn" viewBox="0 0 12 13" role="img" aria-label="a note has a conflicted copy">
-      <path class="sign" d="M6 2.2 10.6 11.4H1.4Z" />
-      <path class="mark" d="M5.35 5.1h1.3v3.5h-1.3zM5.35 9.4h1.3v1.3h-1.3z" />
-    </svg>
+    Vault
+    @if (conflicts().length > 0) {
+      <svg class="warn" viewBox="0 0 12 13" role="img" aria-label="a note has a conflicted copy">
+        <path class="sign" d="M6 2.2 10.6 11.4H1.4Z" />
+        <path class="mark" d="M5.35 5.1h1.3v3.5h-1.3zM5.35 9.4h1.3v1.3h-1.3z" />
+      </svg>
     }
   </a>
   <a routerLink="/settings" routerLinkActive="active">Settings</a>
