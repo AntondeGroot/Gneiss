@@ -2,5 +2,11 @@
   "printWidth": 100,
   "singleQuote": false,
   "trailingComma": "all",
-  "semi": true
+  "semi": true,
+  "overrides": [
+    {
+      "files": "src/app/**/*.html",
+      "options": { "parser": "angular" }
+    }
+  ]
 }

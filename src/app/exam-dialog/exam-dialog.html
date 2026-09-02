@@ -29,29 +29,30 @@
     </label>
 
     @if (scopeProblem()) {
-    <p class="problem">{{ scopeProblem() }}</p>
+      <p class="problem">{{ scopeProblem() }}</p>
     } @else if (vaultUnread()) {
-    <p class="note">The vault has not been read yet, so the tag cannot be checked against it.</p>
+      <p class="note">The vault has not been read yet, so the tag cannot be checked against it.</p>
     } @else if (covered().length) {
-    <p class="note">
-      Covers {{ covered().length }} {{ covered().length === 1 ? "tag" : "tags" }} in the vault.
-    </p>
+      <p class="note">
+        Covers {{ covered().length }} {{ covered().length === 1 ? "tag" : "tags" }} in the vault.
+      </p>
     }
 
     <!-- The vault's own tags, narrowed to what has been typed. In the panel's
          own flow rather than floating: a dropdown lands on top of the phone's
          keyboard, which is exactly where the typing is happening. -->
     @if (showSuggestions()) {
-    <ul class="suggestions">
-      @for (tag of suggestions(); track tag) {
-      <li>
-        <button type="button" (click)="pick(tag)">{{ tag }}</button>
-      </li>
+      <ul class="suggestions">
+        @for (tag of suggestions(); track tag) {
+          <li>
+            <button type="button" (click)="pick(tag)">{{ tag }}</button>
+          </li>
+        }
+      </ul>
+      @if (unshown()) {
+        <p class="note">{{ unshown() }} more — keep typing to narrow it down.</p>
       }
-    </ul>
-    @if (unshown()) {
-    <p class="note">{{ unshown() }} more — keep typing to narrow it down.</p>
-    } }
+    }
 
     <label class="field">
       <span>Exam date</span>
@@ -64,9 +65,9 @@
     </label>
 
     @if (dateProblem()) {
-    <p class="problem">{{ dateProblem() }}</p>
+      <p class="problem">{{ dateProblem() }}</p>
     } @else if (daysLeft()) {
-    <p class="note">{{ daysLeft() }} {{ daysLeft() === 1 ? "day" : "days" }} to go.</p>
+      <p class="note">{{ daysLeft() }} {{ daysLeft() === 1 ? "day" : "days" }} to go.</p>
     }
 
     <label class="field">
@@ -82,7 +83,7 @@
     </label>
 
     @if (paceProblem()) {
-    <p class="problem">{{ paceProblem() }}</p>
+      <p class="problem">{{ paceProblem() }}</p>
     }
     <p class="hint small">
       This exam's own pace, gentle to intensive, in place of the ordinary new-card portion for its

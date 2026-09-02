@@ -18,10 +18,10 @@
   />
   <ul class="preview">
     @for (row of preview(); track row.tier) {
-    <li [class]="'tier-' + row.tier">
-      <span class="tier">{{ row.tier }}</span>
-      <span class="days">{{ row.days }}d</span>
-    </li>
+      <li [class]="'tier-' + row.tier">
+        <span class="tier">{{ row.tier }}</span>
+        <span class="days">{{ row.days }}d</span>
+      </li>
     }
   </ul>
   <p class="hint small">A card seen 10 days ago, graded Medium, would return in:</p>
@@ -36,26 +36,26 @@
   </p>
 
   @for (topic of topics(); track topic.tag) {
-  <div class="topic">
-    <span class="tag">{{ topic.tag }}</span>
-    <div class="choices" role="group" [attr.aria-label]="'Tier for ' + topic.tag">
-      @for (choice of choices; track $index) {
-      <button
-        type="button"
-        [class.on]="(topic.mapped ?? null) === choice"
-        [attr.aria-pressed]="(topic.mapped ?? null) === choice"
-        (click)="setTopicTier(topic.tag, choice)"
-      >
-        {{ choice ?? "Inherit" }}
-      </button>
+    <div class="topic">
+      <span class="tag">{{ topic.tag }}</span>
+      <div class="choices" role="group" [attr.aria-label]="'Tier for ' + topic.tag">
+        @for (choice of choices; track $index) {
+          <button
+            type="button"
+            [class.on]="(topic.mapped ?? null) === choice"
+            [attr.aria-pressed]="(topic.mapped ?? null) === choice"
+            (click)="setTopicTier(topic.tag, choice)"
+          >
+            {{ choice ?? "Inherit" }}
+          </button>
+        }
+      </div>
+      @if (!topic.mapped) {
+        <span class="inherited">schedules as {{ topic.effective }}</span>
       }
     </div>
-    @if (!topic.mapped) {
-    <span class="inherited">schedules as {{ topic.effective }}</span>
-    }
-  </div>
   } @empty {
-  <p class="hint small">No topic tags yet — open a vault and its topics appear here.</p>
+    <p class="hint small">No topic tags yet — open a vault and its topics appear here.</p>
   }
 </section>
 
@@ -109,12 +109,12 @@
     <span>Remind me daily</span>
   </label>
   @if (draft().reminderOn) {
-  <input
-    type="time"
-    name="reminderAt"
-    [ngModel]="draft().reminderAt"
-    (ngModelChange)="update('reminderAt', $event)"
-  />
+    <input
+      type="time"
+      name="reminderAt"
+      [ngModel]="draft().reminderAt"
+      (ngModelChange)="update('reminderAt', $event)"
+    />
   }
 
   <label class="row spaced">
@@ -127,16 +127,16 @@
     <span>Nudge me in the evening if I have not reviewed</span>
   </label>
   @if (draft().backupReminderOn) {
-  <input
-    type="time"
-    name="backupReminderAt"
-    [ngModel]="draft().backupReminderAt"
-    (ngModelChange)="update('backupReminderAt', $event)"
-  />
-  <p class="hint small">
-    Only arrives on a day you have not worked through a session. Finishing one moves it to tomorrow;
-    grading a card or two does not.
-  </p>
+    <input
+      type="time"
+      name="backupReminderAt"
+      [ngModel]="draft().backupReminderAt"
+      (ngModelChange)="update('backupReminderAt', $event)"
+    />
+    <p class="hint small">
+      Only arrives on a day you have not worked through a session. Finishing one moves it to
+      tomorrow; grading a card or two does not.
+    </p>
   }
 </section>
 
@@ -151,15 +151,15 @@
   <!-- A summary, not a form: the fields are asked for in the dialog, where they
        can be checked against the vault before they count. -->
   @for (cram of draft().crams; track $index) {
-  <div class="exam">
-    <button type="button" class="exam-open" (click)="openExam($index)">
-      <span class="exam-name">{{ cram.scope }}</span>
-      <span class="exam-when">{{ describeExam(cram) }}</span>
-    </button>
-    <button type="button" class="drop" (click)="removeCram($index)">Remove</button>
-  </div>
+    <div class="exam">
+      <button type="button" class="exam-open" (click)="openExam($index)">
+        <span class="exam-name">{{ cram.scope }}</span>
+        <span class="exam-when">{{ describeExam(cram) }}</span>
+      </button>
+      <button type="button" class="drop" (click)="removeCram($index)">Remove</button>
+    </div>
   } @empty {
-  <p class="hint small">No exams. Cards follow their tier as usual.</p>
+    <p class="hint small">No exams. Cards follow their tier as usual.</p>
   }
 
   <button type="button" class="add" (click)="openExam(NEW)">Add an exam</button>
@@ -193,17 +193,17 @@
 </button>
 
 @if (message()) {
-<p class="message">{{ message() }}</p>
+  <p class="message">{{ message() }}</p>
 }
 
 <!-- Over the whole screen rather than inside the Exams group: it is one thing
      to answer, and the fields it checks are checked together. -->
 @if (editing() !== null) {
-<gn-exam-dialog
-  [exam]="examUnderEdit()"
-  [topics]="deckTopics()"
-  [today]="today()"
-  (save)="saveExam($event)"
-  (dismissed)="closeExam()"
-/>
+  <gn-exam-dialog
+    [exam]="examUnderEdit()"
+    [topics]="deckTopics()"
+    [today]="today()"
+    (save)="saveExam($event)"
+    (dismissed)="closeExam()"
+  />
 }

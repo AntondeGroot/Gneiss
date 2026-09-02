@@ -1,113 +1,117 @@
 @if (!started()) {
-<section class="intro">
-  <h1>Review</h1>
-  @if (dueCount() > 0) {
-  <p class="count">{{ dueCount() }} due</p>
-  <p class="sub">Core material comes first.</p>
-  <button type="button" class="primary" (click)="start()">Start review</button>
-  } @else {
-  <p class="sub">Nothing due. Read a vault first.</p>
-  <a class="link" routerLink="/vault">Go to Vault</a>
-  }
-</section>
-} @if (started() && current(); as card) {
-<!-- Where the session is up to. Thin and above the card, so it answers "how
-     much longer" without taking attention from the question. -->
-<div
-  class="progress"
-  role="progressbar"
-  [attr.aria-valuenow]="progress()"
-  aria-valuemin="0"
-  aria-valuemax="100"
-  aria-label="Session progress"
->
-  <span class="fill" [style.width.%]="progress()"></span>
-</div>
-
-<section class="card">
-  <header class="bar">
-    <span class="note">{{ card.note }}</span>
-    <span class="tier" [class]="'tier-' + card.tier">{{ card.tier }}</span>
-    <!-- Why this card is here at all. Quiet, but present: a card that keeps
-         coming back is indistinguishable from one that is genuinely due, and
-         that difference lives in the note's SR comment where nobody looks. -->
-    @if (standing(); as why) {
-    <span class="standing" [class.odd]="why.kind === 'ahead'">{{ describeStanding(why) }}</span>
-    }
-    <!-- Small and out of the way: nothing should compete with the recall. -->
-    <button
-      type="button"
-      class="edit"
-      [class.on]="editing()"
-      [attr.aria-label]="editing() ? 'Close the editor' : 'Edit this card'"
-      [attr.aria-expanded]="editing()"
-      (click)="toggleEditor()"
-    >
-      ✎
-    </button>
-    <span class="left">{{ remaining() }} left</span>
-    <!-- The tab bar is hidden while reviewing, so this is the way out. Nothing
-         is lost by leaving: every grade is already in the vault. -->
-    <button type="button" class="leave" aria-label="Leave the review" (click)="leave()">✕</button>
-  </header>
-
-  <gn-card-body class="front" [text]="card.front" />
-
-  @if (editing()) {
-  <gn-card-editor
-    [front]="card.front"
-    [back]="card.back"
-    [folder]="link().folder"
-    [noteUri]="link().uri"
-    [notePath]="card.note"
-    [saving]="saving()"
-    (save)="saveEdit($event)"
-    (remove)="deleteCard()"
-    (dismissed)="closeEditor()"
-  />
-  } @else if (revealed()) {
-  <gn-card-body class="back" [text]="card.back" />
-  <div class="grades">
-    <!-- Named `choice`, not `grade`: a loop variable called `grade` shadows the
-         component's grade() method, and the call silently binds to the string. -->
-    @for (choice of grades; track choice) {
-    <button type="button" [class]="'grade grade-' + choice" (click)="grade(choice)">
-      <span class="label">{{ choice }}</span>
-      <span class="next">{{ preview(choice) }}</span>
-    </button>
-    }
-  </div>
-  } @else {
-  <button type="button" class="primary wide" (click)="reveal()">Show answer</button>
-  }
-</section>
-} @if (finished()) {
-<section class="intro">
-  <h1>Done</h1>
-  <p class="count">{{ graded() }} reviewed</p>
-  @if (sessions() > 1) {
-  <p class="sub tally">{{ gradedAcrossSessions() }} across {{ sessions() }} sessions today</p>
-  } @if (writeError(); as failure) {
-  <p class="sub warn">Some grades could not be saved — {{ failure }}</p>
-  } @else {
-  <p class="sub">Saved into each note's SR comment.</p>
-  }
-
-  <!-- The day's pace is a portion, not a limit: whatever it held back is offered
-       straight away rather than made to wait for tomorrow. -->
-  @if (dueCount() > 0) {
-  <p class="more">
-    {{ dueCount() }} more ready now — {{ describeReady() }}. Today's pace is a target, not a limit.
-  </p>
-  } @else {
-  <p class="sub">Nothing else is due today.</p>
-  }
-
-  <div class="choices">
+  <section class="intro">
+    <h1>Review</h1>
     @if (dueCount() > 0) {
-    <button type="button" class="primary" (click)="start()">Another session</button>
+      <p class="count">{{ dueCount() }} due</p>
+      <p class="sub">Core material comes first.</p>
+      <button type="button" class="primary" (click)="start()">Start review</button>
+    } @else {
+      <p class="sub">Nothing due. Read a vault first.</p>
+      <a class="link" routerLink="/vault">Go to Vault</a>
     }
-    <button type="button" class="secondary" (click)="leave()">Back to Today</button>
+  </section>
+}
+@if (started() && current(); as card) {
+  <!-- Where the session is up to. Thin and above the card, so it answers "how
+       much longer" without taking attention from the question. -->
+  <div
+    class="progress"
+    role="progressbar"
+    [attr.aria-valuenow]="progress()"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    aria-label="Session progress"
+  >
+    <span class="fill" [style.width.%]="progress()"></span>
   </div>
-</section>
+
+  <section class="card">
+    <header class="bar">
+      <span class="note">{{ card.note }}</span>
+      <span class="tier" [class]="'tier-' + card.tier">{{ card.tier }}</span>
+      <!-- Why this card is here at all. Quiet, but present: a card that keeps
+           coming back is indistinguishable from one that is genuinely due, and
+           that difference lives in the note's SR comment where nobody looks. -->
+      @if (standing(); as why) {
+        <span class="standing" [class.odd]="why.kind === 'ahead'">{{ describeStanding(why) }}</span>
+      }
+      <!-- Small and out of the way: nothing should compete with the recall. -->
+      <button
+        type="button"
+        class="edit"
+        [class.on]="editing()"
+        [attr.aria-label]="editing() ? 'Close the editor' : 'Edit this card'"
+        [attr.aria-expanded]="editing()"
+        (click)="toggleEditor()"
+      >
+        ✎
+      </button>
+      <span class="left">{{ remaining() }} left</span>
+      <!-- The tab bar is hidden while reviewing, so this is the way out. Nothing
+           is lost by leaving: every grade is already in the vault. -->
+      <button type="button" class="leave" aria-label="Leave the review" (click)="leave()">✕</button>
+    </header>
+
+    <gn-card-body class="front" [text]="card.front" />
+
+    @if (editing()) {
+      <gn-card-editor
+        [front]="card.front"
+        [back]="card.back"
+        [folder]="link().folder"
+        [noteUri]="link().uri"
+        [notePath]="card.note"
+        [saving]="saving()"
+        (save)="saveEdit($event)"
+        (remove)="deleteCard()"
+        (dismissed)="closeEditor()"
+      />
+    } @else if (revealed()) {
+      <gn-card-body class="back" [text]="card.back" />
+      <div class="grades">
+        <!-- Named `choice`, not `grade`: a loop variable called `grade` shadows the
+             component's grade() method, and the call silently binds to the string. -->
+        @for (choice of grades; track choice) {
+          <button type="button" [class]="'grade grade-' + choice" (click)="grade(choice)">
+            <span class="label">{{ choice }}</span>
+            <span class="next">{{ preview(choice) }}</span>
+          </button>
+        }
+      </div>
+    } @else {
+      <button type="button" class="primary wide" (click)="reveal()">Show answer</button>
+    }
+  </section>
+}
+@if (finished()) {
+  <section class="intro">
+    <h1>Done</h1>
+    <p class="count">{{ graded() }} reviewed</p>
+    @if (sessions() > 1) {
+      <p class="sub tally">{{ gradedAcrossSessions() }} across {{ sessions() }} sessions today</p>
+    }
+    @if (writeError(); as failure) {
+      <p class="sub warn">Some grades could not be saved — {{ failure }}</p>
+    } @else {
+      <p class="sub">Saved into each note's SR comment.</p>
+    }
+
+    <!-- The day's pace is a portion, not a limit: whatever it held back is offered
+         straight away rather than made to wait for tomorrow. -->
+    @if (dueCount() > 0) {
+      <p class="more">
+        {{ dueCount() }} more ready now — {{ describeReady() }}. Today's pace is a target, not a
+        limit.
+      </p>
+    } @else {
+      <p class="sub">Nothing else is due today.</p>
+    }
+
+    <div class="choices">
+      @if (dueCount() > 0) {
+        <button type="button" class="primary" (click)="start()">Another session</button>
+      }
+      <button type="button" class="secondary" (click)="leave()">Back to Today</button>
+    </div>
+  </section>
 }
