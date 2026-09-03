@@ -90,6 +90,9 @@
       </div>
     } @else {
       <button type="button" class="primary wide" (click)="reveal()">Show answer</button>
+      @if (canSkip()) {
+        <button type="button" class="secondary wide" (click)="skip()">Skip for now</button>
+      }
     }
   </section>
 }

@@ -33,6 +33,7 @@ export class ReviewScreen {
   protected readonly current = this.session.current;
   protected readonly remaining = this.session.remaining;
   protected readonly progress = this.session.progress;
+  protected readonly canSkip = this.session.canSkip;
   protected readonly graded = this.session.graded;
   protected readonly sessions = this.session.sessions;
   protected readonly gradedAcrossSessions = this.session.gradedToday;
@@ -107,6 +108,10 @@ export class ReviewScreen {
 
   protected reveal(): void {
     this.revealed.set(true);
+  }
+
+  protected skip(): void {
+    this.session.skip();
   }
 
   /**

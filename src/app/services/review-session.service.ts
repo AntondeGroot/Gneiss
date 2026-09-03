@@ -19,6 +19,7 @@ interface SavedSession {
   readonly vault: string;
   readonly queue: readonly DeckCard[];
   readonly at: number;
+  readonly skipped: readonly string[];
   readonly graded: number;
   readonly gradedToday: number;
   readonly sessions: number;
@@ -42,6 +43,8 @@ export class ReviewSessionService {
 
   private readonly queue = signal<readonly DeckCard[]>([]);
   private readonly at = signal(0);
+  private readonly skipped = signal<readonly string[]>([]);
+
   /** The vault the open session belongs to, remembered across a restart. */
   private vault = "";
 
@@ -86,7 +89,10 @@ export class ReviewSessionService {
   readonly current = computed(() => this.queue()[this.at()] ?? null);
   readonly total = computed(() => this.queue().length);
   readonly remaining = computed(() => Math.max(0, this.total() - this.at()));
-
+  readonly canSkip = computed(() => {
+    const card = this.current();
+    return card !== null && !this.skipped().includes(card.id) && this.remaining() > 1;
+  });
   /**
    * A session with cards still in it, belonging to the vault now open.
    *
@@ -117,6 +123,7 @@ export class ReviewSessionService {
     this.vault = this.deck.vaultName();
     this.queue.set([...this.deck.due()]);
     this.at.set(0);
+    this.skipped.set([]);
     this.graded.set(0);
     this.sessions.update((count) => count + 1);
     this.persist();
@@ -157,12 +164,13 @@ export class ReviewSessionService {
     // The promise is handed back so the caller can wait before moving on, which
     // is what keeps the note from being opened elsewhere mid-write.
     const written = this.deck.editCard(card, next);
+    // The id is derived from the question, so correcting one mints a new card as
+    // far as anything keyed by id goes — including the skip, which would
+    // otherwise be shed by fixing a typo.
+    const id = cardId(card.note, next.front, card.occurrence);
+    this.skipped.update((ids) => ids.map((skipped) => (skipped === card.id ? id : skipped)));
     this.queue.update((cards) =>
-      cards.map((existing) =>
-        existing.id === card.id
-          ? { ...existing, id: cardId(card.note, next.front, card.occurrence), ...next }
-          : existing,
-      ),
+      cards.map((existing) => (existing.id === card.id ? { ...existing, id, ...next } : existing)),
     );
     this.persist();
     await written;
@@ -177,6 +185,17 @@ export class ReviewSessionService {
     // Removing at the current position slides the next card into it, so the
     // position stays put and the session simply carries on.
     this.queue.update((cards) => cards.filter((existing) => existing.id !== card.id));
+    this.persist();
+  }
+
+  /** Skips the card and places it at the back of the queue */
+  skip(): void {
+    const card = this.current();
+    if (!card) return;
+    if (this.skipped().includes(card.id)) return;
+
+    this.queue.update((cards) => [...cards.filter((existing) => existing.id !== card.id), card]);
+    this.skipped.update((ids) => [...ids, card.id]);
     this.persist();
   }
 
@@ -201,6 +220,7 @@ export class ReviewSessionService {
 
       this.queue.set(saved.queue);
       this.at.set(saved.at);
+      this.skipped.set(saved.skipped);
       this.graded.set(saved.graded);
       this.gradedToday.set(saved.gradedToday);
       this.sessions.set(saved.sessions);
@@ -235,6 +255,7 @@ export class ReviewSessionService {
       vault: this.vault || this.deck.vaultName(),
       queue,
       at: this.at(),
+      skipped: this.skipped(),
       graded: this.graded(),
       gradedToday: this.gradedToday(),
       sessions: this.sessions(),
@@ -259,6 +280,7 @@ function readSession(parsed: unknown): SavedSession | null {
   if (saved.version !== STORED_SHAPE) return null;
   if (typeof saved.day !== "string" || typeof saved.at !== "number") return null;
   if (!Array.isArray(saved.queue) || !saved.queue.every(isDeckCard)) return null;
+  if (!Array.isArray(saved.skipped) || !saved.skipped.every(isString)) return null;
 
   return {
     version: STORED_SHAPE,
@@ -266,10 +288,15 @@ function readSession(parsed: unknown): SavedSession | null {
     vault: typeof saved.vault === "string" ? saved.vault : "",
     queue: saved.queue,
     at: saved.at,
+    skipped: saved.skipped,
     graded: count(saved.graded),
     gradedToday: count(saved.gradedToday),
     sessions: count(saved.sessions),
   };
+}
+
+function isString(value: unknown): boolean {
+  return typeof value === "string";
 }
 
 function count(value: unknown): number {

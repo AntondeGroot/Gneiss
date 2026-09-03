@@ -127,6 +127,22 @@ describe("ReviewSessionService across a restart", () => {
     expect(relaunched().gradedToday()).toBe(2);
   });
 
+  it("remembers which card was already put off", async () => {
+    const { session } = await loaded();
+    session.start();
+    session.skip();
+
+    const reopened = relaunched();
+    reopened.grade("medium");
+    reopened.grade("medium");
+    reopened.grade("medium");
+
+    // The restored queue already has the card at the back, so without the ban
+    // surviving too it could be sent round again, and again, indefinitely.
+    expect(reopened.current()?.id).toBe("git.md::Q1?#0");
+    expect(reopened.canSkip()).toBe(false);
+  });
+
   it("does not pick up a session from another day", async () => {
     const { session } = await loaded();
     session.start();
@@ -206,5 +222,114 @@ describe("ReviewSessionService when the vault changes underneath", () => {
     // cards as it removes.
     expect(session.current()?.id).toBe("shell.md::Q4?#0");
     expect(session.remaining()).toBe(2);
+  });
+});
+
+describe("ReviewSessionService putting a card off", () => {
+  it("sends a skipped card to the back and carries on", async () => {
+    const { session } = await loaded();
+    session.start();
+    expect(session.current()?.id).toBe("git.md::Q1?#0");
+
+    session.skip();
+
+    // The position does not move — the card behind slides into it — so the next
+    // question is up straight away. Nothing was answered, so the queue is still
+    // four long and the progress bar has not budged.
+    expect(session.current()?.id).toBe("git.md::Q2?#0");
+    expect(session.remaining()).toBe(4);
+    expect(session.progress()).toBe(0);
+
+    // At the back, not merely somewhere later: the other three come first.
+    session.grade("medium");
+    session.grade("medium");
+    session.grade("medium");
+    expect(session.current()?.id).toBe("git.md::Q1?#0");
+  });
+
+  it("refuses a second skip of the same card", async () => {
+    const { session } = await loaded();
+    session.start();
+    session.skip();
+
+    // Round the queue to meet it again.
+    session.grade("medium");
+    session.grade("medium");
+    session.grade("medium");
+    expect(session.current()?.id).toBe("git.md::Q1?#0");
+
+    // A card that could be put off every time it came round would never be
+    // answered, so the offer is gone and pressing anyway changes nothing.
+    expect(session.canSkip()).toBe(false);
+    session.skip();
+    expect(session.current()?.id).toBe("git.md::Q1?#0");
+  });
+
+  it("does not offer to skip the last card standing", async () => {
+    const { session } = await loaded();
+    session.start();
+    session.grade("medium");
+    session.grade("medium");
+    session.grade("medium");
+    expect(session.remaining()).toBe(1);
+
+    // Moving the only card left to the back lands it exactly where it is, so
+    // the offer would be a button that visibly does nothing.
+    expect(session.canSkip()).toBe(false);
+  });
+
+  it("does not count a skip as a grade", async () => {
+    const { session } = await loaded();
+    session.start();
+    const before = session.current()?.review;
+
+    session.skip();
+
+    // Putting a card off is free: it settles nothing, so neither tally counts
+    // it and the streak and the evening nudge are untouched.
+    expect(session.graded()).toBe(0);
+    expect(session.gradedToday()).toBe(0);
+
+    // And it claims nothing — the schedule in the note is exactly as it was, so
+    // the card is still just as due as before it was passed over.
+    session.grade("medium");
+    session.grade("medium");
+    session.grade("medium");
+    expect(session.current()?.review).toEqual(before);
+  });
+
+  it("lets a new session put the same card off again", async () => {
+    const { session } = await loaded();
+    session.start();
+    session.skip();
+    session.grade("medium");
+    session.grade("medium");
+
+    // A second sitting re-reads what is due and builds its own queue, which the
+    // last one's order says nothing about — so the ban goes with it.
+    session.start();
+
+    expect(session.current()?.id).toBe("git.md::Q1?#0");
+    expect(session.canSkip()).toBe(true);
+  });
+
+  it("keeps the card banned when its question is corrected", async () => {
+    const { session } = await loaded();
+    session.start();
+    session.skip();
+    // Two put off, so reaching the first one again does not also make it the
+    // last card standing — which would refuse the skip for the wrong reason.
+    session.skip();
+    session.grade("medium");
+    session.grade("medium");
+    expect(session.current()?.id).toBe("git.md::Q1?#0");
+    expect(session.remaining()).toBe(2);
+
+    await session.edit({ front: "Q1 corrected?", back: "A1" });
+
+    // The id is derived from the question, so the edit mints a new one. Fixing
+    // a typo is not a way to be handed a second skip.
+    expect(session.current()?.id).toBe("git.md::Q1 corrected?#0");
+    expect(session.canSkip()).toBe(false);
   });
 });

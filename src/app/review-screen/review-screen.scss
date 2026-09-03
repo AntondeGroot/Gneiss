@@ -86,6 +86,12 @@ h1 {
 .secondary {
   padding: 0.7rem 1.4rem;
   color: $dim;
+
+  // Closer than `.wide`'s own gap: this sits under the offer rather than beside
+  // it, and the two are answers to the same question.
+  &.wide {
+    margin-top: 0.6rem;
+  }
 }
 
 button {
@@ -103,11 +109,12 @@ button {
   color: $ink;
   font-weight: 600;
   padding: 0.7rem 1.4rem;
+}
 
-  &.wide {
-    width: 100%;
-    margin-top: 1.5rem;
-  }
+/* Lifted out of `.primary` once the quiet button under it wanted it too. */
+.wide {
+  width: 100%;
+  margin-top: 1.5rem;
 }
 
 /* The same shape the cram countdown uses, so a filling bar means one thing. */
