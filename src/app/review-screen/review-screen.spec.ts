@@ -4,6 +4,7 @@ import { Router, provideRouter } from "@angular/router";
 import { DEFAULT_CONFIG, parseNote } from "../../vault";
 import type { GneissConfig, ParsedNote } from "../../vault";
 import { DeckService } from "../services/deck.service";
+import { SoundService } from "../services/sound.service";
 import type { NoteBatch, VaultSource } from "../services/vault-source";
 import { ReviewScreen } from "./review-screen";
 
@@ -93,7 +94,11 @@ beforeEach(() => {
 async function started() {
   await TestBed.configureTestingModule({
     imports: [ReviewScreen],
-    providers: [provideRouter([])],
+    // Silent: jsdom cannot play audio, and says so on every grade.
+    providers: [
+      provideRouter([]),
+      { provide: SoundService, useValue: { graded: () => undefined } },
+    ],
   }).compileComponents();
 
   const deck = TestBed.inject(DeckService);
