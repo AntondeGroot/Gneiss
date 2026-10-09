@@ -7,6 +7,7 @@ import { ExamDialog } from "../exam-dialog/exam-dialog";
 import { DeckService } from "../services/deck.service";
 import { today } from "../services/clock.service";
 import { ReminderService } from "../services/reminder.service";
+import { SoundService } from "../services/sound.service";
 
 /** The card the preview is computed against: an established one, graded Medium. */
 const SAMPLE_INTERVAL = 10;
@@ -33,6 +34,10 @@ export interface TierPreview {
 export class SettingsScreen {
   private readonly deck = inject(DeckService);
   private readonly reminders = inject(ReminderService);
+  private readonly sound = inject(SoundService);
+
+  /** Applied at once rather than on Save: it is this device's, not the vault's. */
+  protected readonly volume = this.sound.volume;
 
   /** Edited locally, then committed on save — so a half-typed value never persists. */
   protected readonly draft = signal<GneissConfig>(this.deck.config());
@@ -128,6 +133,12 @@ export class SettingsScreen {
 
   protected setTopicTier(tag: string, tier: Tier | null): void {
     this.update("tiers", withTopicTier(this.draft().tiers, tag, tier));
+  }
+
+  /** Plays the chime at the new level, so the slider is also how to hear it. */
+  protected setVolume(value: number | string): void {
+    this.sound.setVolume(Number(value));
+    this.sound.play("correct");
   }
 
   protected update<K extends keyof GneissConfig>(key: K, value: GneissConfig[K]): void {

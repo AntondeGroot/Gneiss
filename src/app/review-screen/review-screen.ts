@@ -10,6 +10,7 @@ import { ClockService } from "../services/clock.service";
 import { AttachmentService } from "../services/attachment.service";
 import { DeckService } from "../services/deck.service";
 import { ReviewSessionService } from "../services/review-session.service";
+import { SoundService } from "../services/sound.service";
 
 const GRADES: readonly Grade[] = ["difficult", "medium", "easy"];
 
@@ -24,6 +25,7 @@ export class ReviewScreen {
   private readonly images = inject(AttachmentService);
   private readonly session = inject(ReviewSessionService);
   private readonly clock = inject(ClockService);
+  private readonly sound = inject(SoundService);
   private readonly router = inject(Router);
 
   protected readonly grades = GRADES;
@@ -182,6 +184,7 @@ export class ReviewScreen {
 
   protected grade(grade: Grade): void {
     this.session.grade(grade);
+    this.sound.graded(grade, this.session.current() === null);
     this.revealed.set(false);
   }
 }

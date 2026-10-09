@@ -141,6 +141,27 @@
 </section>
 
 <section class="group">
+  <h2>Sound</h2>
+  <p class="hint">
+    A chime for a recalled card and a fanfare for a finished session. All the way down is off.
+  </p>
+  <input
+    type="range"
+    name="volume"
+    min="0"
+    max="1"
+    step="0.05"
+    aria-label="Sound volume"
+    [ngModel]="volume()"
+    (ngModelChange)="setVolume($event)"
+  />
+  <p class="hint small">
+    Kept on this device rather than in the vault, so the phone can stay quiet while the laptop does
+    not. Sound effects from <a href="https://www.zapsplat.com" target="_blank">ZapSplat</a>.
+  </p>
+</section>
+
+<section class="group">
   <h2>Exams</h2>
   <p class="hint">
     Deadline-scoped focus on a topic. Intervals are capped so nothing schedules past the exam, and

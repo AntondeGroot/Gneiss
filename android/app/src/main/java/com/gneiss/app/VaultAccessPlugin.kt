@@ -32,6 +32,37 @@ import com.getcapacitor.annotation.CapacitorPlugin
 @CapacitorPlugin(name = "VaultAccess")
 class VaultAccessPlugin : Plugin() {
 
+    /**
+     * Where the file work runs, rather than on the thread Capacitor gives plugins.
+     *
+     * That thread is shared by every plugin, so a vault write — a couple of
+     * seconds through the Storage Access Framework — held up everything queued
+     * behind it. Found through the fanfare's vibration: its buzzes were sent on
+     * the beat and reached the motor in two late bursts, each as the write ahead
+     * of it finished. One thread, not a pool, so reads and writes still happen in
+     * the order they were asked for.
+     */
+    private val io = Executors.newSingleThreadExecutor()
+
+    override fun handleOnDestroy() {
+        io.shutdown()
+    }
+
+    /**
+     * Runs a call's work on [io]. Anything it throws rejects the call, as the
+     * bridge would have done on its own thread — left uncaught here it would
+     * leave the call waiting forever.
+     */
+    private fun offThread(call: PluginCall, work: () -> Unit) {
+        io.execute {
+            try {
+                work()
+            } catch (error: Exception) {
+                call.reject(error.message ?: "The vault could not be reached", error)
+            }
+        }
+    }
+
     /** Opens the system folder picker. Resolves with the tree URI to remember. */
     @PluginMethod
     fun pick(call: PluginCall) {
@@ -101,11 +132,11 @@ class VaultAccessPlugin : Plugin() {
      * which issues a query per entry and turns a large vault into a long wait.
      */
     @PluginMethod
-    fun readNotes(call: PluginCall) {
+    fun readNotes(call: PluginCall) = offThread(call) {
         val tree = call.getString("uri")?.let(Uri::parse)
         if (tree == null) {
             call.reject("A vault uri is required")
-            return
+            return@offThread
         }
 
         val found = mutableListOf<Note>()
@@ -120,7 +151,7 @@ class VaultAccessPlugin : Plugin() {
             readAll(tree, found)
         } catch (error: SecurityException) {
             call.reject("Access to that folder was withdrawn — pick it again", error)
-            return
+            return@offThread
         }
         call.resolve(JSObject().put("total", found.size).put("attachments", attachments))
     }
@@ -168,25 +199,25 @@ class VaultAccessPlugin : Plugin() {
      * pulled through the bridge at once.
      */
     @PluginMethod
-    fun readAttachment(call: PluginCall) {
+    fun readAttachment(call: PluginCall) = offThread(call) {
         val tree = call.getString("uri")?.let(Uri::parse)
         val path = call.getString("path")
         if (tree == null || path == null) {
             call.reject("A vault uri and a path are required")
-            return
+            return@offThread
         }
 
         val documentId = resolve(tree, path)
         if (documentId == null) {
             call.resolve(JSObject().put("dataUrl", "").put("found", false))
-            return
+            return@offThread
         }
 
         val file = DocumentsContract.buildDocumentUriUsingTree(tree, documentId)
         val bytes = context.contentResolver.openInputStream(file)?.use { it.readBytes() }
         if (bytes == null) {
             call.resolve(JSObject().put("dataUrl", "").put("found", false))
-            return
+            return@offThread
         }
 
         val mime = sniff(bytes) ?: context.contentResolver.getType(file) ?: FALLBACK_MIME
@@ -196,12 +227,12 @@ class VaultAccessPlugin : Plugin() {
 
     /** One file by its path within the vault. Missing files resolve empty. */
     @PluginMethod
-    fun readFile(call: PluginCall) {
+    fun readFile(call: PluginCall) = offThread(call) {
         val tree = call.getString("uri")?.let(Uri::parse)
         val path = call.getString("path")
         if (tree == null || path == null) {
             call.reject("A vault uri and a path are required")
-            return
+            return@offThread
         }
 
         val documentId = resolve(tree, path)
@@ -211,13 +242,13 @@ class VaultAccessPlugin : Plugin() {
 
     /** Writes one file, creating the folders above it when they do not exist. */
     @PluginMethod
-    fun writeFile(call: PluginCall) {
+    fun writeFile(call: PluginCall) = offThread(call) {
         val tree = call.getString("uri")?.let(Uri::parse)
         val path = call.getString("path")
         val contents = call.getString("contents")
         if (tree == null || path == null || contents == null) {
             call.reject("A vault uri, a path and contents are required")
-            return
+            return@offThread
         }
 
         try {
@@ -237,12 +268,12 @@ class VaultAccessPlugin : Plugin() {
      * it not be there — has been met either way.
      */
     @PluginMethod
-    fun deleteFile(call: PluginCall) {
+    fun deleteFile(call: PluginCall) = offThread(call) {
         val tree = call.getString("uri")?.let(Uri::parse)
         val path = call.getString("path")
         if (tree == null || path == null) {
             call.reject("A vault uri and a path are required")
-            return
+            return@offThread
         }
 
         try {
