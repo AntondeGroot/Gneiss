@@ -1,6 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommitTypeAll(chore)"],
+  "reviewers": ["AntondeGroot"],
+  "assignAutomerge": true,
   "timezone": "Europe/Amsterdam",
   "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
