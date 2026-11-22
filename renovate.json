@@ -4,7 +4,7 @@
   "reviewers": ["AntondeGroot"],
   "assignAutomerge": true,
   "timezone": "Europe/Amsterdam",
-  "schedule": ["before 6am on monday"],
+  "schedule": ["* * * * 6"],
   "labels": ["dependencies"],
   "prConcurrentLimit": 5,
   "minimumReleaseAge": "3 days",
