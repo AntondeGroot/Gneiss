@@ -17,6 +17,9 @@ const FOUR = [
   "",
 ].join("\n");
 
+/** A second topic, to show a session narrowed to one leaves the other out. */
+const SHELL = "List files? :: ls\n\nChange dir? :: cd\n\n#flashcards/shell\n";
+
 /** Stubbed rather than assumed: the test runner has no DOM storage of its own. */
 const store = new Map<string, string>();
 
@@ -160,6 +163,30 @@ describe("ReviewSessionService across a restart", () => {
     store.set("gneiss.session", JSON.stringify({ day: "2020-01-01", queue: [{ id: "x" }] }));
 
     expect(relaunched().unfinished()).toBe(false);
+  });
+
+  /**
+   * The topic is restored with the queue, so finishing the session and pressing
+   * "Another session" stays on git — rather than quietly widening back out to
+   * the whole deck after the app was closed.
+   */
+  it("keeps the chosen topic, so another session after a restart stays on it", async () => {
+    const { deck, session } = await loaded();
+    deck.setNotes([parseNote(FOUR, "git.md"), parseNote(SHELL, "shell.md")]);
+    session.start({ kind: "topic", scope: "#flashcards/git" });
+    session.grade("medium");
+
+    const reopened = relaunched();
+    TestBed.inject(DeckService).setNotes([parseNote(FOUR, "git.md"), parseNote(SHELL, "shell.md")]);
+    reopened.start();
+    const served = new Set<string>();
+    while (reopened.current()) {
+      served.add(reopened.current()?.note ?? "");
+      reopened.grade("medium");
+    }
+
+    expect(reopened.focus()).toEqual({ kind: "topic", scope: "#flashcards/git" });
+    expect([...served]).toEqual(["git.md"]);
   });
 
   it("forgets the session once its last card is graded", async () => {
@@ -331,5 +358,27 @@ describe("ReviewSessionService putting a card off", () => {
     // a typo is not a way to be handed a second skip.
     expect(session.current()?.id).toBe("git.md::Q1 corrected?#0");
     expect(session.canSkip()).toBe(false);
+  });
+
+  /**
+   * A topic covers its subtopics, the same way an exam's scope does — so
+   * `git/rebase` comes along with `git`, and `shell` does not.
+   */
+  it("serves only the chosen topic's cards, subtopics included", async () => {
+    const { deck, session } = await loaded();
+    deck.setNotes([
+      parseNote(FOUR, "git.md"),
+      parseNote("Rebase onto main? :: git rebase main\n\n#flashcards/git/rebase\n", "rebase.md"),
+      parseNote(SHELL, "shell.md"),
+    ]);
+
+    session.start({ kind: "topic", scope: "#flashcards/git" });
+    const served: string[] = [];
+    while (session.current()) {
+      served.push(session.current()?.note ?? "");
+      session.grade("medium");
+    }
+
+    expect(served).toEqual(["git.md", "git.md", "git.md", "git.md", "rebase.md"]);
   });
 });

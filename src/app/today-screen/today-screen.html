@@ -127,9 +127,16 @@
   </ul>
 }
 @if (unfinished()) {
-  <p class="left">{{ left() }} cards left</p>
+  <p class="left">
+    {{ left() }} cards left
+    @if (sessionTopic(); as topic) {
+      in {{ topic }}
+    }
+  </p>
 }
-@if (due().length > 0) {
+<!-- `unfinished()` too: a topic practised ahead holds cards that are not due,
+     and its session must still be continuable from here. -->
+@if (due().length > 0 || unfinished()) {
   <button type="button" class="primary" (click)="start()">
     {{ unfinished() ? "Continue review" : "Start review" }}
   </button>
@@ -138,6 +145,11 @@
 } @else {
   <p class="empty">No vault loaded yet.</p>
   <a class="link" routerLink="/vault">Open Vault</a>
+}
+@if (weakest(); as topic) {
+  <a class="weakest" routerLink="/topics" [queryParams]="{ topic: topic.tag }">
+    Weakest topic: <strong>{{ topic.label }}</strong> — practise it →
+  </a>
 }
 @if (heldBackReviews() > 0 || heldBackNew() > 0 || heldCrammed() > 0) {
   <p class="held">

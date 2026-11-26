@@ -6,6 +6,9 @@ import { cardId } from "./deck-card";
 import { DeckService } from "./deck.service";
 import { today } from "./clock.service";
 import type { DeckCard } from "./deck.service";
+import { WHOLE_DECK, readFocus } from "./focus";
+import type { Focus } from "./focus";
+import { TopicService } from "./topic.service";
 
 const KEY = "gneiss.session";
 
@@ -17,6 +20,8 @@ interface SavedSession {
   readonly day: string;
   /** The vault it came from, so another vault's cards are never served. */
   readonly vault: string;
+  /** What the session draws on, so continuing it stays on the same subject. */
+  readonly focus: Focus;
   readonly queue: readonly DeckCard[];
   readonly at: number;
   readonly skipped: readonly string[];
@@ -40,6 +45,7 @@ interface SavedSession {
 @Injectable({ providedIn: "root" })
 export class ReviewSessionService {
   private readonly deck = inject(DeckService);
+  private readonly topics = inject(TopicService);
 
   private readonly queue = signal<readonly DeckCard[]>([]);
   private readonly at = signal(0);
@@ -86,6 +92,18 @@ export class ReviewSessionService {
   readonly gradedToday = signal(0);
   readonly sessions = signal(0);
 
+  /** The whole deck, one topic, or practice ahead within one. */
+  readonly focus = signal<Focus>(WHOLE_DECK);
+
+  /** The subject the session is narrowed to — `certexam`, not the full tag — or null. */
+  readonly topic = computed(() => {
+    const focus = this.focus();
+    return focus.kind === "deck" ? null : (focus.scope.split("/").at(-1) ?? null);
+  });
+
+  /** What another session with the same focus would serve right now. */
+  readonly ready = computed(() => this.topics.queueFor(this.focus()));
+
   readonly current = computed(() => this.queue()[this.at()] ?? null);
   readonly total = computed(() => this.queue().length);
   readonly remaining = computed(() => Math.max(0, this.total() - this.at()));
@@ -113,15 +131,17 @@ export class ReviewSessionService {
   );
 
   /**
-   * Begins a session on whatever is due now.
+   * Begins a session on whatever its focus has ready now — the focus given, or
+   * the one the last session had.
    *
    * Also how a *second* session starts: the cards graded a moment ago are no
    * longer due, so re-reading picks up what the last one's pace held back. The
    * pace is a target, not a wall.
    */
-  start(): void {
+  start(focus: Focus = this.focus()): void {
     this.vault = this.deck.vaultName();
-    this.queue.set([...this.deck.due()]);
+    this.focus.set(focus);
+    this.queue.set([...this.topics.queueFor(focus)]);
     this.at.set(0);
     this.skipped.set([]);
     this.graded.set(0);
@@ -129,9 +149,12 @@ export class ReviewSessionService {
     this.persist();
   }
 
-  /** Picks up where the session left off, or starts one if none is open. */
+  /**
+   * Picks up where the session left off, or starts one on the whole deck if
+   * none is open. Today's button is about the day, not the last topic chosen.
+   */
   resume(): void {
-    if (!this.unfinished()) this.start();
+    if (!this.unfinished()) this.start(WHOLE_DECK);
   }
 
   grade(grade: Grade): void {
@@ -225,6 +248,7 @@ export class ReviewSessionService {
       this.gradedToday.set(saved.gradedToday);
       this.sessions.set(saved.sessions);
       this.vault = saved.vault;
+      this.focus.set(saved.focus);
     } catch {
       // A half-written or older session is not worth recovering: the cards it
       // held are still due, so the cost is starting a session rather than
@@ -253,6 +277,7 @@ export class ReviewSessionService {
       version: STORED_SHAPE,
       day: today(),
       vault: this.vault || this.deck.vaultName(),
+      focus: this.focus(),
       queue,
       at: this.at(),
       skipped: this.skipped(),
@@ -286,6 +311,7 @@ function readSession(parsed: unknown): SavedSession | null {
     version: STORED_SHAPE,
     day: saved.day,
     vault: typeof saved.vault === "string" ? saved.vault : "",
+    focus: readFocus(saved.focus),
     queue: saved.queue,
     at: saved.at,
     skipped: saved.skipped,

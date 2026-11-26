@@ -5,6 +5,7 @@ import { isWithinScope } from "../../vault";
 import type { Tier } from "../../vault";
 import { DeckService } from "../services/deck.service";
 import { ReviewSessionService } from "../services/review-session.service";
+import { TopicService } from "../services/topic.service";
 import type { DeckCard } from "../services/deck.service";
 
 /** Ring geometry. The radius drives the circumference every segment is cut from. */
@@ -39,6 +40,7 @@ export interface RingSegment {
 export class TodayScreen {
   private readonly deck = inject(DeckService);
   private readonly session = inject(ReviewSessionService);
+  private readonly topics = inject(TopicService);
   private readonly router = inject(Router);
 
   protected readonly radius = RADIUS;
@@ -83,6 +85,15 @@ export class TodayScreen {
   /** A session left part-way through, which this screen offers to continue. */
   protected readonly unfinished = this.session.unfinished;
   protected readonly left = this.session.remaining;
+
+  /**
+   * The weakest topic, offered as a single line rather than the whole list: Today
+   * is the app's plan for the day, and the Topics tab is where choosing happens.
+   */
+  protected readonly weakest = this.topics.weakest;
+
+  /** The subject an open session is narrowed to, so "continue" says what it continues. */
+  protected readonly sessionTopic = this.session.topic;
 
   /**
    * The inner arc: how much of the open session is done.

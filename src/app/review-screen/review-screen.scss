@@ -279,6 +279,14 @@ button {
   margin-top: 1.3rem;
 }
 
+/* Says why Medium and Easy show the same date: the card is not due yet. */
+.early {
+  margin: 0.7rem 0 0;
+  color: $faint;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
 .grade {
   display: flex;
   flex-direction: column;

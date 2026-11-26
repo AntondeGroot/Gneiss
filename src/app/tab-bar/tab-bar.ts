@@ -4,9 +4,8 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
 import { DeckService } from "../services/deck.service";
 
 /**
- * Two slots only, both part of the daily loop. Settings is deliberately not a tab:
- * it is config touched monthly, and the bar's slots are reserved for what is used
- * every day.
+ * Today, Topics, Vault and Settings. Today is the app's plan for the day and
+ * Topics is the user's own pick, so the two sit side by side.
  */
 @Component({
   selector: "gn-tab-bar",

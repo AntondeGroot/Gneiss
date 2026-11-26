@@ -68,7 +68,7 @@ export interface DueSelection<T> {
  * before the second one needs a slot in front of it, so this ordering carries the
  * write guarantee as well as the learning one.
  */
-function oneDirectionEach<T extends Schedulable>(sorted: readonly T[]): T[] {
+export function oneDirectionEach<T extends Schedulable>(sorted: readonly T[]): T[] {
   const served = new Set<string>();
   return sorted.filter((card) => {
     if (card.pair === undefined) return true;

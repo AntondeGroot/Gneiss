@@ -307,6 +307,20 @@ circle {
   margin: 0 0 0.6rem;
 }
 
+/* Sits apart from the button: an offer, not part of today's plan. */
+.weakest {
+  display: block;
+  margin-top: 1.2rem;
+  color: $dim;
+  font-size: 0.82rem;
+  text-decoration: none;
+
+  strong {
+    color: $text;
+    font-weight: 600;
+  }
+}
+
 .held {
   margin-top: 1rem;
   color: $faint;
