@@ -250,6 +250,45 @@ notes — but putting it in the vault means it rides the existing vault sync for
 preserving the no-backend decision. Without this, config set on the laptop never reaches
 the phone.
 
+## Choosing a topic (DECIDED)
+
+The SR plugin lets a deck be picked from a tree of `#flashcards/…` tags, each row showing what
+is due, new and total. Gneiss has the same, as a **Topics** tab (`topicRows`): a parent row
+counts its subtopics, and a parent appears even when no note carries its tag directly, so one
+row covers a whole subject. A topic is matched with `isWithinScope`, the same test exams use.
+
+**Today is the app's plan; Topics is the user's.** That is why the list is its own tab rather
+than a section under the ring — Today stays one button with nothing to decide. Today carries a
+single line pointing at the **weakest topic**, and nothing more. "Exam" and "Test" were rejected
+as the tab's name: exam already means a cram with a date, and test suggests a quiz with a score.
+
+A topic session is an **ordinary session drawn from fewer cards** — `selectDue` with the same
+portions, ordering and exams, not a second scheduler. The session keeps its focus (`Focus`:
+deck, topic, or practice), so *Continue* and *Another session* stay on the subject picked. The
+finished screen says so in words — *Another session on shell*, *Keep practising generics*, and
+*Back to Topics* rather than Today — since staying on a topic is otherwise invisible.
+
+**Weakness is read from ease**, which every card already carries in its SR comment and every
+Difficult lowers. A topic is weak below `WEAK_EASE` (2.0) with at least `WEAK_MINIMUM_MET` cards
+met; the weakest is the lowest such, the more specific on a tie. Nothing new is stored.
+
+### Practising ahead, and the asymmetric rule (DECIDED)
+
+An ordinary session only serves what is due, so a weak topic with nothing due has nothing to
+offer. **Practice** serves a topic's cards that are *not* due yet, lowest ease first
+(`practiceQueue`). New cards are never in it — an unseen card is always due already.
+
+Grading a card before it is due is held to an **asymmetric rule**, in `schedule()` itself:
+**Difficult counts in full; Medium and Easy leave the schedule untouched.** Forgetting is real
+information whenever it turns up. Recalling a card early is not evidence it can wait longer —
+growing the interval from an early review would push the card out on a test it was never due
+to sit. So practice can only bring a card closer. Rejected: grading it as a normal review
+(inflated intervals), and a dry run that writes nothing (throws away the forgetting).
+
+Living in `schedule()` rather than behind a practice flag means the grade previews tell the
+truth on their own, and an unchanged grade writes nothing to the note — `editedNote` sees no
+change — so practice never makes Gneiss a side of a sync conflict for no reason.
+
 ## Markdown is the source of truth
 
 `parseNote(md, filename)` is a pure function with no app dependencies — it's meant to
@@ -359,6 +398,9 @@ rest on. No real vault data lives in this repo — the prototype's `SEED` is inv
   card will next appear, computed live from the current `spread`.
 - **Vault** — notes list with per-note tier buttons. Tap a note to open an editor
   showing raw markdown above and live-parsed cards below.
+- **Topics** — the deck as a tree of topic tags with due / new / total per row. Choosing a row
+  offers a review of that topic, and practice ahead when it has cards not yet due. See
+  *Choosing a topic*.
 - **Settings** — reminder + time, new-cards-per-session portion, core emphasis slider with
   a live preview of resulting intervals, and the tag→tier table: a row per topic tag
   found in the vault, each offering **Inherit / Core / Standard / Optional**. Inherit is
@@ -369,7 +411,7 @@ rest on. No real vault data lives in this repo — the prototype's `SEED` is inv
   re-tiers the loaded deck, so an edit bites on the current session and not just the next
   load.
 
-Navigation: bottom tab bar has **Today, Vault and Settings**. Only Review hides it —
+Navigation: bottom tab bar has **Today, Topics, Vault and Settings**. Only Review hides it —
 nothing should compete with the card being recalled.
 
 **CHANGED:** Settings was originally kept *out* of the tab bar, on the reasoning that
@@ -377,7 +419,7 @@ it is config touched monthly and the slots belonged to the daily loop. Reversed 
 use: with only two tabs the bar looked sparse, and reaching Settings through a corner
 link on Today was less discoverable than the argument assumed. Three tabs still leaves
 the bar uncrowded. The Today header link and the Settings back link were both dropped
-as duplicates once the tab existed.
+as duplicates once the tab existed. Topics made it four.
 
 ## Stack decision (DECIDED)
 

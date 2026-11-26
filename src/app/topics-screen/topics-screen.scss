@@ -1,0 +1,191 @@
+@use "styles" as *;
+
+/** Counts share one column width, so they line up down the whole tree. */
+$count-width: 2.6rem;
+/** How far each level of the tree steps in. */
+$indent: 1.1rem;
+
+:host {
+  display: block;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  color: $text;
+  font-family: "Hanken Grotesk", "Avenir Next", system-ui, sans-serif;
+}
+
+.head {
+  padding-top: 1.5rem;
+  margin-bottom: 1.4rem;
+}
+
+h1 {
+  margin: 0;
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 500;
+  font-size: 1.5rem;
+}
+
+.sub,
+.empty {
+  margin: 0.3rem 0 0;
+  color: $dim;
+  font-size: 0.85rem;
+}
+
+.link {
+  display: inline-block;
+  margin-top: 0.8rem;
+  color: $amber;
+  font-size: 0.85rem;
+}
+
+.columns {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0.6rem 0.4rem;
+  color: $faint;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  span {
+    width: $count-width;
+    text-align: right;
+  }
+}
+
+.tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid $line;
+  border-radius: 0.8rem;
+  background: $panel;
+  overflow: hidden;
+}
+
+li + li {
+  border-top: 1px solid $line;
+}
+
+li.selected {
+  background: $panel2;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  padding-left: calc(var(--depth, 0) * #{$indent});
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $amber;
+    outline-offset: -2px;
+  }
+}
+
+.fold {
+  flex: 0 0 2.2rem;
+  align-self: stretch;
+  border: none;
+  background: none;
+  color: $dim;
+  font-size: 0.8rem;
+  transition: transform 0.15s ease;
+
+  &.open {
+    transform: rotate(90deg);
+  }
+}
+
+.pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  padding: 0.85rem 0.6rem 0.85rem 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 1rem;
+  font-size: 0.68rem;
+  vertical-align: 0.1em;
+
+  &.weak {
+    border: 1px solid $red;
+    color: $red;
+  }
+
+  &.exam {
+    border: 1px solid $teal;
+    color: $teal;
+  }
+}
+
+.count {
+  flex: 0 0 $count-width;
+  color: $dim;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+
+  &.lit {
+    color: $amber;
+    font-weight: 600;
+  }
+
+  &.total {
+    color: $faint;
+  }
+}
+
+.actions {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0 0.9rem 0.9rem calc(var(--depth, 0) * #{$indent} + 2.2rem);
+}
+
+.primary,
+.secondary {
+  padding: 0.7rem;
+  border-radius: 0.7rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.primary {
+  border: none;
+  background: $amber;
+  color: $ink;
+}
+
+.secondary {
+  border: 1px solid $line;
+  background: $panel;
+  color: $text;
+}
+
+.hint {
+  margin: 0;
+  color: $faint;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}

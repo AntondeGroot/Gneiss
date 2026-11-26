@@ -5,7 +5,7 @@ import { CardBody } from "../card-body/card-body";
 import { CardEditor } from "../card-editor/card-editor";
 
 import type { CardText, Grade, Standing } from "../../vault";
-import { cardStanding, tallyStandings } from "../../vault";
+import { cardStanding, daysBetween, tallyStandings } from "../../vault";
 import { ClockService } from "../services/clock.service";
 import { AttachmentService } from "../services/attachment.service";
 import { DeckService } from "../services/deck.service";
@@ -40,7 +40,23 @@ export class ReviewScreen {
   protected readonly sessions = this.session.sessions;
   protected readonly gradedAcrossSessions = this.session.gradedToday;
 
-  protected readonly dueCount = computed(() => this.deck.due().length);
+  /** What another session on the same focus would serve — a topic stays a topic. */
+  protected readonly dueCount = computed(() => this.session.ready().length);
+
+  protected readonly topic = this.session.topic;
+
+  /**
+   * Names the topic on the button, so it is plain that another session stays on
+   * it rather than widening back out to the whole deck.
+   */
+  protected readonly againLabel = computed(() => {
+    const topic = this.topic();
+    if (this.practising()) return `Keep practising ${topic ?? ""}`.trim();
+    return topic ? `Another session on ${topic}` : "Another session";
+  });
+
+  /** Practising ahead, where every card is early by design rather than by mistake. */
+  protected readonly practising = computed(() => this.session.focus().kind === "practice");
 
   /**
    * Why this card is being asked — new, due today, or overdue by so many days.
@@ -57,7 +73,9 @@ export class ReviewScreen {
   });
 
   /** What a next session would be made of, so the offer says what it serves. */
-  protected readonly ready = computed(() => tallyStandings(this.deck.due(), this.clock.today()));
+  protected readonly ready = computed(() =>
+    tallyStandings(this.session.ready(), this.clock.today()),
+  );
   protected readonly writeError = this.deck.writeError;
   protected readonly finished = computed(() => this.started() && this.current() === null);
 
@@ -105,7 +123,8 @@ export class ReviewScreen {
    * still there on the way back.
    */
   protected leave(): void {
-    void this.router.navigate(["/today"]);
+    // Back where the session was chosen: a topic was picked on Topics.
+    void this.router.navigate([this.topic() ? "/topics" : "/today"]);
   }
 
   protected reveal(): void {
@@ -150,10 +169,17 @@ export class ReviewScreen {
     this.revealed.set(false);
   }
 
-  /** When this grade would bring the card back, computed live from the settings. */
+  /**
+   * When this grade would bring the card back, computed live from the settings.
+   *
+   * Counted to the due date rather than read off the interval: a card practised
+   * ahead keeps its schedule on Medium or Easy, and its interval says nothing
+   * about how far off that schedule now is.
+   */
   protected preview(grade: Grade): string {
     const card = this.current();
-    return card ? describeInterval(this.deck.preview(card, grade).interval) : "";
+    if (!card) return "";
+    return describeInterval(daysBetween(this.clock.today(), this.deck.preview(card, grade).due));
   }
 
   /** Short enough for the card header, which is deliberately quiet. */
@@ -161,9 +187,9 @@ export class ReviewScreen {
     if (standing.kind === "new") return "new";
     if (standing.kind === "due") return "due today";
     if (standing.kind === "overdue") return `${standing.days}d overdue`;
-    // Never expected: the queue serves nothing scheduled ahead. Named on screen
-    // rather than hidden, since seeing it is the only way it gets reported.
-    return `scheduled in ${standing.days}d`;
+    // Expected only when practising ahead; anywhere else it is a card served
+    // that should not have been, and showing it is how that gets reported.
+    return `due in ${standing.days}d`;
   }
 
   /**

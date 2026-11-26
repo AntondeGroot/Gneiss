@@ -1,0 +1,87 @@
+<header class="head">
+  <h1>Topics</h1>
+  <p class="sub">Review one subject, or practise a weak one ahead of schedule.</p>
+</header>
+
+@if (rows().length === 0) {
+  <p class="empty">No topics yet — they come from your notes' <code>#flashcards/…</code> tags.</p>
+  <a class="link" routerLink="/vault">Open Vault</a>
+} @else {
+  <div class="columns" aria-hidden="true">
+    <span>due</span>
+    <span>new</span>
+    <span>total</span>
+  </div>
+
+  <ul class="tree">
+    @for (row of visible(); track row.tag) {
+      <li [class.selected]="isSelected(row)" [style.--depth]="row.depth">
+        <div class="row">
+          @if (row.hasChildren) {
+            <button
+              type="button"
+              class="fold"
+              [class.open]="isExpanded(row)"
+              [attr.aria-expanded]="isExpanded(row)"
+              [attr.aria-label]="(isExpanded(row) ? 'Hide' : 'Show') + ' subtopics of ' + row.label"
+              (click)="toggle(row)"
+            >
+              ▸
+            </button>
+          } @else {
+            <span class="fold" aria-hidden="true"></span>
+          }
+          <button
+            type="button"
+            class="pick"
+            [attr.aria-expanded]="isSelected(row)"
+            [attr.aria-label]="
+              row.label +
+              ': ' +
+              row.due +
+              ' due, ' +
+              row.fresh +
+              ' new, ' +
+              row.total +
+              ' total' +
+              (row.weak ? ', weak' : '')
+            "
+            (click)="select(row)"
+          >
+            <span class="name">
+              {{ row.label }}
+              @if (row.weak) {
+                <span class="tag weak">weak</span>
+              }
+              @if (examDays(row); as days) {
+                <span class="tag exam">exam · {{ days }}d</span>
+              }
+            </span>
+            <span class="count" [class.lit]="row.due > 0">{{ row.due }}</span>
+            <span class="count">{{ row.fresh }}</span>
+            <span class="count total">{{ row.total }}</span>
+          </button>
+        </div>
+
+        @if (isSelected(row)) {
+          <div class="actions">
+            @if (reviewSize() > 0) {
+              <button type="button" class="primary" (click)="review(row)">
+                Review {{ reviewSize() }}
+              </button>
+            }
+            @if (practiceSize() > 0) {
+              <button type="button" class="secondary" (click)="practise(row)">
+                Practise {{ practiceSize() }} ahead
+              </button>
+              <p class="hint">
+                Practice serves cards that are not due yet, weakest first. Only Difficult changes
+                when they come back.
+              </p>
+            }
+          </div>
+        }
+      </li>
+    }
+  </ul>
+}

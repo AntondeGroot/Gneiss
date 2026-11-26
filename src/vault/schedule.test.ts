@@ -103,6 +103,23 @@ describe("schedule", () => {
     expect(schedule(card, "medium", STANDARD).interval).toBe(25);
     expect(next).toMatchObject({ interval: 4, due: "2026-08-05" });
   });
+
+  /**
+   * Practising ahead: a card answered before its due date. Recalling it early is
+   * no evidence it can wait longer, so only Difficult may move it — and only
+   * closer.
+   */
+  it("leaves a card graded before it is due unchanged unless it is graded difficult", () => {
+    const notYetDue = { due: "2026-08-10", interval: 10, ease: 2.5 };
+
+    expect(schedule(notYetDue, "medium", STANDARD)).toEqual(notYetDue);
+    expect(schedule(notYetDue, "easy", STANDARD)).toEqual(notYetDue);
+    expect(schedule(notYetDue, "difficult", STANDARD)).toMatchObject({
+      due: "2026-08-02",
+      interval: 1,
+      ease: 2.3,
+    });
+  });
 });
 
 describe("newReviewState and isDue", () => {

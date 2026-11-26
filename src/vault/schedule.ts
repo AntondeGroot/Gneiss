@@ -44,11 +44,24 @@ export function newReviewState(today: string): ReviewState {
   return { due: today, interval: 0, ease: STARTING_EASE };
 }
 
+/**
+ * The review a grade leads to.
+ *
+ * A card graded before it is due — practising ahead — is held to an asymmetric
+ * rule: Difficult counts in full, anything else leaves the schedule as it was.
+ * Forgetting is real information whenever it turns up, and should bring a card
+ * back sooner. Recalling it early is not evidence it can wait *longer*: growing
+ * the interval from a review that came ahead of time would push the card out on
+ * the strength of a test it was never due to sit. So practice can only bring a
+ * card closer, and practising a weak topic never costs it its reviews.
+ */
 export function schedule(
   state: ReviewState,
   grade: Grade,
   options: SchedulingOptions,
 ): ReviewState {
+  if (!isDue(state, options.today) && grade !== "difficult") return state;
+
   const ease = nextEase(state.ease, grade);
   const grown = grownInterval(state.interval, ease, grade, options);
   const interval = cramClamp(grown, options.topicTags, options.crams, options.today);
