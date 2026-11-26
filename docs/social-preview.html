@@ -1,0 +1,322 @@
+<!doctype html>
+<!--
+  The repo's social preview (GitHub: Settings → General → Social preview), 1280×640.
+  Rendered to docs/social-preview.png by scripts/social-preview.mjs (`npm run social-preview`),
+  so edit this file and regenerate rather than editing the PNG.
+
+  The story it tells: the note as it is typed in Obsidian, and the card Gneiss makes of it.
+  The card is the Review screen redrawn — colours from src/styles/_tokens.scss, shapes from
+  review-screen.scss and card-body.scss — so a restyle there means regenerating this.
+  The card's content is invented: no real vault data goes in a link preview.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=block"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --base: #07050c;
+        --panel: #1c1916;
+        --panel2: #221e1a;
+        --line: #2c2722;
+        --text: #ede6dc;
+        --dim: #9a9087;
+        --faint: #6e665e;
+        --amber: #e5a045;
+        --teal: #7fa8a0;
+        --red: #c8674f;
+        --green: #8fae7e;
+        /* The rock in the logo. */
+        --violet: #9a86d6;
+        --head: Fraunces, Georgia, serif;
+        --body: "Hanken Grotesk", sans-serif;
+        --mono: "JetBrains Mono", monospace;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--base);
+      }
+      .preview {
+        width: 1280px;
+        height: 640px;
+        overflow: hidden;
+        position: relative;
+        background:
+          radial-gradient(
+            circle at 110px 120px,
+            rgba(140, 110, 220, 0.18) 0,
+            rgba(140, 110, 220, 0) 300px
+          ),
+          radial-gradient(
+            circle at 1010px 330px,
+            rgba(229, 160, 69, 0.13) 0,
+            rgba(229, 160, 69, 0) 380px
+          ),
+          var(--base);
+        font-family: var(--body);
+        color: var(--text);
+      }
+
+      /* ── The words ── */
+      .text {
+        position: absolute;
+        left: 64px;
+        top: 84px;
+        width: 470px;
+      }
+      /* The logo's rock, without the wordmark under it: the title below says the name. */
+      .mark {
+        width: 92px;
+        height: 92px;
+        background: url("../public/gneiss-logo.png") no-repeat;
+        background-size: 168px 168px;
+        background-position: -38px -22px;
+        /* The logo's ground is a shade off this one; lighten drops it so no square shows. */
+        mix-blend-mode: lighten;
+      }
+      h1 {
+        margin: 14px 0 0;
+        font: 500 112px/0.95 var(--head);
+        letter-spacing: -2px;
+      }
+      .pitch {
+        margin: 26px 0 0;
+        font-size: 29px;
+        line-height: 39px;
+      }
+      .pitch em {
+        font-style: normal;
+        color: var(--amber);
+      }
+      .facts {
+        margin: 30px 0 0;
+        display: flex;
+        gap: 10px;
+      }
+      .facts span {
+        padding: 7px 15px;
+        border-radius: 999px;
+        border: 1px solid #3a342d;
+        font-size: 18px;
+        color: var(--dim);
+        white-space: nowrap;
+      }
+
+      /* ── The note, as typed ── */
+      .note {
+        position: absolute;
+        left: 548px;
+        top: 150px;
+        width: 290px;
+        padding: 18px 20px 20px;
+        border-radius: 12px;
+        border: 1px solid #221f2a;
+        background: #0f0d15;
+        font: 400 13.5px/1.7 var(--mono);
+        /* Ligatures would draw the SR comment's <!-- and --> as arrows. */
+        font-variant-ligatures: none;
+        color: #8d879a;
+        white-space: pre;
+        transform: rotate(-3deg);
+        opacity: 0.92;
+      }
+      .note .file {
+        display: block;
+        margin-bottom: 10px;
+        color: #57516a;
+        font-size: 13px;
+      }
+      .note .q {
+        color: #cfc8db;
+      }
+      .note .mark-q {
+        color: var(--violet);
+        font-weight: 500;
+      }
+      .note .soft {
+        color: #4f4a5c;
+      }
+      .note .tag {
+        color: var(--violet);
+      }
+
+      .caption {
+        position: absolute;
+        font-size: 17px;
+        letter-spacing: 3px;
+        color: var(--faint);
+      }
+      .caption.typed {
+        left: 566px;
+        top: 532px;
+      }
+      .caption.shown {
+        left: 842px;
+        top: 532px;
+        color: var(--amber);
+      }
+
+      /* ── The card, as Gneiss shows it (review-screen.scss + card-body.scss) ── */
+      .card {
+        position: absolute;
+        left: 820px;
+        top: 112px;
+        width: 400px;
+        box-sizing: border-box;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+        padding: 18px 20px 20px;
+        box-shadow: 0 28px 60px rgba(0, 0, 0, 0.7);
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+      }
+      .bar .path {
+        color: var(--faint);
+        font: 12px var(--mono);
+      }
+      .tier {
+        border: 1px solid currentcolor;
+        border-radius: 16px;
+        padding: 1px 8px;
+        color: var(--amber);
+      }
+      .bar .left {
+        margin-left: auto;
+        color: var(--faint);
+      }
+      .front {
+        margin: 22px 0;
+        font-size: 21px;
+        line-height: 1.4;
+      }
+      .back {
+        padding: 14px 15px;
+        border-radius: 10px;
+        background: var(--panel2);
+        color: var(--text);
+        font: 15px/1.6 var(--mono);
+        font-variant-ligatures: none;
+      }
+      .back p {
+        margin: 0 0 11px;
+      }
+      .inline {
+        padding: 0.08em 0.32em;
+        border-radius: 0.3em;
+        background: var(--base);
+        color: var(--amber);
+        font-size: 0.88em;
+      }
+      .code {
+        margin: 0;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--base);
+        font: 13.5px/1.55 var(--mono);
+        white-space: pre;
+        font-variant-ligatures: none;
+      }
+      .code .prompt {
+        color: var(--faint);
+      }
+      .grades {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .grade {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        padding: 10px 6px;
+        border: 1px solid;
+        border-radius: 11px;
+        background: var(--panel2);
+      }
+      .grade b {
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .grade small {
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .grade.difficult {
+        color: var(--red);
+        border-color: rgb(201 104 90 / 45%);
+      }
+      .grade.medium {
+        color: var(--amber);
+        border-color: rgb(229 160 69 / 45%);
+      }
+      .grade.easy {
+        color: var(--green);
+        border-color: rgb(143 174 126 / 45%);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="preview">
+      <div class="text">
+        <div class="mark"></div>
+        <h1>Gneiss</h1>
+        <p class="pitch">
+          Flashcards from your Obsidian notes, paced by what they are for:
+          <em>core</em> vs. <em>regular</em> knowledge or focused learning for an <em>exam</em>.
+        </p>
+        <div class="facts">
+          <span>Obsidian vault</span>
+          <span>Android</span>
+          <span>No account</span>
+        </div>
+      </div>
+
+      <!-- prettier-ignore -->
+      <div class="note"><span class="file">git.md</span><span class="q">How do you unstage a file,
+but keep its changes?</span>
+<span class="mark-q">?</span>
+Use `git restore` with
+**--staged**:
+<span class="soft">```bash</span>
+$ git restore --staged a.txt
+<span class="soft">```</span>
+<span class="soft">&lt;!--SR:!2026-12-03,9,250--&gt;</span>
+
+<span class="tag">#flashcards/git</span></div>
+      <span class="caption typed">IN YOUR NOTE</span>
+
+      <div class="card">
+        <div class="bar">
+          <span class="path">tools/git.md</span>
+          <span class="tier">core</span>
+          <span class="left">4 left</span>
+        </div>
+        <p class="front">How do you unstage a file, but keep its changes?</p>
+        <div class="back">
+          <p>Use <code class="inline">git restore</code> with <strong>--staged</strong>:</p>
+          <pre class="code"><span class="prompt">$</span> git restore --staged a.txt</pre>
+        </div>
+        <div class="grades">
+          <div class="grade difficult"><b>Difficult</b><small>tomorrow</small></div>
+          <div class="grade medium"><b>Medium</b><small>in a week</small></div>
+          <div class="grade easy"><b>Easy</b><small>in 3 weeks</small></div>
+        </div>
+      </div>
+      <span class="caption shown">IN GNEISS</span>
+    </div>
+  </body>
+</html>
